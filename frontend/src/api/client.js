@@ -5,6 +5,7 @@ import timeseries from '../mocks/timeseries.json';
 import recommendation from '../mocks/recommendation.json';
 import recommendationDisease from '../mocks/recommendation-disease.json';
 import stressMap from '../mocks/stress-map.json';
+import areasGeo from '../mocks/areas.geojson?raw';
 import releaseDemand from '../mocks/release-demand.json';
 import echogramMock from '../mocks/echogram.svg';
 
@@ -68,6 +69,9 @@ export const api = {
         }),
 
   getStressMap: () => (USE_MOCK ? delay(stressMap) : http('/areas/stress-map')),
+
+  // 해역 경계(GeoJSON). 계약상 지도 응답 형식이 미정이라 프론트는 area_id로 stress-map과 이어 붙인다.
+  getAreaShapes: () => (USE_MOCK ? delay(JSON.parse(areasGeo)) : http('/areas/shapes')),
 
   getReleaseDemand: (areaId) =>
     USE_MOCK
