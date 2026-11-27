@@ -7,7 +7,7 @@
 
 `common.config` 호환 reader도 다섯 파일 전체를 검증한다. 파일/키 오류에 코드 기본값이나
 last_good을 자동 적용하지 않는다. `fusion.fuse(snapshot=...)`, `StressModel.fit/score_series/load(snapshot=...)`
-와 pipeline·stress CLI는 동일한 고정 snapshot을 전달한다. 원시 관측 업로더는 모델 설정에 의존하지 않는다.
+와 pipeline·stress CLI는 동일한 고정 snapshot을 전달한다. 원시 관측 업로더는 모델 설정에 의존하지 않는다. 모델 프로세스 설정은 import 시점이 아닌 첫 데이터 처리 때 초기화하여, 잘못된 분석 설정이 raw 수집/health API 시작을 막지 않게 한다.
 
 모델에는 training_settings(schema/알고리즘/주기/윈도/낮밤/융합/품질/특징 목록)와 training_revision을 저장한다.
 융합 산출물의 fusion_signature도 확인하여 다른 융합 가중치로 만든 특징을 그대로 학습/채점하지 않는다.
@@ -102,7 +102,7 @@ API 캐시가 예열되었다고 하지 않는다. 요청별 시간·scenario/co
 
 | 확인 | 결과 |
 | --- | --- |
-| Python 전체 unittest | 398개 통과 |
+| Python 전체 unittest | 399개 통과 |
 | 실제 PostgreSQL migration/RLS 검증(PGlite) | 236개 통과 |
 | 데이터 생성·모델 학습·채점·내보내기 | 8개 시나리오, 각48프레임(총384), R7 유지20프레임 |
 | 별도 프로세스 모델 로드/채점 | 고수온2304회차 성공 |

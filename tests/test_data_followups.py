@@ -3,6 +3,9 @@ import copy
 from dataclasses import replace
 from datetime import timedelta
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 import pickle
 import shutil
@@ -42,6 +45,23 @@ class BundleTestCase(unittest.TestCase):
         change(document)
         p.write_text(yaml.safe_dump(document,allow_unicode=True))
         return self.loader.snapshot()
+
+
+class AnalysisImportIsolationTest(unittest.TestCase):
+    def test_invalid_analysis_bundle_does_not_block_raw_api_startup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            code = """from fastapi.testclient import TestClient
+from api.main import app
+c = TestClient(app)
+assert c.get('/health').status_code == 200
+assert c.post('/ingest/metrics', json=[]).status_code == 401
+assert c.post('/demo/scenario/heatwave_typhoon?t=0').status_code == 503
+print('isolated')
+"""
+            result = subprocess.run([sys.executable,'-c',code],cwd=Path(__file__).resolve().parents[1],
+                env={**os.environ,'ROCKFISH_CONFIG_DIR':folder},capture_output=True,text=True,timeout=60)
+            self.assertEqual(result.returncode,0,result.stderr[-1200:])
+            self.assertEqual(result.stdout.strip(),'isolated')
 
 
 class ModelConfigurationTest(BundleTestCase):

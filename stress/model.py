@@ -36,6 +36,7 @@ import pickle
 import json
 import os
 import tempfile
+from threading import RLock
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -60,17 +61,36 @@ def _hour(value):
     return int(h) + int(m) / 60
 
 
-# These define the in-process feature extractor. Changes require a new process;
-# persisted training metadata additionally prevents old-model/new-process mixing.
-_PROCESS = snapshot_or_current()['thresholds']
-CYCLE_MINUTES = float(_PROCESS['cycle_minutes'])
-WINDOW_HOURS = float(_PROCESS['baseline']['window_hours'])
-MIN_BASELINE_WINDOWS = _PROCESS['baseline']['min_windows']
+# Initialize on first data use, not module import: raw collection/admin recovery
+# must still start when the analysis bundle is missing or invalid.
+_PROCESS = None
+_settings_lock = RLock()
+_PROCESS_NAMES = {'CYCLE_MINUTES','WINDOW_HOURS','MIN_BASELINE_WINDOWS',
+                  'WINDOW_CYCLES','MIN_CYCLES_IN_WINDOW','DAY_START','DAY_END'}
 MIN_DAYPART_WINDOWS = 24
-WINDOW_CYCLES = max(1, int(round(WINDOW_HOURS * 60 / CYCLE_MINUTES)))
-MIN_CYCLES_IN_WINDOW = max(1, WINDOW_CYCLES // 2)
-DAY_START = _hour(_PROCESS['baseline']['day_start'])
-DAY_END = _hour(_PROCESS['baseline']['day_end'])
+
+
+def _initialize_process(snapshot=None):
+    global _PROCESS
+    with _settings_lock:
+        if _PROCESS is not None:
+            return
+        t = snapshot_or_current(snapshot)['thresholds']
+        cycles = max(1, int(round(t['baseline']['window_hours']*60/t['cycle_minutes'])))
+        globals().update(CYCLE_MINUTES=float(t['cycle_minutes']),
+            WINDOW_HOURS=float(t['baseline']['window_hours']), MIN_BASELINE_WINDOWS=t['baseline']['min_windows'],
+            WINDOW_CYCLES=cycles, MIN_CYCLES_IN_WINDOW=max(1,cycles//2),
+            DAY_START=_hour(t['baseline']['day_start']), DAY_END=_hour(t['baseline']['day_end']))
+        _PROCESS = t
+
+
+def __getattr__(name):
+    if name in _PROCESS_NAMES:
+        _initialize_process()
+        return globals()[name]
+    raise AttributeError(name)
+
+
 KST = timezone(timedelta(hours=9))
 
 SONAR_FEATURES = ["p_bottom", "p_mid", "p_surface", "act_mean", "act_std", "cohesion"]
@@ -89,6 +109,7 @@ def training_settings(snapshot):
 
 
 def require_process_settings(snapshot):
+    _initialize_process(snapshot)
     t = snapshot['thresholds']
     actual = (t['cycle_minutes'], t['baseline']['window_hours'], t['baseline']['min_windows'],
               _hour(t['baseline']['day_start']), _hour(t['baseline']['day_end']))
@@ -116,6 +137,7 @@ def cycle_matrix(fused: Sequence[FusedFeatures]) -> tuple:
 
 def window_features(Xw: np.ndarray) -> Dict[str, float]:
     """한 윈도우(주기×원시 지표) → 특징 dict. 소나 특징이 모자라면 빈 dict."""
+    _initialize_process()
     act = Xw[:, 3]
     ok = ~np.isnan(act)
     if ok.sum() < MIN_CYCLES_IN_WINDOW:
@@ -132,6 +154,7 @@ def window_features(Xw: np.ndarray) -> Dict[str, float]:
 
 
 def is_day(ts: datetime) -> bool:
+    _initialize_process()
     t = ts.astimezone(KST)
     h = t.hour + t.minute / 60
     return DAY_START <= h < DAY_END if DAY_START < DAY_END else h >= DAY_START or h < DAY_END
@@ -139,6 +162,7 @@ def is_day(ts: datetime) -> bool:
 
 def hourly_windows(fused: Sequence[FusedFeatures]) -> List[tuple]:
     """학습용: 정시 기준으로 겹치지 않는 1시간 윈도우 → [(윈도우 시작, 특징 dict)]."""
+    _initialize_process()
     ts, X = cycle_matrix(fused)
     if not len(ts):
         return []
@@ -253,6 +277,7 @@ class StressModel:
 
     @property
     def status(self) -> str:
+        _initialize_process()
         return "ready" if self.n_windows >= MIN_BASELINE_WINDOWS and self.detectors else "warming_up"
 
     def fit(self, fused: Sequence[FusedFeatures], *, snapshot=None) -> "StressModel":
