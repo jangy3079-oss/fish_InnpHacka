@@ -8,13 +8,54 @@
 
 ## 실행 방법
 
-> 각 모듈이 완성되는 대로 채웁니다. (이슈 #42에서 최종 정리)
+### API 로컬 실행
 
+`POST /ingest/metrics`는 전용 edge 계정 인증·RLS를 거쳐 실제 DB에 저장합니다.
+그 외 경로는 프론트 연동용 목업이며 분석·추천·발송·저장을 수행하지 않습니다.
+수집 경로는 `X-Data-Mode: database`, 나머지는 `mock`을 표시합니다.
+수집 외 변경 요청은 `persisted: false`입니다.
+Python 3.11 이상, 저장소 루트에서 실행합니다.
+
+```sh
+python -m venv .venv
 ```
-# TODO: 설치
-# TODO: 시뮬레이터 + 백엔드 실행
-# TODO: 프론트 실행
+
+Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
 ```
+
+macOS/Linux:
+
+```sh
+source .venv/bin/activate
+```
+
+```sh
+python -m pip install -r requirements-api-dev.txt
+python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+- [Swagger UI](http://127.0.0.1:8000/docs)
+- [OpenAPI JSON](http://127.0.0.1:8000/openapi.json)
+- [ReDoc](http://127.0.0.1:8000/redoc)
+- [Health](http://127.0.0.1:8000/health)
+- [SDD 상태 예시](http://127.0.0.1:8000/cages/3/status)
+
+프론트 개발 서버 `http://localhost:5173`, `http://127.0.0.1:5173`에 CORS를 허용합니다.
+다른 주소는 `API_CORS_ORIGINS` 환경변수에 쉼표로 구분해 지정합니다.
+
+### API·공통 모델 테스트
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+라우트·응답 형식·목업의 한계·합의할 항목은 [API 계약](docs/api-contract.md)을 확인하세요.
+실제 수집·저장에 필요한 Supabase 환경변수·migration·edge 토큰 설정과 JSONL 업로드 방법은
+[지표 수집 계약](docs/ingestion-contract.md)을 확인하세요.
+다른 모듈의 실행법은 각 구현 PR과 이슈 #42에서 이어 정리합니다.
 
 ## 디렉터리 구조
 
@@ -45,21 +86,6 @@
 | 백엔드 | `api`, Supabase, `cause`, `decision`, `notify` | `/status`, `/recommendation` API, R1·R2 규칙 | _(이름)_ |
 | 프론트 | `web` | 목업 JSON으로 화면 먼저 만들고 API로 교체 | _(이름)_ |
 | 문서·검증 | 시나리오·config YAML, 비전 시험, RAG 자료, 검증, 발표 | 시나리오 YAML·규칙·비용 YAML | _(이름)_ |
-
-## API 로컬 실행
-
-Python 3.11 이상에서 `python -m pip install -r requirements-api-dev.txt` 후
-`python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000`으로 실행합니다.
-
-- [Swagger UI](http://127.0.0.1:8000/docs)
-- [OpenAPI JSON](http://127.0.0.1:8000/openapi.json)
-- [API 계약](docs/api-contract.md)
-
-`python -m unittest discover -s tests -v`로 API·공통 모델 테스트를 실행합니다.
-기본 프론트 CORS 주소는 localhost:5173과 127.0.0.1:5173이며 `API_CORS_ORIGINS`로 변경합니다.
-
-`POST /ingest/metrics`의 실제 인증·저장 설정, DB migration, 시뮬레이터 JSONL 업로드 방법은
-[지표 수집 계약](docs/ingestion-contract.md)을 확인하세요. 그 외 API는 아직 목업입니다.
 
 ## 협업 규칙
 
