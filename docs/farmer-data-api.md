@@ -3,7 +3,8 @@
 범위는 재고 PUT, 지표 시계열 GET, 에코그램 GET이다.
 status·추천·선택 저장은 아직 기존 목업이며 #29 후속 범위다.
 최신 main에서 시작했고 DB/RLS PR #67을 작업 브랜치에만 선행 통합했다.
-#10의 미병합 수집 브랜치와 #83 시나리오 파일 내보내기는 포함하지 않는다.
+#10의 미병합 수집 브랜치는 포함하지 않는다. 작업 중 main에 들어온 #83 내보내기는
+그대로 유지하되, 이번 시계열 경로는 DB 원시 지표를 조회하며 시나리오 재생 연계는 #30 범위다.
 
 ## 인증·접근 권한
 
@@ -141,7 +142,6 @@ npm test --prefix supabase/tests
 Python API 테스트는 실제 FastAPI/인증 의존성/PNG 렌더링을 호출하고 Supabase HTTP만 대체한다.
 PostgreSQL 테스트는 migration·RPC·RLS·전체 재고 대체·오류 rollback·센서 선택·페이지 경계를 실행한다.
 실제 hosted Supabase Auth/PostgREST와 프론트 세션 연결은 접속 정보·인증 UI 연계 후 확인해야 한다.
-#88의 source_status를 거부하던 기존 config 스키마도 메타데이터를 보존하도록 최소 호환 수정했다.
 
 ## 합의 필요
 

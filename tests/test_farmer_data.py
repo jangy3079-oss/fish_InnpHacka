@@ -171,6 +171,18 @@ class FarmerDataTests(unittest.TestCase):
         with patch.object(EchogramRenderer, "render", side_effect=AssertionError("Asset must not be read")):
             self.assertEqual(self.get("/cages/3/echogram").status_code, 404)
 
+    def test_actual_simulator_npz_format_is_compatible(self):
+        from dataclasses import replace
+        from simulator.scenario import load_scenario
+        from simulator.run import simulate
+        from simulator.echogram import save_npz, synthesize
+        scenario = replace(load_scenario("heatwave_typhoon"), duration_days=1/24, n_fish=30)
+        asset = synthesize(simulate(scenario), bin_m=0.5)
+        save_npz(asset, self.root / "3/echogram.npz")
+        response = self.get("/cages/3/echogram")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.content.startswith(b"\x89PNG\r\n\x1a\n"))
+
 
 if __name__ == "__main__":
     unittest.main()
