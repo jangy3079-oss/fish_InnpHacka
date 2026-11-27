@@ -67,6 +67,7 @@ python -m vision --help
 
 공개 영상·CFD 가중치 다운로드, 실행 명령, 품질 게이트와 수심·활동량 보정,
 시험 결과는 [카메라 파이프라인 안내](docs/vision-pipeline.md)를 확인하세요.
+AI Hub 조피볼락 20장의 탐지 비교 방법·결과와 시연 판단은 [VC-07 시험 기록](docs/vc07-rockfish.md)에 있습니다.
 
 ## 디렉터리 구조
 

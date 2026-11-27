@@ -4,12 +4,13 @@ import importlib.util
 import json
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 
-from vision.evaluation import box_iou, checked_boxes, compare_boxes, match_iou, prepare_dataset, summarize
+from vision.evaluation import box_iou, checked_boxes, compare_boxes, extract_candidates, file_hash, match_iou, prepare_dataset, summarize
 
 HAS_CV = importlib.util.find_spec("cv2") is not None
 if HAS_CV:
@@ -87,6 +88,38 @@ class EvaluationDatasetTests(unittest.TestCase):
         self.assertEqual(result["images"][0]["boxes_xyxy"], [[2., 2., 8., 8.]])
         self.assertEqual(result["images"][0]["publisher_iscrowd"], [1])
         self.assertEqual(len(result["images"][0]["image_sha256"]), 64)
+
+    def test_archive_pool_balances_lights_and_preserves_original_labels(self):
+        archive = self.root / "source.zip"
+        images, annotations = [], []
+        with zipfile.ZipFile(archive, "w") as zipped:
+            for index, light in enumerate(("L01", "L01", "L03", "L03")):
+                name = f"fish{index}.png"
+                frame = np.full((20, 20, 3), index * 30, dtype=np.uint8)
+                _, encoded = cv2.imencode(".png", frame)
+                zipped.writestr(name, encoded.tobytes())
+                images.append({**self.data["images"][0], "id": str(index), "file_name": f"kr/{name}",
+                               "light": light, "date_captured": "2021-01-15"})
+                annotations.append({**self.data["annotations"][0], "id": index, "image_id": str(index)})
+            zipped.writestr("unrelated.txt", "must not be extracted")
+        self.data.update(images=images, annotations=annotations)
+        self.labels.write_text(json.dumps(self.data))
+        original_hash = file_hash(self.labels)
+        out = self.root / "pool"
+        provenance = extract_candidates(archive, self.labels, ["조피볼락"], 2, out)
+        self.assertEqual(provenance["candidate_light_counts"], {"L01": 1, "L03": 1})
+        subset = json.loads((out / "labels.json").read_text())
+        self.assertEqual([image["id"] for image in subset["images"]], ["0", "2"])
+        self.assertEqual([a["image_id"] for a in subset["annotations"]], ["0", "2"])
+        self.assertEqual(len(list(out.rglob("*.png"))), 2)
+        self.assertFalse((out / "unrelated.txt").exists())
+        self.assertEqual(file_hash(self.labels), original_hash)
+        manifest = prepare_dataset(out / "labels.json", out, ["조피볼락"], 2, "https://example.org", self.config)
+        self.assertEqual(manifest["source_provenance"][0]["source_labels_sha256"], original_hash)
+
+    def test_invalid_archive_candidate_count_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "candidate count"):
+            extract_candidates(self.root / "missing.zip", self.labels, ["조피볼락"], 0, self.root / "pool")
 
     def test_same_pixels_do_not_count_as_two_test_images(self):
         (self.images / "copy.png").write_bytes((self.images / "fish.png").read_bytes())

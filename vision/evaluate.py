@@ -15,9 +15,11 @@ import numpy as np
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from common.config_loader import ConfigLoader
+
 from .backends import FishDetector
 from .config import ROOT, load_config
-from .evaluation import checked_boxes, compare_boxes, file_hash, prepare_dataset, summarize
+from .evaluation import checked_boxes, compare_boxes, extract_candidates, file_hash, prepare_dataset, summarize
 from .quality import assess, enhance
 
 
@@ -56,6 +58,7 @@ def preview(frame, truth, predictions, scores, result, path):
 
 def run_evaluation(manifest: Path, images_root: Path, weights: Path, out: Path,
                    camera_config, eval_config: EvalConfig, device="cpu", detector_factory=None):
+    config_revision = ConfigLoader().snapshot().revision
     dataset = json.loads(manifest.read_text(encoding="utf-8"))
     if dataset.get("schema_version") != 1 or not dataset.get("images"):
         raise ValueError("expected a nonempty version 1 evaluation manifest")
@@ -115,7 +118,10 @@ def run_evaluation(manifest: Path, images_root: Path, weights: Path, out: Path,
                 rows.append(row)
                 preview(frame, truth, predictions, confidence, comparison, out / preview_name)
     report = {"status": "complete", "manifest_sha256": file_hash(manifest),
+              "config_revision": config_revision,
+              "counting_note": "false_positive means unmatched against published labels; non-exhaustive labels require visual review before interpreting real false alarms",
               "weights_sha256": file_hash(weights), "source_url": dataset["source_url"],
+              "source_provenance": dataset.get("source_provenance", []),
               "categories": dataset["categories"], "device": device,
               "seconds": round(time.perf_counter() - started, 3),
               "camera_config": camera_config.model_dump(mode="json"),
@@ -136,6 +142,12 @@ def main():
     parser.add_argument("--camera-config", type=Path, default=ROOT / "config/vision.yaml")
     parser.add_argument("--eval-config", type=Path, default=ROOT / "config/vision_eval.yaml")
     subcommands = parser.add_subparsers(dest="command", required=True)
+    extract = subcommands.add_parser("extract", help="extract a light-balanced candidate pool from a large source ZIP")
+    extract.add_argument("--archive", type=Path, required=True)
+    extract.add_argument("--labels", type=Path, required=True)
+    extract.add_argument("--category", action="append", required=True)
+    extract.add_argument("--candidates", type=int, required=True)
+    extract.add_argument("--out", type=Path, required=True)
     prepare = subcommands.add_parser("prepare", help="read AI Hub COCO-style labels and select unique frames")
     prepare.add_argument("--labels", type=Path, required=True)
     prepare.add_argument("--images-root", type=Path, required=True)
@@ -152,7 +164,10 @@ def main():
     try:
         camera_config = load_config(args.camera_config)
         eval_config = EvalConfig.model_validate(yaml.safe_load(args.eval_config.read_text(encoding="utf-8")))
-        if args.command == "prepare":
+        if args.command == "extract":
+            provenance = extract_candidates(args.archive, args.labels, args.category, args.candidates, args.out)
+            print(json.dumps(provenance, ensure_ascii=False))
+        elif args.command == "prepare":
             dataset = prepare_dataset(args.labels, args.images_root, args.category,
                                       eval_config.sample_count, args.source_url, camera_config)
             args.out.parent.mkdir(parents=True, exist_ok=True)

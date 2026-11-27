@@ -1,0 +1,1248 @@
+{
+  "date": "2026-11-27",
+  "issue": 19,
+  "purpose": "VC-07 reporting only; no pass/fail threshold",
+  "source_url": "https://www.aihub.or.kr/aihubdata/data/view.do?dataSetSn=155",
+  "categories": [
+    "KoreaRockfish"
+  ],
+  "source_provenance": [
+    {
+      "source_labels": "[라벨]kr_part2.json",
+      "source_labels_sha256": "a0e41369fecd56c398a6d968ea5f39a110a53999a1ae6fcef31a1dad5a2e5081",
+      "source_archive": "[원천]kr_part2.zip",
+      "source_archive_bytes": 24736607990,
+      "eligible_images": 35692,
+      "candidate_images": 120,
+      "selection": "balanced light quotas, evenly spaced date/filename ranks within each light",
+      "source_light_counts": {
+        "L01": 6255,
+        "L03": 29437
+      },
+      "candidate_light_counts": {
+        "L01": 60,
+        "L03": 60
+      }
+    }
+  ],
+  "selection": "evenly spaced ranks of original quality score, no detection-based selection",
+  "manifest_sha256": "86d0829a0f0a530c39b78208241f3ce6ae3a31c8fa3719cf1b4f5fd523a15845",
+  "weights_sha256": "e3eac301b778e251c3826eae247cc783e1f2dab3fd71a18de92bf3e8999c6f10",
+  "config_revision": "a4b3e1b08f7193d906443ea9ae1f84378079e8ac65507135ba6be31a1119afc9",
+  "camera_config": {
+    "contrast_reference": 64.0,
+    "sharpness_reference": 200.0,
+    "brightness_target": 127.5,
+    "quality_weights": [
+      0.4,
+      0.4,
+      0.2
+    ],
+    "clahe_clip_limit": 2.0,
+    "clahe_grid_size": 8,
+    "detection_threshold": 0.3,
+    "track_activation_threshold": 0.3,
+    "high_conf_det_threshold": 0.3,
+    "minimum_consecutive_frames": 2,
+    "lost_track_buffer": 30,
+    "still_speed_px_s": 5.0,
+    "activity_reference_px_s": null,
+    "meters_per_pixel": null,
+    "depth_top_m": null,
+    "depth_bottom_m": null,
+    "net_depth_m": null,
+    "gate_low": 0.3,
+    "clahe_min": 0.3,
+    "clahe_max": 0.6,
+    "camera_only_min": 0.6
+  },
+  "evaluation_config": {
+    "confidence_thresholds": [
+      0.3,
+      0.1
+    ],
+    "iou_threshold": 0.5,
+    "sample_count": 20
+  },
+  "runtime": {
+    "python": "3.13.7",
+    "opencv-python": "5.1.0.95",
+    "rfdetr": "1.12.1",
+    "torch": "2.15.0",
+    "numpy": "2.5.5",
+    "scipy": "1.18.1"
+  },
+  "device": "cpu",
+  "seconds": 7.184,
+  "annotations_exhaustive": false,
+  "counting_note": "FP below means unmatched predictions against published labels. It includes visible unlabelled fish and duplicate detections; real false-positive total and real precision are not established.",
+  "totals": [
+    {
+      "mode": "pipeline",
+      "confidence_threshold": 0.1,
+      "images": 20,
+      "true_positive": 33,
+      "unmatched_predictions": 242,
+      "false_negative": 26,
+      "quality_skipped_images": 8,
+      "label_precision": 0.12,
+      "label_recall": 0.559322033898305
+    },
+    {
+      "mode": "pipeline",
+      "confidence_threshold": 0.3,
+      "images": 20,
+      "true_positive": 28,
+      "unmatched_predictions": 53,
+      "false_negative": 31,
+      "quality_skipped_images": 8,
+      "label_precision": 0.345679012345679,
+      "label_recall": 0.4745762711864407
+    },
+    {
+      "mode": "raw",
+      "confidence_threshold": 0.1,
+      "images": 20,
+      "true_positive": 58,
+      "unmatched_predictions": 330,
+      "false_negative": 1,
+      "quality_skipped_images": 0,
+      "label_precision": 0.14948453608247422,
+      "label_recall": 0.9830508474576272
+    },
+    {
+      "mode": "raw",
+      "confidence_threshold": 0.3,
+      "images": 20,
+      "true_positive": 56,
+      "unmatched_predictions": 89,
+      "false_negative": 3,
+      "quality_skipped_images": 0,
+      "label_precision": 0.38620689655172413,
+      "label_recall": 0.9491525423728814
+    }
+  ],
+  "decision": "Keep production confidence 0.3 and simulated camera behavior for the hackathon; calibrate quality and audit complete labels/tracking before replacing behavior data.",
+  "images": [
+    {
+      "image": "kr/swim_kr_2021-02-01-11-55_00-30-54_2064.jpg",
+      "source_image_id": "73158",
+      "image_sha256": "dd428bf5719772918ef446a9626b989275c39c4440db9088e131e39187706850",
+      "pixel_sha256": "380bcedda430899106a3cb93ba8e78685d86e001cdf3096005a3a88d1f02f6d4",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 0,
+      "truth_count": 3,
+      "quality": 0.18380518723889439,
+      "visual_review": "Left-edge cropped fish are unlabelled; lower confidence adds overlapping head/body detections.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 5,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 2
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 11,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 8
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 3,
+          "unmatched_predictions": 0
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 3,
+          "unmatched_predictions": 0
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-15-10-25_00-42-58_15299.jpg",
+      "source_image_id": "46427",
+      "image_sha256": "eeece64845e3b3d849952934e8f6262005555770c9e742860e5d1ec0f985782f",
+      "pixel_sha256": "0e8345fc9972dd14df11fae01f378d5673206fb7e1ece158d83f145518ad1b6d",
+      "light": "L03",
+      "date_captured": "2021-01-15",
+      "width": 2704,
+      "height": 1520,
+      "index": 1,
+      "truth_count": 2,
+      "quality": 0.24738160827236083,
+      "visual_review": "Foreground partial fish outside published GT; low confidence adds body/fin duplicates.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 3,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 1
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 20,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 18
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 2,
+          "unmatched_predictions": 0
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 2,
+          "unmatched_predictions": 0
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-15-10-25_00-42-58_24413.jpg",
+      "source_image_id": "130041",
+      "image_sha256": "74d6dfae31888a7595159d45eec6cffa67a54db64a69f0a04e5e491190f143b3",
+      "pixel_sha256": "692f2fcdb1fb2d605d5f33320c273a3181a3c40cf47d53812afb51a4d85c83b1",
+      "light": "L03",
+      "date_captured": "2021-01-15",
+      "width": 2704,
+      "height": 1520,
+      "index": 2,
+      "truth_count": 6,
+      "quality": 0.25347080364981317,
+      "visual_review": "Cropped lower-edge fish outside GT; lower confidence duplicates overlapping fish.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 7,
+          "true_positive": 6,
+          "false_negative": 0,
+          "unmatched_predictions": 1
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 20,
+          "true_positive": 6,
+          "false_negative": 0,
+          "unmatched_predictions": 14
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 6,
+          "unmatched_predictions": 0
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 6,
+          "unmatched_predictions": 0
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_41980.jpg",
+      "source_image_id": "94023",
+      "image_sha256": "8355db4e94c52e213d8971f04ff1a358a4f45acd814411ef3e21d6a6dff66192",
+      "pixel_sha256": "9b6feeb8f17e4cf1238407ff15e601c35df9f570597b161a76e59821f441ae24",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 3,
+      "truth_count": 4,
+      "quality": 0.2592544900596568,
+      "visual_review": "Bottom-edge partial fish outside GT; some overlapping low-confidence detections.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 5,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 1
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 12,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 8
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 4,
+          "unmatched_predictions": 0
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 4,
+          "unmatched_predictions": 0
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-15-10-25_00-42-58_08328.jpg",
+      "source_image_id": "24559",
+      "image_sha256": "df13158271138d8bf05c2e18b81db22421d71ca1b2faae8a9e2e6aa9514a3366",
+      "pixel_sha256": "4e4aed098df8cb5ff97e51c43c08f356df0d498294469e8a47e3d2dff5d887e8",
+      "light": "L03",
+      "date_captured": "2021-01-15",
+      "width": 2704,
+      "height": 1520,
+      "index": 4,
+      "truth_count": 1,
+      "quality": 0.26261610128119245,
+      "visual_review": "Foreground cropped fish outside the sole GT; many low-confidence duplicates.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 6,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 5
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 24,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 23
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 1,
+          "unmatched_predictions": 0
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 1,
+          "unmatched_predictions": 0
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_39572.jpg",
+      "source_image_id": "74567",
+      "image_sha256": "7515fd217aa487d7833323707e1a1d007c0d1cabfab1408a9ba5b9d82ad6aee7",
+      "pixel_sha256": "56bf0923d8a1c65793226abbfabb5152188709cc3a2cb478760ddb1f87e70480",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 5,
+      "truth_count": 3,
+      "quality": 0.2689818504498184,
+      "visual_review": "Raw 0.3 misses GT index 0; raw 0.1 recovers it. Additional visible fish lack GT.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 6,
+          "true_positive": 2,
+          "false_negative": 1,
+          "unmatched_predictions": 4
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 13,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 10
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 3,
+          "unmatched_predictions": 0
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 3,
+          "unmatched_predictions": 0
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_33909.jpg",
+      "source_image_id": "73288",
+      "image_sha256": "4e259eeb8a4fd86d44a82a3bc37ea2ec51ca2a2e891a736e0a72c105571f44db",
+      "pixel_sha256": "0c746b5e5efa7cb2c8e6e9eade4fae8c650dfa7dc7137897656ff5771cbd8a3c",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 6,
+      "truth_count": 3,
+      "quality": 0.27311454220342235,
+      "visual_review": "All three published GT matched; additional edge fish detections are not all real errors.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 6,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 3
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 11,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 8
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 3,
+          "unmatched_predictions": 0
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 3,
+          "unmatched_predictions": 0
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_31898.jpg",
+      "source_image_id": "73262",
+      "image_sha256": "7601cc4fe5b7ee1413b69a96a44bfcd723aecb12a3d41fd03baaca4c62b3e250",
+      "pixel_sha256": "525f6432ee1c2e9708afc30935d0ed9f8f554512c50c97acd20286fcf85937e6",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 7,
+      "truth_count": 3,
+      "quality": 0.28583952623535713,
+      "visual_review": "All three GT matched; lower confidence produces extra overlapping boxes.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 4,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 1
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 10,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 7
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 3,
+          "unmatched_predictions": 0
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": true,
+          "enhanced": false,
+          "prediction_count": 0,
+          "true_positive": 0,
+          "false_negative": 3,
+          "unmatched_predictions": 0
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-15-10-25_00-42-58_21973.jpg",
+      "source_image_id": "25047",
+      "image_sha256": "069aad90c36e34421b8383c93b706b5c5355971a09b164fcdb3059ae08ffbf72",
+      "pixel_sha256": "8ee7ab45c8ae1e936d129fc1ebc78eb9bc64752948d865c4d464a2f625ea44f8",
+      "light": "L03",
+      "date_captured": "2021-01-15",
+      "width": 2704,
+      "height": 1520,
+      "index": 8,
+      "truth_count": 1,
+      "quality": 0.3018490815291856,
+      "visual_review": "Only far fish is labelled; large foreground partial fish is unlabelled.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 2,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 1
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 4,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 3
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 2,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 1
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 4,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 3
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_16593.jpg",
+      "source_image_id": "94299",
+      "image_sha256": "046ccabf808988cd2de8bc19f4ac4248652591b071989e6a2148d63b053fd3c7",
+      "pixel_sha256": "6c09c89ce357245d0c07b7996dc3b267ca740adfca65cc4ee9509743a7d92c05",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 9,
+      "truth_count": 4,
+      "quality": 0.3103013632035425,
+      "visual_review": "Visible edge/occluded fish not covered by GT; low confidence adds many overlapping boxes.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 8,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 4
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 23,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 19
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 4,
+          "true_positive": 2,
+          "false_negative": 2,
+          "unmatched_predictions": 2
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 21,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 17
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-18-14-35_01-29-40_326.jpg",
+      "source_image_id": "38908",
+      "image_sha256": "959ae30be1c0fffcd1632c7157c1b80d39734b888dc966da5a03389318cd0531",
+      "pixel_sha256": "91de77b772290d1b2c2f3be639d500bb8825c6bb1ac1d8660447a9f950453353",
+      "light": "L03",
+      "date_captured": "2021-01-18",
+      "width": 2704,
+      "height": 1520,
+      "index": 10,
+      "truth_count": 2,
+      "quality": 0.3217086244259135,
+      "visual_review": "Two GT matched; multiple cropped foreground fish have no published GT.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 8,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 6
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 32,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 30
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 10,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 8
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 33,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 31
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_18047.jpg",
+      "source_image_id": "130588",
+      "image_sha256": "31da71338487fb4dde52ada4f7f35c266713681df79f38cb237a28a5d8899cc4",
+      "pixel_sha256": "5ab45b94ed244ec4e13533ecd05c0cc6ecd3d2bfba4eff4ebfc3ebe495399ed1",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 11,
+      "truth_count": 6,
+      "quality": 0.3336625233474737,
+      "visual_review": "Six GT matched; remaining visible partial fish and overlapping boxes require separate interpretation.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 14,
+          "true_positive": 6,
+          "false_negative": 0,
+          "unmatched_predictions": 8
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 30,
+          "true_positive": 6,
+          "false_negative": 0,
+          "unmatched_predictions": 24
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 7,
+          "true_positive": 5,
+          "false_negative": 1,
+          "unmatched_predictions": 2
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 29,
+          "true_positive": 6,
+          "false_negative": 0,
+          "unmatched_predictions": 23
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-19-11-40_00-30-10_325.jpg",
+      "source_image_id": "106294",
+      "image_sha256": "7eb482f9eca1e79837b8d98dd8510dd232e6dfa115baece1d6dedf4e374df15a",
+      "pixel_sha256": "e9affe92c8bbc82f3caea67f2625219910811702ee8521c52bced9a59739c570",
+      "light": "L03",
+      "date_captured": "2021-01-19",
+      "width": 2704,
+      "height": 1520,
+      "index": 12,
+      "truth_count": 5,
+      "quality": 0.352250659503145,
+      "visual_review": "Five GT matched; right-edge partial fish lies outside published GT.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 7,
+          "true_positive": 5,
+          "false_negative": 0,
+          "unmatched_predictions": 2
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 7,
+          "true_positive": 5,
+          "false_negative": 0,
+          "unmatched_predictions": 2
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 7,
+          "true_positive": 5,
+          "false_negative": 0,
+          "unmatched_predictions": 2
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 12,
+          "true_positive": 5,
+          "false_negative": 0,
+          "unmatched_predictions": 7
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-15-09-15_00-52-50_31421.jpg",
+      "source_image_id": "28598",
+      "image_sha256": "7d5725308b8dc376c784c0321ee2d5cf7aaf8b88766d74dc5edf36d6a13f4edf",
+      "pixel_sha256": "93cb2eb4b6290d80ba8b47b8d6973fedadfb678b004a6ae8fd761074fcad3106",
+      "light": "L03",
+      "date_captured": "2021-01-15",
+      "width": 2704,
+      "height": 1520,
+      "index": 13,
+      "truth_count": 1,
+      "quality": 0.36027615145060443,
+      "visual_review": "One GT matched; several larger foreground fish are not labelled.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 10,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 9
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 41,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 40
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 7,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 6
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 51,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 50
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_37993.jpg",
+      "source_image_id": "29406",
+      "image_sha256": "dda6c3915809039c805f4fd38c9043b8251e3933a57d43740ac1b14d315d7386",
+      "pixel_sha256": "ca18f86176806559fb679d7f4fa1e3a94067a6f4e1d59fc777b077172e8b0764",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 14,
+      "truth_count": 1,
+      "quality": 0.3719110469687185,
+      "visual_review": "One GT matched; most foreground and edge fish are outside published GT.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 7,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 6
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 16,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 15
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 6,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 5
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 12,
+          "true_positive": 1,
+          "false_negative": 0,
+          "unmatched_predictions": 11
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_25524.jpg",
+      "source_image_id": "52266",
+      "image_sha256": "e289f432963c270f3ae4a284ada48c511d9036aa503c16f633c60894a56c5f03",
+      "pixel_sha256": "067b508d353a5bc5821ef5997359dfa88a83dacc6b7ea1e731a76de5f8e1e011",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 15,
+      "truth_count": 2,
+      "quality": 0.3897505588379322,
+      "visual_review": "GT index 1 remains unmatched at both thresholds; fish is overlapped/occluded.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 11,
+          "true_positive": 1,
+          "false_negative": 1,
+          "unmatched_predictions": 10
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 27,
+          "true_positive": 1,
+          "false_negative": 1,
+          "unmatched_predictions": 26
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 5,
+          "true_positive": 1,
+          "false_negative": 1,
+          "unmatched_predictions": 4
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 20,
+          "true_positive": 1,
+          "false_negative": 1,
+          "unmatched_predictions": 19
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_21535.jpg",
+      "source_image_id": "73103",
+      "image_sha256": "20cde89c269c3e447c9fb51b2c0fa914958c91aab1a95f832f4ffc4725b05c32",
+      "pixel_sha256": "68c97c1c2f690ca9e3b4b6abd99cd9b85e66d6cf491bc485f213069cf24c6eee",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 16,
+      "truth_count": 3,
+      "quality": 0.4171639347794297,
+      "visual_review": "Three GT matched; several extra detections are visible unlabelled fish.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 7,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 4
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 15,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 12
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 6,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 3
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 17,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 14
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-26-09-00_04-00-11_0553.jpg",
+      "source_image_id": "84465",
+      "image_sha256": "e14967c506922b65664e28467d796ae111c8b43f17777e62c0f8d90154ac3a89",
+      "pixel_sha256": "c6ea181252901ead21e536d5d4ef49787028292336ad455d3049596ed5883de3",
+      "light": "L03",
+      "date_captured": "2021-01-26",
+      "width": 2704,
+      "height": 1520,
+      "index": 17,
+      "truth_count": 3,
+      "quality": 0.4477151877795212,
+      "visual_review": "Raw 0.3 misses GT index 2; raw 0.1 recovers it and adds overlapping detections.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 7,
+          "true_positive": 2,
+          "false_negative": 1,
+          "unmatched_predictions": 5
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 17,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 14
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 6,
+          "true_positive": 1,
+          "false_negative": 2,
+          "unmatched_predictions": 5
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 18,
+          "true_positive": 3,
+          "false_negative": 0,
+          "unmatched_predictions": 15
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-02-01-09-00_02-24-04_24419.jpg",
+      "source_image_id": "95176",
+      "image_sha256": "8a0e1def55ff7fc3aee972b9e12b72e1979aaaee2628919859fdea8d2e4c42fc",
+      "pixel_sha256": "f5a5c5d12a492107510a49d13c78cbf0b13b11b2700e26e768d3821216d38b9c",
+      "light": "L01",
+      "date_captured": "2021-02-01",
+      "width": 2704,
+      "height": 1520,
+      "index": 18,
+      "truth_count": 4,
+      "quality": 0.4703168648536594,
+      "visual_review": "Four GT matched; cropped and partially occluded fish outside published GT.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 10,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 6
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 18,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 14
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 9,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 5
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 14,
+          "true_positive": 4,
+          "false_negative": 0,
+          "unmatched_predictions": 10
+        }
+      ]
+    },
+    {
+      "image": "kr/swim_kr_2021-01-26-09-00_04-00-11_1384.jpg",
+      "source_image_id": "36707",
+      "image_sha256": "b6b66380ee1cdc7b0c352d3290e1a287516f4ab8983abeb077b8da041970417c",
+      "pixel_sha256": "860fd00aee81cd09c05633e4aff1d0025630deb666d4a2b79e40fb3a548b5bab",
+      "light": "L03",
+      "date_captured": "2021-01-26",
+      "width": 2704,
+      "height": 1520,
+      "index": 19,
+      "truth_count": 2,
+      "quality": 0.5356209926744271,
+      "visual_review": "Two GT matched. Raw 0.3 prediction index 11 is a confirmed background/line false detection; many other extras are real partial fish.",
+      "counts": [
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 12,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 10
+        },
+        {
+          "mode": "raw",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": false,
+          "prediction_count": 37,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 35
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.3,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 12,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 10
+        },
+        {
+          "mode": "pipeline",
+          "confidence_threshold": 0.1,
+          "quality_skipped": false,
+          "enhanced": true,
+          "prediction_count": 44,
+          "true_positive": 2,
+          "false_negative": 0,
+          "unmatched_predictions": 42
+        }
+      ]
+    }
+  ]
+}

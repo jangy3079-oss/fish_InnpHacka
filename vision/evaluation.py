@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -100,6 +101,69 @@ def resolve_image(root: Path, filename: str, index: dict[str, list[Path]]) -> Pa
     return found[0]
 
 
+def extract_candidates(archive: Path, labels: Path, categories: list[str], count: int, out: Path) -> dict:
+    """Extract a balanced light-condition pool without unpacking the whole dataset."""
+    if not 1 <= count <= 1000:
+        raise ValueError("candidate count must be between 1 and 1000")
+    data = json.loads(labels.read_text(encoding="utf-8-sig"))
+    target_ids = {str(c["id"]) for c in data["categories"] if c["name"] in categories}
+    if not target_ids:
+        raise ValueError("requested categories not found in source labels")
+    annotations = defaultdict(list)
+    for annotation in data["annotations"]:
+        annotations[str(annotation["image_id"])].append(annotation)
+    groups = defaultdict(list)
+    for image in data["images"]:
+        observed = annotations[str(image["id"])]
+        if observed and all(str(a["category_id"]) in target_ids for a in observed):
+            groups[str(image.get("light", "unknown"))].append(image)
+    for group in groups.values():
+        group.sort(key=lambda image: (str(image.get("date_captured", "")), image["file_name"]))
+    available = sum(map(len, groups.values()))
+    if available < count:
+        raise ValueError(f"need {count} candidates, found {available}")
+    quotas = dict.fromkeys(sorted(groups), 0)
+    remaining = count
+    while remaining:
+        for key in quotas:
+            if quotas[key] < len(groups[key]) and remaining:
+                quotas[key] += 1
+                remaining -= 1
+    selected = []
+    for key, size in quotas.items():
+        selected.extend(groups[key][int(i)] for i in np.linspace(0, len(groups[key]) - 1, size, dtype=int))
+    if len({str(image["id"]) for image in selected}) != len(selected):
+        raise ValueError("duplicate source image IDs")
+    out.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive) as zipped:
+        members = defaultdict(list)
+        for member in zipped.infolist():
+            if not member.is_dir():
+                members[Path(member.filename).name].append(member)
+        for image in selected:
+            relative = Path(image["file_name"].replace("\\", "/"))
+            if relative.is_absolute() or ".." in relative.parts:
+                raise ValueError("source image filenames must stay within the extraction directory")
+            found = members.get(relative.name, [])
+            if len(found) != 1:
+                raise ValueError(f"archive image missing or ambiguous: {relative}")
+            destination = out / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(zipped.read(found[0]))  # also verifies the selected entry's CRC
+    ids = {str(image["id"]) for image in selected}
+    provenance = {"source_labels": labels.name, "source_labels_sha256": file_hash(labels),
+                  "source_archive": archive.name, "source_archive_bytes": archive.stat().st_size,
+                  "eligible_images": available, "candidate_images": len(selected),
+                  "selection": "balanced light quotas, evenly spaced date/filename ranks within each light",
+                  "source_light_counts": {key: len(group) for key, group in sorted(groups.items())},
+                  "candidate_light_counts": quotas}
+    subset = {"categories": data["categories"], "images": selected,
+              "annotations": [a for a in data["annotations"] if str(a["image_id"]) in ids],
+              "source_provenance": provenance}
+    (out / "labels.json").write_text(json.dumps(subset, ensure_ascii=False, indent=2), encoding="utf-8")
+    return provenance
+
+
 def prepare_dataset(labels: Path, images_root: Path, categories: list[str], count: int,
                     source_url: str, camera_config) -> dict:
     """Read AI Hub's published COCO-style xywh schema; select quality quantiles."""
@@ -118,12 +182,15 @@ def prepare_dataset(labels: Path, images_root: Path, categories: list[str], coun
         if path.is_file() and path.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"}:
             image_index[path.name].append(path)
     candidates, seen_pixels, seen_images = [], set(), set()
+    source_provenance = []
     skipped = Counter()
     found_names = set()
     for label_path in paths:
         data = json.loads(label_path.read_text(encoding="utf-8-sig"))
         if not isinstance(data, dict) or not all(key in data for key in ("images", "annotations", "categories")):
             raise ValueError(f"expected COCO-style AI Hub annotation: {label_path.name}")
+        if data.get("source_provenance") and data["source_provenance"] not in source_provenance:
+            source_provenance.append(data["source_provenance"])
         names = {str(item["id"]): item["name"] for item in data["categories"]}
         found_names.update(names.values())
         target_ids = {key for key, name in names.items() if name in categories}
@@ -172,6 +239,7 @@ def prepare_dataset(labels: Path, images_root: Path, categories: list[str], coun
                 "annotation_file": (label_path.relative_to(labels).as_posix()
                                     if labels.is_dir() else label_path.name),
                 "annotation_sha256": annotation_hash, "source_image_id": image_id,
+                "light": meta.get("light"), "date_captured": meta.get("date_captured"),
                 "width": meta["width"], "height": meta["height"],
                 "boxes_xyxy": boxes.tolist(), "annotation_ids": [a["id"] for a in annotations],
                 "publisher_iscrowd": [a.get("iscrowd") for a in annotations],
@@ -183,6 +251,7 @@ def prepare_dataset(labels: Path, images_root: Path, categories: list[str], coun
     selected = [candidates[int(i)] for i in indices]
     return {"schema_version": 1, "source_url": source_url, "categories": categories,
             "camera_config": camera_config.model_dump(mode="json"),
+            "source_provenance": source_provenance,
             "selection": "evenly spaced ranks of original quality score, no detection-based selection",
             "available_unique_images": len(candidates), "excluded": dict(skipped),
             "bbox_source_format": "xywh", "iscrowd_policy": "each published annotation box is one object; review overlays",

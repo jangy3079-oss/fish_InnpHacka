@@ -13,13 +13,20 @@ CFD RF-DETR Nano를 같은 조피볼락 이미지 10~20장에서 conf=0.3/0.1로
 
 ```sh
 python -m pip install -r requirements-vision.txt
-python -m vision.evaluate prepare --labels /path/to/labels --images-root /path/to/images --category 조피볼락 --source-url 'https://www.aihub.or.kr/aihubdata/data/view.do?dataSetSn=155' --out data/out/vc07/manifest.json
-python -m vision.evaluate run --manifest data/out/vc07/manifest.json --images-root /path/to/images --weights models/cfd-rf-detr-nano-640.pth --out data/out/vc07/results
+python -m vision.evaluate extract --archive '/path/to/Training/[원천]kr_part2.zip' --labels '/path/to/Training/[라벨]kr_part2.json' --category KoreaRockfish --candidates 120 --out data/out/vc07/pool
+python -m vision.evaluate prepare --labels data/out/vc07/pool/labels.json --images-root data/out/vc07/pool --category KoreaRockfish --source-url 'https://www.aihub.or.kr/aihubdata/data/view.do?dataSetSn=155' --out data/out/vc07/manifest.json
+python -m vision.evaluate run --manifest data/out/vc07/manifest.json --images-root data/out/vc07/pool --weights models/cfd-rf-detr-nano-640.pth --out data/out/vc07/results
 ```
 
 `--category`는 다운로드한 JSON의 **실제 categories.name**과 정확히 같아야 한다.
 이름이 다르면 출처 설명을 확인한 뒤 지정한다. 일부 문자열이나 파일 이름만 보고
-조피볼락으로 분류하지 않는다. 비교할 여러 조피볼락 범주가 있으면 옵션을 반복한다.
+조피볼락으로 분류하지 않는다. 이번 원본의 실제 범주명은 `KoreaRockfish`(category_id=2)다.
+비교할 여러 조피볼락 범주가 있으면 옵션을 반복한다.
+
+큰 ZIP은 `extract`로 후보만 푼다. 라벨상 조피볼락 단일 범주 이미지 중 조명 코드별
+동일한 수를 배정하고, 각 조명 안에서 날짜·파일명 정렬 순위에 균등 간격으로 뽑는다.
+원본 JSON은 바꾸지 않으며 추출 라벨에 원본 라벨 해시·출처와 후보 선정 방법을 보존한다.
+선택한 ZIP 항목의 CRC를 확인한다. 전체 ZIP 해시는 계산하지 않는다.
 
 준비 단계는 실제 이미지 크기·JSON ID 연결·상자 유효성을 확인한다. 다른 어종이 함께
 라벨링된 이미지는 제외하며, 같은 픽셀의 파일을 여러 장으로 세지 않는다. 후보를 원본
@@ -66,3 +73,48 @@ conf=0.1이 누락을 줄여도 오탐이 늘 수 있으므로 양쪽 건수를 
 정적 탐지가 가능하다는 결과만으로 실제 가두리 행동 지표를 대체하지 않는다.
 
 영상·샘플·가중치는 Git에 넣지 않는다. 사용·재배포 조건 확인은 #48과 SBOM의 데이터 출처 항목을 따른다.
+
+## 실행 결과 — 2026-11-27
+
+사용자가 확보한 AI Hub Training `[원천]kr_part2.zip`(24,736,607,990 bytes),
+`[라벨]kr_part2.json`을 사용했다. 이미지 35,693장 중 조피볼락 라벨이 있는 35,692장에서
+L01/L03 각 60장, 총 120장 후보를 추출했다(라벨 없는 이미지 1장 제외).
+후보의 품질 순위를 나눠 **20장, 정답 상자 59개**를 고정했다.
+최종 표본은 L01 11장/L03 9장, q=0.1838~0.5356이다.
+
+| 경로 | conf | 대응 TP | 라벨 기준 FN | 라벨 미대응 탐지(FP*) | 정답 대응 재현율 | 품질 생략 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 원본 raw | 0.3 | 56 | 3 | 89 | 94.92% | 0장 |
+| 원본 raw | 0.1 | 58 | 1 | 330 | 98.31% | 0장 |
+| 품질 게이트+CLAHE | 0.3 | 28 | 31 | 53 | 47.46% | 8장 |
+| 품질 게이트+CLAHE | 0.1 | 33 | 26 | 242 | 55.93% | 8장 |
+
+**FP*는 실제 오탐 총수가 아니다.** 20장 오버레이를 확인한 결과, 화면 가장자리의 잘린
+물고기·가려진 물고기가 원본 라벨에 포함되지 않은 사례가 여럿 있었다.
+예: source_image_id=73158의 왼쪽 물고기, 24559의 전경 물고기, 36707의 주변 물고기.
+이들을 잡은 탐지도 자동 집계에서는 FP*가 된다. 따라서 위 수치로 실제 precision이나
+실제 오탐률을 확정하지 않는다. 36707의 raw/conf=0.3 prediction_index=11은 바닥의
+선/배경을 잡은 실제 오탐 사례(conf=0.3183)로 확인했다. 낮은 conf에서는 같은 물고기의
+머리·몸통·지느러미를 겹쳐 잡는 중복도 증가했다. 상자별 완전한 수작업 재라벨링은 하지 않았다.
+
+raw/conf=0.3에서 놓친 정답의 source_image_id는 74567, 52266, 84465다.
+conf=0.1은 74567·84465를 회복하지만 52266의 겹쳐 가려진 개체는 대응하지 못했다.
+작은 표본의 **게시 라벨 기준 대응**이며 전체 물고기의 실제 검출률은 아니다.
+
+### 시연 결정
+
+**운영 conf=0.3을 유지하고, 해커톤의 카메라 행동 지표는 기존 시뮬레이션을 유지한다.**
+conf=0.1은 정답 대응을 2개 늘리는 동안 미대응 탐지가 241개 늘었다. 중복 억제·라벨 범위
+검토 없이 일괄 적용할 근거가 부족하다. 현재 M1의 가정값은 20장 중 8장(정답 상자 25개)을
+생략했고 모든 이미지가 q<0.6이었다. 실제 영상으로 품질 점수를 보정하고, 완전한 검증 라벨과
+연속 추적·설치 보정까지 확보한 뒤 행동 지표를 전환한다. 탐지기 자체의 조피볼락 적용 가능성과
+실제 운영 준비 상태를 구분한다. 이 PR은 운영 설정이나 데모 데이터 경로를 바꾸지 않는다.
+
+기계 판독용 집계·선택 이미지 ID/해시·육안 검토 메모는
+[vc07-20261127.json](validation/vc07-20261127.json)에 있다.
+원본 이미지·정답 좌표·전체 예측·오버레이는 로컬 `data/out/vc07/`에만 둔다.
+
+- 원본 라벨 SHA-256: `a0e41369fecd56c398a6d968ea5f39a110a53999a1ae6fcef31a1dad5a2e5081`
+- 가중치 SHA-256: `e3eac301b778e251c3826eae247cc783e1f2dab3fd71a18de92bf3e8999c6f10`
+- 실행 환경: Python 3.13, macOS CPU. 20장×두 경로 추론·미리보기 생성 7.184초(모델 적재 포함).
+  성능 벤치마크나 현장 속도 보증이 아니다.
