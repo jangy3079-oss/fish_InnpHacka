@@ -32,27 +32,36 @@ export default function FarmerPage() {
     return () => clearTimeout(id);
   }, [status, rec]);
 
-  const { demo } = useDemo();
+  const { demo, setBusy } = useDemo();
 
   // 시나리오·시각이 바뀌면 다시 불러온다. 이전 화면은 새 값이 올 때까지 유지해 깜빡임을 줄인다.
   useEffect(() => {
     let alive = true;
+    setBusy(true); // 응답이 올 때까지 재생을 멈춘다
     // 슬라이더를 빠르게 움직일 때 중간 값마다 요청하지 않고 마지막 값만 보낸다(실제 서버만).
     const timer = setTimeout(() => {
       Promise.all([api.getStatus(CAGE_ID, demo), api.getRecommendation(CAGE_ID, demo)])
         .then(([s, r]) => {
           if (!alive) return;
+          setBusy(false);
           setStatus(s);
           setRec(r);
           setError(null);
         })
-        .catch((e) => alive && setError(e.message));
+        .catch((e) => {
+          if (!alive) return;
+          setBusy(false);
+          setError(e.message);
+        });
     }, api.debounceMs);
     return () => {
       alive = false;
       clearTimeout(timer);
     };
-  }, [demo, attempt]);
+  }, [demo, attempt, setBusy]);
+
+  // 화면을 떠나면 재생이 멈춘 채로 남지 않게 푼다.
+  useEffect(() => () => setBusy(false), [setBusy]);
 
   if (error && (!status || !rec)) {
     return (
