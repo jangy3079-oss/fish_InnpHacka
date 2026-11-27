@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FarmerTabs } from '../components/SiteChrome.jsx';
 import { api } from '../api/client.js';
 
 const CAGE_ID = 3;
@@ -58,6 +59,8 @@ export default function StockPage() {
   };
 
   return (
+    <div className="narrow">
+    <FarmerTabs />
     <form className="farmer stock" onSubmit={submit} noValidate>
       <h1>가두리 {CAGE_ID}번 재고 입력</h1>
       <p className="hint">손해를 계산할 때 쓰입니다. 대략적인 숫자여도 괜찮습니다.</p>
@@ -100,5 +103,6 @@ export default function StockPage() {
       {state === 'done' && <p className="done" role="status">✔ 저장했습니다.</p>}
       {state === 'error' && <p className="error" role="alert">저장하지 못했습니다. 다시 눌러 주세요.</p>}
     </form>
+    </div>
   );
 }
