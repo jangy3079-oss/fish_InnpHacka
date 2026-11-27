@@ -239,8 +239,8 @@ Nov 27, 2026 · @해리
 | 소나 장비 | [bluerobotics-ping (brping)](https://github.com/bluerobotics/ping-python) | Ping360·Ping 에코사운더 통신 | MIT | `pip install bluerobotics-ping` |
 | 소나 처리 | [echopype](https://pypi.org/project/echopype/) | 에코사운더 파일 변환, 보정, 잡음 제거, MVBS 계산 | Apache 2.0 | Simrad EK60·EK80, AZFP 지원 |
 | 영상 처리 | OpenCV | 품질 점수(대비·선명도), CLAHE 개선 | Apache 2.0 | 가장 가벼운 개선 방법 |
-| 영상 개선 | [FUnIE-GAN](https://github.com/xahidbuffon/funie-gan) | 수중 영상 색·대비 복원 | **확인 필요** | Jetson AGX Xavier 48 FPS 이상 (저자 발표) |
-| 물고기 탐지 | [Community Fish Detector](https://github.com/WildHackers/community-fish-detector) | "fish" 단일 클래스 탐지 (즉시 사용) | AGPL | 41개 공개 데이터셋, 양식장 영상 포함 |
+| 영상 개선 | [FUnIE-GAN](https://github.com/xahidbuffon/funie-gan) | 수중 영상 색·대비 복원 | MIT (저장소 LICENSE, 가중치·데이터셋은 별도 확인) | Jetson AGX Xavier 48 FPS 이상 (저자 발표) |
+| 물고기 탐지 | [Community Fish Detector](https://github.com/filippovarini/community-fish-detector) | "fish" 단일 클래스 탐지 (즉시 사용) | AGPL | 41개 공개 데이터셋, 양식장 영상 포함 |
 | 물고기 탐지 | [RF-DETR](https://roboflow.com/model-licenses/rf-detr) (Nano\~Large) | 조피볼락 미세조정용 탐지기 | Apache 2.0 | 상용화 대안. XL 등 일부 크기는 별도 라이선스 |
 | 물고기 탐지 | Ultralytics YOLO | 미세조정·추론 프레임워크 | AGPL | Community Fish Detector 실행에 필요 |
 | 추적 | [trackers (Roboflow)](https://trackers.roboflow.com/latest/learn/about/) | ByteTrack, OC-SORT, BoT-SORT | Apache 2.0 | 어떤 탐지기에도 붙음 |
@@ -376,5 +376,5 @@ Nov 27, 2026 · @해리
 - [PyOD (PyPI)](https://pypi.org/project/pyod/)
 - [Chronos-Bolt (Hugging Face)](https://huggingface.co/autogluon/chronos-bolt-base) — Apache 2.0
 - [FUnIE-GAN 프로젝트](https://irvlab.cs.umn.edu/projects/funie-gan)
-- [Community Fish Detector](https://github.com/WildHackers/community-fish-detector) — AGPL
+- [Community Fish Detector](https://github.com/filippovarini/community-fish-detector) — AGPL
 - OpenCV, scikit-learn, PyTorch, LightGBM, FastAPI, Supabase, React, MapLibre GL JS, LlamaIndex, supervision의 라이선스는 각 저장소에서 다시 확인해 SBOM에 기록한다 (NFR-MNT-03).

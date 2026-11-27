@@ -87,7 +87,7 @@ MetricRecord
 | M2 수중 영상 개선 | 탁한 프레임 보정 | OpenCV CLAHE (quality 0.3\~0.6 구간만 적용) | OpenCV, FUnIE-GAN \[확장, 라이선스 확인 후\] | 프레임 → 개선 프레임 | — |
 | M3 탐지·추적 | 개체 위치·ID | Community Fish Detector 그대로 ("fish" 단일 클래스) + trackers ByteTrack | Community Fish Detector, Ultralytics, trackers, supervision | 프레임 → 박스·ID → 속도·평균 수심·정지 비율·비비기 횟수 | RF-DETR(Apache 2.0)을 조피볼락 이미지로 미세조정 |
 | M4 소나 지표 추출 | 수직 분포·활동량 | 신호처리 (아래 식) | NumPy, SciPy, echopype \[실장비\] | 에코그램 → 수심 구간별 비율, 활동량 | 경량 CNN \[확장\] |
-| M5 스트레스 지수 | 평소 대비 이탈 | Isolation Forest, 가두리×밤낮 기준선 2개 | PyOD, scikit-learn | FusedFeatures 윈도우 → 0\~100 | LSTM 오토인코더(PyTorch), Chronos-Bolt 보조 점수 |
+| M5 스트레스 지수 | 평소 대비 이탈 | 특징 묶음별 Isolation Forest 4개의 최댓값, 가두리×밤낮 기준선 2개 (5.3절) | PyOD, scikit-learn | FusedFeatures 윈도우 → 0\~100 | LSTM 오토인코더(PyTorch), Chronos-Bolt 보조 점수 |
 | M6 원인 추정 | 의심 원인·확률 | 규칙 YAML 8개 (6.3절) | 자체 개발 | 패턴+환경 → 원인별 점수 | LightGBM 분류기 |
 | M7 폐사 위험 예측 | 며칠 안 폐사 확률 | 구현 안 함 \[확장\] | LightGBM | 행동+환경+폐사 기록 → 확률 | — |
 | — 알림 문장 | 어민용 문장 | LLM API + 관리요령 검색 | LlamaIndex | Recommendation → 3문장 이내 | — |
@@ -112,10 +112,26 @@ p_k(t) = \frac{\sum_{z \in k} E(t,z)}{\sum_{z} E(t,z)} \qquad A(t) = \frac{1}{|Z
 
 ### 5.3 M5 학습 방법
 
-1. 특징: 1시간 윈도우마다 p\_저층, p\_중층, p\_표층, A 평균, A 표준편차, 응집도, (카메라 있으면) 정지 비율·급이 반응.
+1. 특징: 1시간 윈도우마다 p\_저층, p\_중층, p\_표층, A 평균, A 표준편차, 응집도, (카메라 있으면) 정지 비율·급이 반응·비비기.
 2. 기준선: 가두리마다 낮(06\~18시)과 밤을 따로 학습한다. 해커톤은 시뮬레이터의 "정상 14일"로 학습한다.
-3. 점수: Isolation Forest의 이상 점수를 학습 구간 분포의 백분위로 바꿔 0\~100으로 만든다.
-4. 콜드 스타트: 기준선 윈도우가 7일치(168개) 미만이면 `warming_up`으로 표시한다. 이 7일은 설계 가정값이다.
+3. 묶음별 모델: 특징을 묶어서 Isolation Forest를 **묶음마다 따로** 학습하고, 묶음 점수 중 **가장 큰 값**을 스트레스 지수로 쓴다.
+
+   | 묶음 | 특징 | 최대 점수 |
+   | --- | --- | --- |
+   | sonar | p\_저·중·표, 활동 평균·표준편차, 응집도 | 100 |
+   | camera | 정지 비율, 급이 반응, 비비기 | 100 |
+   | rubbing | 비비기 (1차원) | 79 (경고) |
+   | still | 정지 비율 (1차원) | 79 (경고) |
+
+   - **왜 묶었나:** 특징 9개를 모델 하나에 넣으면 비비기가 기준선의 4배인데도 지수가 37점(정상)이었다. Isolation Forest는 여러 특징 중 하나만 벗어난 점을 잘 격리하지 못한다 (그 축이 분할에 뽑힐 확률이 1/9).
+   - 비비기·정지 비율은 한 지표만 늘어도 의미 있는 행동 이벤트라 1차원 모델을 따로 둔다. 보조 지표(🔺)이므로 단독으로는 '위험'을 만들지 않는다 (최대 79점).
+   - 급이 반응은 camera 묶음에만 둔다. UC-04(23℃ 급이만 감소 → 경보 없이 사료 감량)를 지키기 위해서다.
+   - 카메라 특징이 없는 윈도우(밤, 탁함, 카메라 없음)는 sonar 점수만 쓴다.
+4. 점수: Isolation Forest의 이상 점수를 학습 구간 분포의 백분위로 바꿔 0\~100으로 만든다.
+   - 학습 분포 99백분위 이하: `0.4 × 백분위` → 0\~39 (정상)
+   - 99백분위 초과: `40 + 60 × ((s − s99)/(s_ext − s99))^γ` → 40\~100. `s_ext`는 학습 범위에서 아주 먼 점의 점수이고, γ는 곡선 모양을 정하는 상수다 (`stress/model.py`).
+   - 시뮬레이터 결과(중앙값): 고수온 피신 경고, 피난처 소실은 R2 발동으로 위험, 질병 의심 주의, 기생충 의심 낮 경고.
+5. 콜드 스타트: 기준선 윈도우가 7일치(168개) 미만이면 `warming_up`으로 표시한다. 이 7일은 설계 가정값이다.
 
 ### 5.4 몸 비비기 판정 (M3 후처리) \[확장\]
 
@@ -150,6 +166,10 @@ f = (1 - w)\, s + w\, c, \qquad w = \begin{cases} 0 & q < 0.3 \\ 0.5\,(q - 0.3)/
 | 80\~100 | 위험 | 1시간 연속 유지, 또는 '피난처 소실' 규칙 발동 시 즉시 |
 
 - 단계가 내려갈 때는 6시간 연속으로 조건이 풀려야 한다 (경보가 오르내리는 것 방지).
+- **근거 센서가 안 보일 때는 단계를 유지한다.** 단계를 올린 근거 묶음(예: `rubbing`, `camera`)이 안 보이는 주기(밤, 탁함)는 '정보 없음'으로 보고 6시간 해제 시간을 세지 않는다. 근거가 안 보이는 것과 증상이 사라진 것은 다르기 때문이다. 근거 묶음이 다시 보일 때까지 단계를 유지한다.
+  - 예: 기생충 의심이 비비기(카메라)로 '경고'가 됐는데, 밤에는 카메라가 없어 소나 점수만 나온다. 소나는 정상이라 6시간 뒤 단계가 풀렸다가 아침에 다시 걸리는 일을 막는다.
+  - 점수 자체가 없는 주기(`warming_up`, 센서 끊김)도 단계를 유지한다.
+  - 어민 화면에는 단계는 유지하되 근거 센서가 안 보이는 상태를 표시한다 (표시 문구는 프론트와 합의, 이슈 #61).
 - 같은 단계 알림은 6시간에 1회만 보낸다 (NFR-REL-04).
 
 ### 6.3 원인 추정 규칙 (cause)
@@ -273,8 +293,8 @@ REST API는 FastAPI로 12개를 둔다. 엣지는 `/ingest`로만 데이터를 �
 | `sonar` | [bluerobotics-ping](https://github.com/bluerobotics/ping-python) | `pip install bluerobotics-ping` | MIT | 쓰지 않음 (합성) | 사용 |
 | `sonar` | [echopype](https://pypi.org/project/echopype/) | `pip install echopype` | Apache 2.0 | 쓰지 않음 (합성) | 사용 |
 | `vision` | OpenCV | `pip install opencv-python` | Apache 2.0 | 사용 (M1, M2) | 사용 |
-| `vision` | [FUnIE-GAN](https://github.com/xahidbuffon/funie-gan) | 저장소 클론 | 확인 필요 | 쓰지 않음 | 라이선스 확인 후 |
-| `vision` | [Community Fish Detector](https://github.com/WildHackers/community-fish-detector) | Releases에서 .pt | AGPL | 사용 (M3) | RF-DETR로 교체 |
+| `vision` | [FUnIE-GAN](https://github.com/xahidbuffon/funie-gan) | 저장소 클론 | MIT (저장소 LICENSE 확인, 가중치·데이터셋은 별도 확인) | 쓰지 않음 | 가중치 조건 확인 후 |
+| `vision` | [Community Fish Detector](https://github.com/filippovarini/community-fish-detector) | Releases에서 가중치 | 저장소에 LICENSE 없음, YOLOv12x 가중치는 AGPL(추론), RF-DETR 가중치는 Apache(추론) | 사용 (M3) | RF-DETR 계열로 교체 |
 | `vision` | Ultralytics | `pip install ultralytics` | AGPL | 사용 | 제거 |
 | `vision` | [RF-DETR](https://roboflow.com/model-licenses/rf-detr) | `pip install rfdetr` | Apache 2.0 (Nano\~Large) | 선택 | 사용 (M3) |
 | `vision` | [trackers](https://trackers.roboflow.com/latest/learn/about/) | `pip install trackers` | Apache 2.0 | 사용 (ByteTrack) | 사용 |
@@ -290,7 +310,7 @@ REST API는 FastAPI로 12개를 둔다. 엣지는 `/ingest`로만 데이터를 �
 | `web` | React | `npm i react` | MIT | 사용 | 사용 |
 | `web` | MapLibre GL JS | `npm i maplibre-gl` | BSD | 사용 | 사용 |
 
-라이선스는 검색으로 확인한 항목(링크 있음)과 널리 알려진 항목이 섞여 있다. 최종 배포 전에 각 저장소의 LICENSE 파일을 다시 확인해 `SBOM.md`에 기록한다. supervision의 `sv.ByteTrack`은 폐기 예정이라 [trackers](https://supervision.roboflow.com/latest/trackers/)를 쓴다.
+라이선스는 2026-11-27에 각 저장소의 LICENSE로 다시 확인했고, 결과와 주의점은 [SBOM.md](../SBOM.md)에 있다. 이 표는 그 요약이다. 최종 배포 전에 각 저장소의 LICENSE 파일을 다시 확인해 `SBOM.md`에 기록한다. supervision의 `sv.ByteTrack`은 폐기 예정이라 [trackers](https://supervision.roboflow.com/latest/trackers/)를 쓴다.
 
 ### 9.2 배포
 
