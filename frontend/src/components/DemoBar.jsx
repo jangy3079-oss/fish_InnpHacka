@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
 import { useDemo } from '../demo/DemoContext.jsx';
-import { SCENARIOS, frameTime } from '../mocks/demo.js';
+import { DEMO_SCENES, SCENARIOS, frameTime } from '../mocks/demo.js';
 import { formatTime } from '../constants.js';
 
 // 시연용 패널: 시나리오 선택, 재생, 시간 슬라이더. 평소에는 접어 두어 사이트 화면을 가리지 않는다.
 export default function DemoBar() {
-  const { demo, maxT, playing, selectScenario, setT, togglePlay, toggleFile } = useDemo();
+  const { demo, maxT, playing, selectScenario, jumpTo, setT, togglePlay, toggleFile } = useDemo();
   const [open, setOpen] = useState(false);
   if (api.live() && !demo.file) return <div className="demo"><span>실제 관측 데이터</span> <button onClick={toggleFile}>파일 시연 보기</button></div>;
   return (
@@ -14,6 +14,11 @@ export default function DemoBar() {
       {api.live() && demo.file && <div className="notice">파일 시연 데이터입니다. <button onClick={toggleFile}>실제 관측 보기</button></div>}
       {open && (
         <div className="demo-panel" id="demo-panel">
+          <div className="demo-scenes" role="group" aria-label="시연 장면">
+            {DEMO_SCENES.filter((s) => SCENARIOS.some((x) => x.id === s.scenario)).map((s) => (
+              <button key={s.label} type="button" aria-pressed={demo.scenario === s.scenario && demo.t === s.t} onClick={() => jumpTo(s.scenario, s.t)}>{s.label}</button>
+            ))}
+          </div>
           <label>
             시나리오
             <select value={demo.scenario} onChange={(e) => selectScenario(e.target.value)}>

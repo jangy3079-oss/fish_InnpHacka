@@ -28,6 +28,18 @@ export function defaultTOf(id) {
   return first >= 0 ? first : sc.frames.length - 1;
 }
 
+// 4분 시연 대본(#41)의 장면. 슬라이더 위치는 현재 시연 데이터 기준이다.
+export const DEMO_SCENES = [
+  { label: '정상', scenario: 'heatwave_typhoon', t: 5 },
+  { label: '사료 권고', scenario: 'heatwave_typhoon', t: 12 },
+  { label: '고수온 피신', scenario: 'heatwave_typhoon', t: 20 },
+  { label: '위험·손익', scenario: 'heatwave_typhoon', t: 26 },
+  { label: '태풍', scenario: 'heatwave_typhoon', t: 35 },
+  { label: '질병 의심', scenario: 'disease_suspect', t: 34 },
+  { label: '기생충 의심', scenario: 'parasite_suspect', t: 39 },
+  { label: '탁도 상승', scenario: 'turbidity_event', t: 24 },
+];
+
 export const DEFAULT_DEMO = { scenario: DEFAULT_ID, t: defaultTOf(DEFAULT_ID) };
 
 function frameAt(demo) {
