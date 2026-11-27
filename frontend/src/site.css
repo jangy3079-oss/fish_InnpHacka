@@ -103,6 +103,9 @@ body {
 .demo-panel { width: min(320px, calc(100vw - 32px)); background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); font-size: 15px; display: flex; flex-direction: column; gap: 10px; }
 .demo-panel label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; }
 .demo-panel select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid #c5d3da; }
+.demo-scenes { display: flex; flex-wrap: wrap; gap: 6px; }
+.demo-scenes button { font: inherit; font-size: 14px; padding: 5px 9px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; color: var(--ink); cursor: pointer; }
+.demo-scenes button[aria-pressed=true] { background: var(--ink); color: #fff; border-color: var(--ink); }
 .demo-row { display: flex; align-items: center; gap: 10px; }
 .demo-row button { width: 38px; height: 34px; border: 0; border-radius: 8px; background: var(--sea); color: #fff; cursor: pointer; }
 .demo-row input { flex: 1; min-width: 0; }

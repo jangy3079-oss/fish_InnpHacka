@@ -44,6 +44,12 @@ export function DemoProvider({ children }) {
         setT(0);
         setPlaying(false);
       },
+      // 시연 대본의 장면으로 바로 간다(시나리오와 시각을 한 번에 바꾼다).
+      jumpTo: (s, v) => {
+        setScenario(s);
+        setT(v);
+        setPlaying(false);
+      },
       setT: (v) => {
         setT(v);
         setPlaying(false);
