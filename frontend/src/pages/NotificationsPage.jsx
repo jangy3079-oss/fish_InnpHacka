@@ -13,12 +13,12 @@ const clock = (iso) => new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digi
 // 알림 모의 화면. 시연용이라 실제 발송(문자·메신저 등)은 하지 않는다.
 export default function NotificationsPage() {
   const [data, setData] = useState(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState(null); // null | 'unavailable' | 'failed'
   const { demo } = useDemo();
 
   useEffect(() => {
     let alive = true;
-    api.getNotifications(CAGE_ID, demo).then((d) => alive && setData(d)).catch(() => alive && setError(true));
+    api.getNotifications(CAGE_ID, demo).then((d) => alive && setData(d)).catch((e) => alive && setError(e.status === 404 ? 'unavailable' : 'failed'));
     return () => {
       alive = false;
     };
@@ -34,7 +34,12 @@ export default function NotificationsPage() {
 
       <div className="notif-grid">
         <section aria-label="알림 목록">
-          {error && <p className="error big">알림을 불러오지 못했습니다.</p>}
+          {error === 'unavailable' && (
+            <div className="card">
+              <p className="empty">아직 알림 기능이 준비되지 않았습니다. 준비되면 단계가 바뀔 때마다 여기에 알림이 쌓입니다.</p>
+            </div>
+          )}
+          {error === 'failed' && <p className="error big">알림을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>}
           {!error && !data && <p className="big">불러오는 중…</p>}
           {data && data.items.length === 0 && (
             <div className="card">

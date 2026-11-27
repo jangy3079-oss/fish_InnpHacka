@@ -13,7 +13,12 @@ async function http(path, options) {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
-  if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
+  if (!res.ok) {
+    // 화면에서 상태 코드로 안내 문구를 가를 수 있게 담아 둔다.
+    const err = new Error(`API ${res.status}: ${path}`);
+    err.status = res.status;
+    throw err;
+  }
   return res.json();
 }
 
