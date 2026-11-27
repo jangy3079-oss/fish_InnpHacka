@@ -157,6 +157,12 @@ function SourceNotice({ status }) {
 }
 
 // 원인 확률은 후보끼리 나눈 상대값이라 맞을 확률로 읽히면 안 된다. 숫자 대신 순위와 상대 막대로 보여준다.
+// 서버가 원인을 비운 이유(cause_suppression). 모르는 값이면 아무것도 덧붙이지 않는다.
+const SUPPRESSION_TEXT = {
+  low_stress: '지금은 스트레스 지수가 낮게 나와 원인을 따지지 않았습니다. 일부 센서가 보이지 않는 시간에는 이전 단계가 유지될 수 있습니다.',
+  missing_score: '지수를 계산할 수 없어 원인을 판단하지 못했습니다.',
+};
+
 function CauseList({ causes, status }) {
   const shown = causes.filter((c) => c.display !== false);
   if (!shown.length) {
@@ -167,6 +173,7 @@ function CauseList({ causes, status }) {
       <section className="card flat">
         <h2>의심되는 원인</h2>
         <p>의심되는 원인을 아직 찾지 못했습니다. 단계는 지금 상태를 기준으로 계산한 것입니다.</p>
+        {SUPPRESSION_TEXT[status.cause_suppression] && <p className="hint">{SUPPRESSION_TEXT[status.cause_suppression]}</p>}
       </section>
     );
   }
