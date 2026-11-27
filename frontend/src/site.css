@@ -7,6 +7,8 @@
   --sea: #0b2230;
   --sea-text: #b9d0db;
   --teal: #0f7c78;
+  --accent: #0f6e6a;
+  --radius: 4px;
 }
 
 body {
@@ -278,3 +280,73 @@ table.areas tr.selected { background: #e6f2f1; }
   .area-map { height: 340px; }
   .map-legend { gap: 6px; padding: 6px 8px; font-size: 12px; flex-wrap: wrap; right: 10px; }
 }
+
+/* 디자인 정리(#157): 한 가지 강조색, 평평한 면, 4px 모서리, 700 이하 굵기 */
+h1, h2, h3, .wordmark, .page-head h1, .section h2, .rec-title, .level-name, .footer-title { font-weight: 700; }
+.hero h1 { font-weight: 700; letter-spacing: -0.01em; font-size: clamp(28px, 3.2vw, 40px); }
+.farmer h1 { font-weight: 600; }
+
+.card, .card.flat, .card.key, .demo-panel, .toast, .notice-error, .skeleton, .area-label, .map-legend, .chart-tip, .stock-sum { border-radius: var(--radius); }
+.card { box-shadow: none; border: 1px solid var(--line); padding: 18px 20px; }
+.card.key { border-top: 3px solid var(--ink); border-left: 1px solid var(--line); box-shadow: none; }
+.card.level { border: 0; }
+.demo-panel, .toast { box-shadow: 0 2px 8px rgba(11, 34, 48, 0.18); }
+.demo-fab, .demo-row button, .notice-error button, .stock input[inputmode], .demo-panel select, button.primary { border-radius: var(--radius); }
+.demo-fab { box-shadow: none; }
+.notice { border-radius: var(--radius); background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--accent); }
+
+/* 버튼 */
+.btn { border-radius: var(--radius); font-size: 16px; padding: 12px 20px; }
+button.primary { background: var(--ink); font-size: 20px; padding: 16px; }
+.btn-dark { background: var(--ink); }
+
+/* 첫 화면: 단색, 에코그램이 주인공 */
+.hero { background: var(--sea); }
+.hero-copy p { font-size: 18px; }
+
+/* 단계 소개: 채운 동그라미 대신 숫자 */
+.steps li { border-top: 1px solid var(--ink); padding-top: 14px; }
+.step-n { position: static; width: auto; height: auto; border-radius: 0; background: none; color: var(--accent); display: block; margin-bottom: 6px; font-size: 15px; font-variant-numeric: tabular-nums; }
+.steps h3 { font-size: 19px; }
+.section h2 { font-size: 26px; }
+.audiences article { border-top-width: 2px; }
+.scale { border-radius: 0; gap: 2px; }
+.scale-seg { border-radius: 0; }
+
+/* 단계 카드: 왼쪽 정렬, 지수가 주인공 */
+.level { text-align: left; padding: 18px 20px 16px; }
+.level h1 { font-size: 15px; opacity: 0.85; }
+.level-main { display: flex; align-items: baseline; gap: 14px; margin: 6px 0 8px; flex-wrap: wrap; }
+.level-score { margin: 0; display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+.level-score strong { font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -0.02em; }
+.level-score span { font-size: 18px; opacity: 0.8; }
+.level-name { font-size: 26px; margin: 0; }
+.level .score { font-size: 17px; }
+
+/* 칩·배지: 알약 대신 네모 */
+.badge { background: none; color: var(--accent); border: 1px solid var(--accent); border-radius: 2px; padding: 0 6px; font-size: 13px; }
+.summary li { border-radius: var(--radius); }
+.summary li { font-variant-numeric: tabular-nums; }
+
+/* 막대와 선: 가늘고 각지게 */
+.loss-bar, .loss-fill, .bar-track, .bar-fill, .demand-track, .demand-fill, .cause-bar, .cause-bar i { border-radius: 0; }
+.loss-bar { height: 6px; }
+.cause-bar { height: 6px; }
+.bar-track, .demand-track { background: #e4eaed; }
+.loss-row.recommended { background: none; margin: 0; padding: 12px 0; border-left: 3px solid var(--accent); padding-left: 10px; margin-left: -13px; }
+.loss-row.recommended .loss-fill { background: var(--accent); }
+.loss-fill { background: #9db0bb; }
+.bar-fill, .demand-fill, .cause-bar i { background: var(--accent); }
+.demand-fill.over { background: #b3261e; }
+.loss-value strong, .facts dd, .bar-n, .stock-sum, .stock-total { font-variant-numeric: tabular-nums; }
+.facts dd { font-weight: 600; }
+.card h2 { font-size: 18px; }
+.formula { border-radius: 2px; }
+.site-header nav a, .site-header nav a.active { border-radius: 0; }
+.area-map-wrap, .area-popup .maplibregl-popup-content, .echogram { border-radius: var(--radius); }
+.map-legend { border-radius: var(--radius); box-shadow: none; border: 1px solid var(--line); }
+.area-popup .maplibregl-popup-content { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+/* 첫 화면의 보조 이동은 버튼이 아니라 밑줄 링크 */
+.hero .btn-ghost { border: 0; padding: 12px 4px; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; }
+.hero .btn-ghost:hover { filter: none; text-decoration-thickness: 2px; }
+input, progress { accent-color: var(--accent); }

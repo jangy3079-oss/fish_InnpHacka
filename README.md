@@ -6,6 +6,49 @@
 
 설계 근거는 SRS(요구사항)·SDD(설계) 문서와 [이슈](../../issues)에 있습니다.
 
+## 빠른 시작: 시연 화면 (백엔드 없이)
+
+시연 화면은 저장소에 들어 있는 시나리오 데이터(`frontend/src/mocks/scenarios.json`, 파이프라인 실제 결과를 내보낸 파일)로 돌아갑니다. 네트워크·서버 없이 동작하므로 현장 시연 기본 경로입니다.
+Node.js 18 이상이 필요합니다.
+
+```sh
+cd frontend
+npm install
+npm run dev
+```
+
+브라우저에서 `http://localhost:5173`을 엽니다. 왼쪽 아래 "시연 모드 열기"에서 시나리오를 고르고 슬라이더(▶)로 시간을 움직입니다. 화면 구성과 실제 API에 붙이는 법은 [frontend/README.md](frontend/README.md)를 확인하세요.
+시연 중 네트워크가 끊길 때를 대비한 화면 녹화 백업 방법은 [docs/demo-backup.md](docs/demo-backup.md)에 있습니다.
+
+## 데이터 재생성과 검증 재현
+
+시연 데이터는 합성 시나리오(`scenarios/*.yaml`)에서 만듭니다 (Python 3.11 이상, 저장소 루트).
+
+```sh
+python -m pip install -r requirements.txt
+python -m pipeline                 # 시나리오별 API용 파일 → data/out/
+python -m pipeline.frontend        # 프론트 시연용 scenarios.json
+python -m pipeline.validate --seeds 10   # VC-01~05 검증 (시드 10개, 약 1분)
+```
+
+- 검증 결과(VC-01~08)와 실행 환경은 [docs/validation-results.md](docs/validation-results.md)에 있습니다. 결과는 합성 데이터 기준이며 현장 검증이 아닙니다.
+- 설정(`config/*.yaml`)을 바꾸면 `python -m common.config_loader`와 `python -m unittest tests.test_config_loader`를 먼저 실행합니다.
+
+## 구조 한눈에
+
+```text
+센서(소나·카메라·수온/DO) → MetricRecord → fusion(영상 품질 가중) → stress(기준선·지수·경보)
+→ cause(의심 원인 R1~R8) → decision(손익·방류 요건) / 질병 계열은 공통 1차 조치 + 진단 요청
+→ notify(근거 수치 3문장 이내) → 어민 화면 · 지자체 대시보드
+```
+
+해커톤에서는 실제 센서 대신 시뮬레이터(`simulator/`)가 만든 합성 데이터를 씁니다. 모듈별 역할은 아래 "모듈 목록", 설계 근거는 `docs/SRS.md`·`docs/SDD.md`입니다.
+
+## 라이선스·출처
+
+- 오픈소스와 데이터 이용 조건은 [SBOM.md](SBOM.md)에 정리했습니다. AI Hub 데이터는 원본 이미지·라벨을 저장소에 올리지 않고 집계 수치만 공개하며, 출처 표기를 따릅니다.
+- 알림의 대응 요령은 국립수산과학원 관리요령만 근거로 쓰고, 약품명·투약량은 내보내지 않습니다 (`notify/docs/README.md`).
+
 ## 실행 방법
 
 공통 1차 조치와 소유자 진단 접수는 [진단 API 안내](docs/diagnosis-api.md)를 확인하세요.
