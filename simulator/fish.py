@@ -72,6 +72,8 @@ class Drivers:
     day: float            # 낮 정도 0~1
     disease: float = 0.0  # 질병 진행도 0~1
     parasite: float = 0.0 # 기생충 감염 정도 0~1
+    red_tide: float = 0.0 # 적조 노출 정도 0~1 (#174)
+    work: float = 0.0     # 망갈이·선별 직후 스트레스 0~1, 시간이 지나며 회복 (#174)
 
 
 @dataclass
@@ -90,6 +92,8 @@ def behavior(dr: Drivers, grid: np.ndarray, rubbing_multiplier: float = 4.0) -> 
     sd = DAY_SD * dr.day + NIGHT_SD * (1 - dr.day)
     # 질병이 진행되면 힘이 빠져 아래로 가라앉는다
     center += 2.5 * dr.disease
+    # 작업 직후: 놀라서 바닥 쪽으로 몰린다. 적조: 아가미 자극으로 표층 쪽으로 오른다 (가정값, #174)
+    center += 2.0 * dr.work - 1.0 * dr.red_tide
     base = np.exp(-0.5 * ((grid - center) / sd) ** 2)
 
     temps = temperature_profile(grid, dr.temp_surface, dr.temp_mid)
@@ -107,9 +111,12 @@ def behavior(dr: Drivers, grid: np.ndarray, rubbing_multiplier: float = 4.0) -> 
     act *= float(heat_activity(dr.temp_surface)) * (1 - 0.5 * d)
     act *= 1 - 0.5 * dr.disease
     act *= 1 + 0.15 * dr.parasite      # 몸 비비기·급회전으로 조금 더 움직임
+    act *= 1 + 1.2 * dr.red_tide       # 적조: 아가미 자극으로 급하게 돌아다님 (가정값)
+    act *= 1 - 0.5 * dr.work           # 작업 직후: 움츠러들어 덜 움직임 (가정값)
 
-    still = float(still_fraction(dr.temp_surface, dr.day)) + 0.25 * dr.disease
-    feed = float(feeding_response(dr.temp_surface)) * (1 - 0.7 * dr.disease)
+    still = float(still_fraction(dr.temp_surface, dr.day)) + 0.25 * dr.disease + 0.2 * dr.work
+    feed = float(feeding_response(dr.temp_surface)) * (1 - 0.7 * dr.disease) * (1 - 0.6 * dr.red_tide) \
+        * (1 - 0.7 * dr.work)
     rub = 1 + (rubbing_multiplier - 1) * dr.parasite
     return Behavior(pdf=pdf, activity=act, still=min(still, 0.9), feeding=feed,
                     rubbing_mult=rub, disorder=d)

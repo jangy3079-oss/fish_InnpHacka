@@ -11,7 +11,8 @@ from threading import RLock
 from pydantic import BaseModel, ConfigDict, Field
 import yaml
 
-from cause import CauseContext, CauseEngine
+from cause import CauseEngine
+from pipeline.contexts import scenario_contexts
 from common import MetricName
 from common.config_loader import ConfigError, ConfigLoader, UniqueSafeLoader, MAX_FILE_BYTES
 from decision.first_aid import ensure_safe
@@ -123,7 +124,7 @@ class ReplayEngine:
             visible_records = [r for r in records if r.ts<cutoff]
             scores = self._model.score_series(fused)
             causes = CauseEngine(FixedSnapshot(snapshot)).evaluate_series(scores,fused,
-                contexts=[CauseContext(advisory_active=sc.env.get('advisory_active'))]*len(scores))
+                contexts=scenario_contexts(sc,[s.ts for s in scores]))
             apply_levels(scores,[c.immediate_danger for c in causes],cfg=snapshot.to_dict()['thresholds'])
             context = {**settings.model_dump(mode='json'), 'stock':[s.model_dump(mode='json') for s in settings.stock]}
             rec, reason = None, 'no_current_cause'

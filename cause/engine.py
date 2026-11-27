@@ -1,4 +1,4 @@
-"""Config-driven R1/R2/R3/R5/R8 rules. One CauseEngine per ordered stream.
+"""Config-driven R1/R2/R3/R4/R5/R6/R8 rules. One CauseEngine per ordered stream.
 
 No raw sensor contract is introduced: observations remain MetricRecord; this stage
 consumes the existing derived StressScore/FusedFeatures pair, matched by cage/time.
@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from common.config_loader import ConfigLoader
-from .temporal import CauseContext, TemporalRules
+from .temporal import CauseContext, TemporalRules, WorkRules
 
 
 def _utc(ts):
@@ -76,6 +76,7 @@ class CauseEngine:
         self._history = defaultdict(deque)
         self._last_ts = {}
         self._temporal = TemporalRules()
+        self._work = WorkRules()
 
     def evaluate(self, score, fused, *, context: CauseContext | None = None) -> CauseResult:
         return self.evaluate_series([score], [fused], contexts=[CauseContext() if context is None else context])[0]
@@ -129,6 +130,7 @@ class CauseEngine:
         if snapshot.revision != self._revision:
             self._history.clear()  # Never mix history from different config revisions.
             self._temporal = TemporalRules()
+            self._work = WorkRules()
             self._revision = snapshot.revision
         rule_details = snapshot.to_dict()["cause_rules"]["rules"]
         results = [self._evaluate(s, f, ts, snapshot, context, rule_details) for s, f, ts, context in pairs]
@@ -160,6 +162,7 @@ class CauseEngine:
                   and oxygen is not None and oxygen >= normal_bounds["do_min_mg_l"])
         temporal = self._temporal.evaluate(s.cage_id, ts, s.score, ready, normal, context,
                                            rubbing, f.quality, cfg, thresholds)
+        work_checks, work_details = self._work.evaluate(s.cage_id, ts, s.score, ready, context, cfg, thresholds)
         observations = {"lower_layers_ratio_x": ratio, "activity_change": act,
                         "cohesion_change": coh, "cohesion_prior_peak": peak,
                         "cohesion_drop_observed": drop, "temp_surface": surface,
@@ -172,7 +175,8 @@ class CauseEngine:
                         "camera_breathing_support": bool(rules["R3"]["behavior"]["camera_surface_breathing"]
                             and context.camera_surface_breathing is True and f.quality is not None
                             and f.quality >= thresholds["quality"]["camera_only_min"]),
-                        **temporal["details"]}
+                        "red_tide_advisory": context.red_tide_advisory,
+                        **temporal["details"], **work_details}
         checks = {
             "R1": {"lower_layers": ratio is not None and ratio >= r1["behavior"]["mid_low_ratio_x_min"],
                    "activity": act is not None and act <= r1["behavior"]["activity_change_max"],
@@ -184,6 +188,9 @@ class CauseEngine:
                    "difference": diff is not None and diff < r2["env"]["temp_diff_max_c"]},
             "R3": {"surface": surface_ratio is not None and surface_ratio >= rules["R3"]["behavior"]["surface_ratio_x_min"],
                    "oxygen": oxygen is not None and oxygen < rules["R3"]["env"]["do_max_mg_l"]},
+            "R4": {"red_tide_advisory": context.red_tide_advisory is True,
+                   "activity_jump": act is not None and abs(act) >= rules["R4"]["behavior"]["activity_change_abs_min"]},
+            "R6": work_checks,
             "R5": {"trend": temporal["R5"], "normal_environment": normal,
                    "advisory_clear": context.advisory_active is False},
             "R8": {"sustained_rubbing": temporal["R8"], "normal_environment": normal,

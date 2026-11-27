@@ -95,15 +95,18 @@ class Thresholds(ConfigModel):
         return self
 
 
+IMPLEMENTED_RULES = {"R1", "R2", "R3", "R4", "R5", "R6", "R8"}
+
+
 class Probability(ConfigModel):
     method: Literal["normalize_sum_to_one"]
     min_display: Ratio
     scoring: Literal["binary_all_required"]
-    tie_break_order: list[Literal["R1", "R2", "R3", "R5", "R8"]]
+    tie_break_order: list[Literal["R1", "R2", "R3", "R4", "R5", "R6", "R8"]]
 
     @model_validator(mode="after")
     def implemented_order(self) -> Self:
-        if len(self.tie_break_order) != 5 or set(self.tie_break_order) != {"R1", "R2", "R3", "R5", "R8"}:
+        if len(self.tie_break_order) != len(IMPLEMENTED_RULES) or set(self.tie_break_order) != IMPLEMENTED_RULES:
             raise ValueError("tie_break_order must list each implemented rule once")
         return self
 
@@ -160,6 +163,33 @@ class R8Behavior(ConfigModel):
     missing_observation: Literal["pause"]
 
 
+class R4Behavior(ConfigModel):
+    activity_change_abs_min: Annotated[float, Field(gt=0, le=1)]
+
+
+class R4Environment(ConfigModel):
+    red_tide_advisory: Literal[True]
+
+
+class R6Behavior(ConfigModel):
+    score_rise_after_work: Literal[True]
+    pre_work_hours: Positive
+    rise_window_hours: Positive
+    min_score_rise: Annotated[float, Field(gt=0, le=100)]
+    not_recovered_hours: Positive
+    max_hours_after_work: Positive
+
+    @model_validator(mode="after")
+    def windows(self) -> Self:
+        if not self.rise_window_hours <= self.not_recovered_hours < self.max_hours_after_work:
+            raise ValueError("R6 windows must satisfy rise_window <= not_recovered < max_hours_after_work")
+        return self
+
+
+class R6Environment(ConfigModel):
+    work_log: Texts
+
+
 class Rule(ConfigModel):
     # Rule-specific evidence names are evolving in #25/#60, so these maps and
     # additional rule fields are preserved rather than silently discarded.
@@ -182,7 +212,8 @@ class CauseRules(ConfigModel):
             raise ValueError("rules must contain R1 through R8")
         for rid, behavior, environment in (("R1", R1Behavior, R1Environment), ("R2", R2Behavior, R2Environment),
                                             ("R3", R3Behavior, R3Environment), ("R5", R5Behavior, NormalEnvironment),
-                                            ("R8", R8Behavior, NormalEnvironment)):
+                                            ("R8", R8Behavior, NormalEnvironment), ("R4", R4Behavior, R4Environment),
+                                            ("R6", R6Behavior, R6Environment)):
             behavior.model_validate(self.rules[rid].behavior)
             environment.model_validate(self.rules[rid].env)
         if type(self.rules["R2"].model_extra.get("immediate_danger")) is not bool:
