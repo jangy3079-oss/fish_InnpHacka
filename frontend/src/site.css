@@ -33,7 +33,7 @@ body {
 /* 푸터 */
 .site-footer { background: var(--sea); color: var(--sea-text); }
 .site-footer-inner { max-width: 1120px; margin: 0 auto; padding: 40px 20px 56px; font-size: 15px; line-height: 1.7; }
-.site-footer p { margin: 0 0 4px; max-width: 60ch; }
+.site-footer p { margin: 0 0 4px; }
 .footer-title { color: #fff; font-weight: 800; font-size: 17px; margin-bottom: 8px !important; }
 .site-footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; }
 .site-footer a { color: #fff; }
@@ -63,7 +63,7 @@ body {
 .section-alt { background: #fff; border-block: 1px solid var(--line); }
 .section-inner { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
 .section h2 { margin: 0 0 12px; font-size: 28px; font-weight: 800; letter-spacing: -0.01em; }
-.lead { margin: 0 0 28px; font-size: 18px; color: var(--ink-soft); max-width: 60ch; }
+.lead { margin: 0 0 28px; font-size: 18px; color: var(--ink-soft); }
 
 .steps { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
 .steps li { position: relative; border-top: 2px solid #c5d3da; padding-top: 28px; }
@@ -81,7 +81,7 @@ body {
 .audiences { margin-top: 28px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; }
 .audiences article { border-top: 3px solid var(--ink); padding-top: 20px; }
 .audiences h3 { margin: 0 0 10px; font-size: 24px; }
-.audiences p { margin: 0 0 12px; font-size: 17px; line-height: 1.7; color: var(--ink-soft); max-width: 46ch; }
+.audiences p { margin: 0 0 12px; font-size: 17px; line-height: 1.7; color: var(--ink-soft); }
 .audiences .btn { margin-top: 8px; }
 
 /* 어민 화면: 탭과 2단 배치 */
@@ -130,7 +130,7 @@ body {
 /* 재고 입력: 표 형태와 안내 */
 .page-head { margin-bottom: 22px; }
 .page-head h1 { margin: 0 0 8px; font-size: 30px; font-weight: 800; letter-spacing: -0.01em; }
-.page-head .lead { margin: 0; font-size: 18px; color: var(--ink-soft); max-width: 56ch; }
+.page-head .lead { margin: 0; font-size: 18px; color: var(--ink-soft); }
 .stock-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (min-width: 1000px) { .stock-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; } }
 .stock { font-size: 18px; padding: 8px 24px 24px; }
@@ -181,7 +181,7 @@ body {
 .tl-dot { position: absolute; left: 114px; top: 20px; width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--paper); box-sizing: content-box; margin-left: -2px; }
 .tl-card { border-top: 4px solid; font-size: 18px; line-height: 1.6; }
 .tl-card h2 { margin: 0 0 6px; font-size: 20px; }
-.tl-card p { margin: 0 0 8px; max-width: 60ch; }
+.tl-card p { margin: 0 0 8px; }
 .tl-card a { font-weight: 700; color: var(--teal); }
 .empty { margin: 0; font-size: 18px; color: var(--ink-soft); }
 @media (max-width: 720px) {
