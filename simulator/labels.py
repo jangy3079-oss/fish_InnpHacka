@@ -94,9 +94,11 @@ def build_labels(sim) -> dict:
                           "cause": c, "cause_ko": name_ko, "rule_id": rule, "alert_expected": alert})
 
     markers = {}
-    hot = np.where(sim.truth["temp_surface"] >= 28.0)[0]
-    if hot.size:
-        markers["advisory_28c"] = iso(t[hot[0]])        # 고수온 주의보 기준 도달 (VC-04)
+    # 고수온 특보 기준 도달 (VC-04). SRS는 28℃ 주의보, 수과원 2018 단계표는 주의보 27~28℃·경보 28℃ 이상
+    for thr, key in ((27.0, "advisory_27c"), (28.0, "advisory_28c")):
+        hot = np.where(sim.truth["temp_surface"] >= thr)[0]
+        if hot.size:
+            markers[key] = iso(t[hot[0]])
     for ev in sc.events:
         key = ev["type"] + ("_at" if "at_h" in ev else "_start")
         h = ev.get("at_h", ev.get("start_h"))
