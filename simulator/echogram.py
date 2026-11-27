@@ -59,7 +59,7 @@ def _naive(t):
 
 
 def synthesize(sim, bin_m: float = 0.1, seed: Optional[int] = None,
-               pulse_sd_m: float = 0.15, ping_jitter_sd: float = 0.2) -> Echogram:
+               pulse_sd_m: float = 0.15, ping_jitter_sd: float = 0.08) -> Echogram:
     """시뮬레이터 결과(개체 위치) → 합성 에코그램.
 
     - 개체 반사 강도(σ_bs) × 핑마다 자세 변화(로그정규 jitter)를 수심 구간에 쌓고
