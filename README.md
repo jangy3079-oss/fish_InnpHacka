@@ -32,7 +32,8 @@
 | `web/` | React (어민 화면, 지자체 대시보드) |
 | `config/` | thresholds, cause_rules, release_rules, costs, first_aid (YAML) |
 | `scenarios/` | 시뮬레이터 시나리오 YAML |
-| `SBOM.md` | 오픈소스 라이선스 목록 (작성 예정) |
+| `docs/` | SRS(요구사항), SDD(설계) 문서. 구현과 달라지면 PR로 같이 고친다 |
+| `SBOM.md` | 오픈소스 라이선스 목록 |
 
 모듈 사이는 `MetricRecord` 하나의 형식으로만 데이터를 주고받습니다.
 
