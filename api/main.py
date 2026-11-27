@@ -100,13 +100,12 @@ def require_edge_token(credentials: Annotated[HTTPAuthorizationCredentials | Non
 
 @app.post("/ingest/metrics", response_model=IngestReceipt, status_code=201, tags=["ingest"],
           responses={401: {"description": "인증 실패"}, 403: {"description": "가두리 수집 권한 없음"},
-                     409: {"description": "기존 지표 키 중복, 전체 거부"}, 503: {"description": "설정 또는 Supabase 장애"}},
-          description="MetricRecord 1~1000개를 하나의 트랜잭션으로 저장합니다. 중복은 전체 거부하며 upsert하지 않습니다.")
+                     409: {"description": "기존 지표와 값/신뢰도 충돌, 전체 거부"}, 503: {"description": "설정 또는 Supabase 장애"}},
+          description="MetricRecord 1~1000개를 원자적으로 저장합니다. 동일 값 재전송은 중복 성공, 다른 값은 전체 거부하며 덮어쓰지 않습니다.")
 def ingest(records: Annotated[list[MetricRecord], Body(min_length=1, max_length=MAX_BATCH_SIZE)],
            token: Annotated[str, Depends(require_edge_token)],
            store: Annotated[SupabaseMetricStore, Depends(get_metric_store)]) -> IngestReceipt:
-    inserted = store.insert(records, token)
-    return IngestReceipt(received_count=len(records), inserted_count=inserted)
+    return store.insert(records, token)
 
 
 @app.get("/cages/{id}/status", response_model=CageStatus, tags=["cages"])

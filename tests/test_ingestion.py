@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from api.ingestion import IngestSettings, SupabaseMetricStore, get_metric_store
 from api.main import app
-from scripts.upload_metrics import UploadError, main as upload_main, read_records, upload
+from scripts.upload_metrics import UploadError, main as upload_main, read_records, upload, upload_counts
 
 
 class IngestionTests(unittest.TestCase):
@@ -19,7 +19,7 @@ class IngestionTests(unittest.TestCase):
         self.requests = []
         self.user = {"id": "00000000-0000-4000-8000-000000000004",
                      "app_metadata": {"role": "edge", "ingest_cage_ids": [3]}}
-        self.auth_status, self.db_status, self.db_body = 200, 201, None
+        self.auth_status, self.db_status, self.db_body = 200, 200, None
         self.settings = IngestSettings("https://test.supabase.co", "test-publishable", {"cage-001": 3})
         self.upstream = httpx.Client(transport=httpx.MockTransport(self.handle))
         app.dependency_overrides[get_metric_store] = lambda: SupabaseMetricStore(self.settings, self.upstream)
@@ -36,8 +36,11 @@ class IngestionTests(unittest.TestCase):
         self.requests.append(request)
         if request.url.path == "/auth/v1/user":
             return httpx.Response(self.auth_status, json=self.user)
-        if request.url.path == "/rest/v1/metric":
-            return httpx.Response(self.db_status, json=self.db_body)
+        if request.url.path == "/rest/v1/rpc/ingest_metrics":
+            n = len(json.loads(request.content)['p_records'])
+            body = self.db_body if self.db_body is not None else {
+                'persisted': True, 'received_count': n, 'inserted_count': n, 'duplicate_count': 0}
+            return httpx.Response(self.db_status, json=body)
         raise AssertionError("Unexpected upstream path")
 
     def post(self, body=None):
@@ -46,15 +49,14 @@ class IngestionTests(unittest.TestCase):
     def test_validated_fixture_saved_once_with_user_token(self):
         result = self.post()
         self.assertEqual(result.status_code, 201, result.text)
-        self.assertEqual(result.json(), {"persisted": True, "received_count": 10, "inserted_count": 10})
+        self.assertEqual(result.json(), {"persisted": True, "received_count": 10, "inserted_count": 10, 'duplicate_count': 0})
         self.assertEqual(result.headers["x-data-mode"], "database")
         self.assertEqual([r.method for r in self.requests], ["GET", "POST"])
         stored = self.requests[1]
         self.assertEqual(stored.headers["Authorization"], "Bearer test-edge-token")
         self.assertEqual(stored.headers["apikey"], "test-publishable")
-        self.assertEqual(stored.headers["Prefer"], "return=minimal")
-        self.assertNotIn("resolution", stored.headers["Prefer"])
-        rows = json.loads(stored.content)
+        self.assertNotIn('Prefer', stored.headers)
+        rows = json.loads(stored.content)['p_records']
         self.assertTrue(all(r["cage_id"] == 3 for r in rows))
         self.assertEqual(rows[0]["value"], [0.5, 0.35, 0.15])
 
@@ -74,6 +76,23 @@ class IngestionTests(unittest.TestCase):
             self.user = user
             self.assertEqual(self.post().status_code, 403)
         self.assertTrue(all(r.method == "GET" for r in self.requests))
+
+    def test_duplicate_and_mixed_receipts_preserve_database_counts(self):
+        for inserted in (0, 4, 10):
+            self.db_body = {'persisted': True, 'received_count': 10,
+                            'inserted_count': inserted, 'duplicate_count': 10-inserted}
+            response = self.post()
+            self.assertEqual(response.status_code, 201)
+            self.assertEqual(response.json(), self.db_body)
+
+    def test_invalid_rpc_acknowledgements_fail_closed(self):
+        good = {'persisted': True, 'received_count': 10, 'inserted_count': 4, 'duplicate_count': 6}
+        for bad in ({'inserted_count': 11}, {'duplicate_count': -1}, {'received_count': 9},
+                    {'inserted_count': True}, {'duplicate_count': '6'}, {'persisted': 1}):
+            self.db_body = {**good, **bad}
+            self.assertEqual(self.post().status_code, 503)
+        self.db_body = {k:v for k,v in good.items() if k != 'duplicate_count'}
+        self.assertEqual(self.post().status_code, 503)
 
     def test_invalid_records_reject_whole_request_without_upstream(self):
         for payload in [[], [{}], {"records": self.fixture}, self.fixture * 101,
@@ -151,6 +170,25 @@ class IngestionTests(unittest.TestCase):
         with patch.dict("os.environ", {}, clear=True), contextlib.redirect_stdout(io.StringIO()) as out:
             self.assertEqual(upload_main([str(fixture), "--dry-run"]), 0)
         self.assertEqual(json.loads(out.getvalue()), {"validated_count": 10, "uploaded": False})
+
+    def test_uploader_counts_legacy_new_and_duplicate_receipts(self):
+        records = read_records(Path(__file__).resolve().parents[1] / 'scenarios/metric_records.example.json')
+        receipts = [{'persisted': True,'received_count':4,'inserted_count':4},
+                    {'persisted': True,'received_count':4,'inserted_count':1,'duplicate_count':3},
+                    {'persisted': True,'received_count':2,'inserted_count':0,'duplicate_count':2}]
+        with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(201,json=receipts.pop(0)))) as client:
+            self.assertEqual(upload_counts(records,client,'http://localhost','edge',4),
+                {'received_count':10,'inserted_count':5,'duplicate_count':5})
+
+    def test_uploader_rejects_false_coerced_or_inconsistent_counts(self):
+        records = read_records(Path(__file__).resolve().parents[1] / 'scenarios/metric_records.example.json')
+        for receipt in ({'persisted':True,'received_count':10,'inserted_count':10.0},
+                        {'persisted':True,'received_count':10,'inserted_count':4},
+                        {'persisted':True,'received_count':10,'inserted_count':9,'duplicate_count':True},
+                        {'persisted':True,'received_count':10,'inserted_count':9,'duplicate_count':2}):
+            with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(201,json=receipt))) as client:
+                with self.assertRaises(UploadError):
+                    upload_counts(records,client,'http://localhost','edge')
 
 
 if __name__ == "__main__":

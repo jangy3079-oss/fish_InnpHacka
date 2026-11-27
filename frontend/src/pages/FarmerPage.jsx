@@ -4,6 +4,7 @@ import { usePageTitle } from '../usePageTitle.js';
 import { ErrorNotice, LoadingBlock, Skeleton } from '../components/States.jsx';
 import { api } from '../api/client.js';
 import { FarmerTabs } from '../components/SiteChrome.jsx';
+import CausePending from '../components/CausePending.jsx';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
 import EvidenceSummary from '../components/EvidenceSummary.jsx';
 import { FirstAidCard, ProfitCompare, formatKrw } from '../components/ProfitCards.jsx';
@@ -204,6 +205,7 @@ function CauseList({ causes, status }) {
         <h2>의심되는 원인</h2>
         <p>의심되는 원인을 아직 찾지 못했습니다. 단계는 지금 상태를 기준으로 계산한 것입니다.</p>
         {SUPPRESSION_TEXT[status.cause_suppression] && <p className="hint">{SUPPRESSION_TEXT[status.cause_suppression]}</p>}
+        <CausePending items={status.cause_pending} />
       </section>
     );
   }
@@ -236,6 +238,7 @@ function CauseList({ causes, status }) {
       ) : (
         <p className="hint">여러 원인이 함께 의심될 수 있습니다. 막대는 서로 비교하기 위한 것이며 맞을 확률이 아닙니다.</p>
       )}
+      <CausePending items={status.cause_pending} />
       {held && <p className="hint">먹이 반응은 영상이 잘 보이지 않아 {formatTime(status.feeding_last_observed_at)}에 확인한 값을 기준으로 유지하고 있습니다.</p>}
       {temporary && <p className="hint">시연용 임시 원인입니다(엔진 판단이 아닙니다).</p>}
     </section>

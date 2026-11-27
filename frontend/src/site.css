@@ -387,3 +387,5 @@ input, progress { accent-color: var(--accent); }
 .calc-groups th, .calc-groups td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: left; font-variant-numeric: tabular-nums; }
 .calc-groups th { color: var(--ink-soft); font-weight: 600; }
 .calc-groups small { color: var(--ink-soft); }
+.pending-notes { list-style: none; margin: 8px 0 0; padding: 0; }
+.pending-notes li { margin: 4px 0; }
