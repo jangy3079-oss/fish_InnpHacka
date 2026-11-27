@@ -18,6 +18,17 @@
 
 ## 디렉터리 구조
 
+### 공통 설정 검증·로더
+
+```sh
+python -m pip install -r requirements.txt
+python -m common.config_loader
+```
+
+5개 YAML의 묶음 검증·재시작 없는 재조회·오류 정책은 [설정 로더 안내](docs/config-loader.md)를 확인하세요.
+
+### 모듈 목록
+
 | 폴더 | 역할 |
 | --- | --- |
 | `simulator/` | 개체 기반 시뮬레이터, 합성 에코그램 |
