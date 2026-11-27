@@ -67,6 +67,9 @@ def scenario_frames(tl: Timeline, n_frames: int, label_causes: bool = True) -> d
         t = max(first_scored, (i + 1) * step - tl.meta["t_step_h"])     # 각 구간의 끝 시점
         row = tl.status_at(t)
         f = {"t": i, **{k: row[k] for k in FRONT_KEYS}, "scenario_t_h": row["t"]}
+        # 원인 대기 사유 (#127): warming_up / missing_score / low_stress, 없으면 None
+        f["cause_suppression"] = row.get("cause_suppression")
+        f["r2_triggered"] = bool(row.get("r2_triggered", False))
         f["cage_id"] = row["cage_id"]
         if f["cause"]:
             f["cause_source"] = "cause_engine"

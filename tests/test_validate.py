@@ -40,6 +40,10 @@ class ValidateSeed3Test(unittest.TestCase):
         self.assertEqual(r["turbidity_event"]["alarms"], 0)
         self.assertEqual(r["feeding_drop"]["alarms"], 0)
         self.assertTrue(r["turbidity_event"]["vc01"]["pass"])
+        # VC-03: 원인 엔진 1순위 (특보 없음 명시, 시나리오 YAML advisory_active: false)
+        for n in ("heatwave_typhoon", "turbidity_event", "disease_suspect", "parasite_suspect"):
+            self.assertTrue(r[n]["vc03"]["pass"], n)
+        self.assertEqual(r["turbidity_event"]["vc03"]["cycles_with_cause"], 0)
 
     def test_markdown(self):
         res = {"run_at": "test", "config_revision": "x", "runs": [self.r], "summary": summarize([self.r]),
