@@ -34,15 +34,33 @@ from typing import Dict, List, Optional, Sequence
 import numpy as np
 from pyod.models.iforest import IForest
 
+from common.config import get as cfg_get
 from fusion.fuse import FusedFeatures
 
 MODEL_VERSION = "m5-iforest-1.0"
 SCORE_GAMMA = 1.6               # 학습 범위 밖 점수 곡선 (1보다 크면 아주 멀리 벗어나야 80 이상)
-MIN_BASELINE_WINDOWS = 168       # 7일 × 24 (SDD 5.3 설계 가정값)
+
+
+def _hour(v, default: float) -> float:
+    """'06:00' / 6 → 6.0"""
+    try:
+        if isinstance(v, str):
+            h, _, m = v.partition(":")
+            return int(h) + (int(m) if m else 0) / 60
+        return float(v)
+    except (TypeError, ValueError):
+        return default
+
+
+# config/thresholds.yaml 의 cycle_minutes, baseline.* 를 읽는다 (#77). 없으면 SDD 기본값.
+CYCLE_MINUTES = int(cfg_get("thresholds", "cycle_minutes", 5))
+WINDOW_HOURS = float(cfg_get("thresholds", "baseline.window_hours", 1))
+MIN_BASELINE_WINDOWS = int(cfg_get("thresholds", "baseline.min_windows", 168))   # 7일 × 24 (가정값)
 MIN_DAYPART_WINDOWS = 24         # 낮·밤 각각 이 이상이어야 그 기준선 모델을 만든다
-WINDOW_CYCLES = 12               # 5분 × 12 = 1시간
-MIN_CYCLES_IN_WINDOW = 6         # 윈도우 안 유효 주기가 이보다 적으면 점수 안 냄
-DAY_START, DAY_END = 6, 18       # KST
+WINDOW_CYCLES = max(1, int(round(WINDOW_HOURS * 60 / CYCLE_MINUTES)))   # 5분 × 12 = 1시간
+MIN_CYCLES_IN_WINDOW = max(1, WINDOW_CYCLES // 2)   # 윈도우 안 유효 주기가 이보다 적으면 점수 안 냄
+DAY_START = _hour(cfg_get("thresholds", "baseline.day_start", 6), 6.0)    # KST
+DAY_END = _hour(cfg_get("thresholds", "baseline.day_end", 18), 18.0)
 KST = timezone(timedelta(hours=9))
 
 SONAR_FEATURES = ["p_bottom", "p_mid", "p_surface", "act_mean", "act_std", "cohesion"]
@@ -89,7 +107,8 @@ def window_features(Xw: np.ndarray) -> Dict[str, float]:
 
 
 def is_day(ts: datetime) -> bool:
-    h = ts.astimezone(KST).hour
+    t = ts.astimezone(KST)
+    h = t.hour + t.minute / 60
     return DAY_START <= h < DAY_END
 
 
@@ -98,7 +117,8 @@ def hourly_windows(fused: Sequence[FusedFeatures]) -> List[tuple]:
     ts, X = cycle_matrix(fused)
     if not len(ts):
         return []
-    hour_key = np.array([t.replace(minute=0, second=0, microsecond=0) for t in ts])
+    step = int(WINDOW_HOURS * 3600)
+    hour_key = np.array([datetime.fromtimestamp(int(t.timestamp()) // step * step, tz=timezone.utc) for t in ts])
     out = []
     for h in sorted(set(hour_key)):
         f = window_features(X[hour_key == h])
@@ -125,10 +145,19 @@ class StressScore:
     features: Dict[str, float] = field(default_factory=dict)
     level: Optional[str] = None          # #24 경보 단계 판정 후 채움
 
+    @property
+    def storable(self) -> bool:
+        """DB 계약(#68): ready면 score·level 필수. 윈도우가 덜 찬 ready 행은 저장하지 않는다."""
+        return self.baseline_status == "warming_up" or (self.score is not None and self.level is not None)
+
     def to_row(self) -> dict:
-        """Supabase stress_score 테이블 행 (cage_id, ts, score, level, baseline_status, model_version)."""
-        return {"cage_id": self.cage_id, "ts": self.ts.strftime("%Y-%m-%dT%H:%M:%SZ"), "score": self.score,
-                "level": self.level, "baseline_status": self.baseline_status, "model_version": self.model_version}
+        """Supabase stress_score 테이블 행 (cage_id, ts, score, level, baseline_status, model_version).
+
+        warming_up이면 score·level 모두 null (#68)."""
+        warm = self.baseline_status == "warming_up"
+        return {"cage_id": self.cage_id, "ts": self.ts.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "score": None if warm else self.score, "level": None if warm else self.level,
+                "baseline_status": self.baseline_status, "model_version": self.model_version}
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -233,7 +262,7 @@ class StressModel:
     # -------------------------------------------------------- 점수
     def _pick(self, ts: datetime, f: Dict[str, float]):
         """점수 낼 기준선 모델 목록 고르기. → (빈 StressScore, [(daypart, 묶음)])"""
-        part = "day" if is_day(ts - timedelta(minutes=30)) else "night"   # 윈도우 가운데 시각 기준
+        part = "day" if is_day(ts - timedelta(hours=WINDOW_HOURS / 2)) else "night"   # 윈도우 가운데 시각 기준
         base = StressScore(cage_id=self.cage_id, ts=ts, score=None, baseline_status=self.status,
                            model_version=self.model_version, daypart=part, baseline_windows=self.n_windows,
                            features={k: round(v, 4) for k, v in f.items() if not np.isnan(v)})
@@ -271,7 +300,7 @@ class StressModel:
         batch: Dict[tuple, list] = {}
         wanted: Dict[int, list] = {}
         for i in range(len(fused)):
-            end = ts[i] + timedelta(minutes=5)
+            end = ts[i] + timedelta(minutes=CYCLE_MINUTES)
             j0 = i - WINDOW_CYCLES + 1
             f = window_features(X[j0:i + 1]) if j0 >= 0 else {}
             s, keys = self._pick(end, f)

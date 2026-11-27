@@ -19,7 +19,8 @@ TABLE = "stress_score"
 
 
 def rows(scores: Iterable) -> List[dict]:
-    return [s.to_row() for s in scores]
+    """저장할 행만 (ready인데 점수가 없는 행은 제외, #68 DB 계약)."""
+    return [s.to_row() for s in scores if s.storable]
 
 
 def save_jsonl(scores: Iterable, path) -> Path:

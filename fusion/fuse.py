@@ -11,6 +11,9 @@
 - 소나가 없으면 f = c, 단 q < 0.3이면 지표를 비운다 (거짓 경보 방지)
 - 들어오지 않은 센서는 가중치 0, `missing_sources`에 기록
 - 같은 5분 주기(ts를 주기 시작으로 내림) 안의 레코드를 한 묶음으로 본다
+
+임계값은 config/thresholds.yaml 의 fusion.gate_low, fusion.full_at, fusion.max_camera_weight,
+quality.camera_only_min 을 읽는다 (#77). 파일·키가 없으면 아래 기본값(SDD 6.1).
 """
 
 from __future__ import annotations
@@ -21,11 +24,23 @@ from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional, Sequence, Union
 
 from common import MetricName, MetricRecord, MetricSource
+from common.config import get as cfg_get
 
+# 기본값 (config/thresholds.yaml 이 없을 때)
 Q_MIN = 0.3            # 이 아래면 카메라 가중치 0
 Q_FULL = 0.7           # 이 이상이면 카메라 가중치 최대
 W_MAX = 0.5
 Q_CAMERA_ONLY = 0.6    # 카메라 전용 지표 사용 하한
+
+
+def params() -> dict:
+    """융합 임계값 (config/thresholds.yaml → 없으면 기본값)."""
+    return {
+        "q_min": float(cfg_get("thresholds", "fusion.gate_low", Q_MIN)),
+        "q_full": float(cfg_get("thresholds", "fusion.full_at", Q_FULL)),
+        "w_max": float(cfg_get("thresholds", "fusion.max_camera_weight", W_MAX)),
+        "q_camera_only": float(cfg_get("thresholds", "quality.camera_only_min", Q_CAMERA_ONLY)),
+    }
 
 SHARED = (MetricName.VERTICAL_DIST, MetricName.ACTIVITY)
 SONAR_ONLY = (MetricName.COHESION,)
@@ -37,11 +52,12 @@ Value = Union[float, List[float], None]
 
 
 def camera_weight(q: Optional[float]) -> float:
-    if q is None or q < Q_MIN:
+    p = params()
+    if q is None or q < p["q_min"]:
         return 0.0
-    if q >= Q_FULL:
-        return W_MAX
-    return W_MAX * (q - Q_MIN) / (Q_FULL - Q_MIN)
+    if q >= p["q_full"]:
+        return p["w_max"]
+    return p["w_max"] * (q - p["q_min"]) / (p["q_full"] - p["q_min"])
 
 
 @dataclass
@@ -97,6 +113,7 @@ def fuse_cycle(cage_id: str, ts: datetime, records: Iterable[MetricRecord],
         vals[(src, r.metric)].append(r.value)
         confs[src].append(r.confidence)
 
+    prm = params()
     q = _mean(vals.get(("camera", MetricName.QUALITY), []))
     if q is None and confs.get("camera"):
         q = min(confs["camera"])          # quality 레코드가 없으면 카메라 confidence로 대신
@@ -111,7 +128,7 @@ def fuse_cycle(cage_id: str, ts: datetime, records: Iterable[MetricRecord],
             feats[m.value], weights[m.value] = _blend(s, c, w), w
         elif s is not None:
             feats[m.value], weights[m.value] = s, 0.0
-        elif c is not None and q is not None and q >= Q_MIN:
+        elif c is not None and q is not None and q >= prm["q_min"]:
             feats[m.value], weights[m.value] = c, 1.0
         else:
             feats[m.value], weights[m.value] = None, 0.0
@@ -120,7 +137,7 @@ def fuse_cycle(cage_id: str, ts: datetime, records: Iterable[MetricRecord],
         weights[m.value] = 0.0
     for m in CAMERA_ONLY:
         c = _mean(vals.get(("camera", m), []))
-        ok = c is not None and q is not None and q >= Q_CAMERA_ONLY
+        ok = c is not None and q is not None and q >= prm["q_camera_only"]
         feats[m.value] = c if ok else None
         weights[m.value] = 1.0 if ok else 0.0
 
