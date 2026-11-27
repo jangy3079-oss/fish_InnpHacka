@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
+import { useDemo } from '../demo/DemoContext.jsx';
 
 const W = 480;
 const H = 170;
@@ -120,14 +121,18 @@ export function VerticalDistChart({ points, alertAt }) {
 }
 
 function useTimeseries(cageId, metric) {
+  const { demo } = useDemo();
   const [data, setData] = useState(null);
   useEffect(() => {
     let alive = true;
-    api.getTimeseries(cageId, metric).then((d) => alive && setData(d)).catch(() => alive && setData({ points: [], failed: true }));
+    api
+      .getTimeseries(cageId, metric, { demo })
+      .then((d) => alive && setData(d))
+      .catch(() => alive && setData({ points: [], failed: true }));
     return () => {
       alive = false;
     };
-  }, [cageId, metric]);
+  }, [cageId, metric, demo]);
   return data;
 }
 
@@ -145,6 +150,16 @@ export default function EvidenceCharts({ cageId, alertAt }) {
   if (!vd || !act || !ts || !tm) return <p className="hint">그래프를 불러오는 중…</p>;
   if ([vd, act, ts, tm].some((d) => d.failed)) return <p className="error">그래프를 불러오지 못했습니다.</p>;
 
+  if (vd.points.length < 2) return (
+      <section className="card" id="evidence" ref={scrollToHash}>
+        <h2>왜 이렇게 판단했나요?</h2>
+        <p className="hint">아직 그래프를 그릴 데이터가 모이지 않았습니다.</p>
+        <Echogram cageId={cageId} />
+      </section>
+    );
+
+  // 활동량은 정상일 때 1.0 안팎이라 축을 0~1로 고정하지 않고 데이터에 맞춘다.
+  const activityMax = Math.max(1, Math.ceil(Math.max(...act.points.map((p) => p.value)) * 5) / 5);
   const temps = [...ts.points, ...tm.points].map((p) => p.value);
   const tMin = Math.floor(Math.min(...temps)) - 1;
   const tMax = Math.ceil(Math.max(...temps)) + 1;
@@ -153,7 +168,7 @@ export default function EvidenceCharts({ cageId, alertAt }) {
     <section className="card" id="evidence" ref={scrollToHash}>
       <h2>왜 이렇게 판단했나요?</h2>
       <VerticalDistChart points={vd.points} alertAt={alertAt} />
-      <LineChart title="움직임 (평소 대비 활발한 정도)" series={[{ label: '활동량', color: '#13243b', points: act.points }]} yMin={0} yMax={1} alertAt={alertAt} />
+      <LineChart title="움직임 (평소 대비 활발한 정도)" series={[{ label: '활동량', color: '#13243b', points: act.points }]} yMin={0} yMax={activityMax} alertAt={alertAt} />
       <LineChart
         title="층별 수온 (℃)"
         series={[

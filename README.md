@@ -10,10 +10,9 @@
 
 ### API 로컬 실행
 
-`POST /ingest/metrics`는 전용 edge 계정 인증·RLS를 거쳐 실제 DB에 저장합니다.
-그 외 경로는 프론트 연동용 목업이며 분석·추천·발송·저장을 수행하지 않습니다.
-수집 경로는 `X-Data-Mode: database`, 나머지는 `mock`을 표시합니다.
-수집 외 변경 요청은 `persisted: false`입니다.
+지표 수집 POST·재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 확인하는 실제 데이터 경로입니다.
+수집은 전용 edge 계정, 어민 데이터는 사용자 계정으로 인증합니다. 나머지는 기존 목업입니다. 실제 데이터 경로의 설정·RPC migration·Bearer/이미지 연계는
+[어민 데이터 API 1차 안내](docs/farmer-data-api.md)를 확인하세요.
 Python 3.11 이상, 저장소 루트에서 실행합니다.
 
 ```sh
@@ -33,7 +32,7 @@ source .venv/bin/activate
 ```
 
 ```sh
-python -m pip install -r requirements-api-dev.txt
+python -m pip install -r requirements.txt -r requirements-api-dev.txt
 python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -53,11 +52,31 @@ python -m unittest discover -s tests -v
 ```
 
 라우트·응답 형식·목업의 한계·합의할 항목은 [API 계약](docs/api-contract.md)을 확인하세요.
-실제 수집·저장에 필요한 Supabase 환경변수·migration·edge 토큰 설정과 JSONL 업로드 방법은
-[지표 수집 계약](docs/ingestion-contract.md)을 확인하세요.
+Supabase 환경변수·edge 권한·JSONL 업로드는 [지표 수집 계약](docs/ingestion-contract.md)을 확인하세요.
 다른 모듈의 실행법은 각 구현 PR과 이슈 #42에서 이어 정리합니다.
 
+### 카메라 파일 영상 시험 (M1~M3)
+
+```sh
+python -m pip install -r requirements-vision.txt
+python -m vision --help
+```
+
+공개 영상·CFD 가중치 다운로드, 실행 명령, 품질 게이트와 수심·활동량 보정,
+시험 결과는 [카메라 파이프라인 안내](docs/vision-pipeline.md)를 확인하세요.
+
 ## 디렉터리 구조
+
+### 공통 설정 검증·로더
+
+```sh
+python -m pip install -r requirements.txt
+python -m common.config_loader
+```
+
+5개 YAML의 묶음 검증·재시작 없는 재조회·오류 정책은 [설정 로더 안내](docs/config-loader.md)를 확인하세요.
+
+### 모듈 목록
 
 | 폴더 | 역할 |
 | --- | --- |
@@ -71,7 +90,7 @@ python -m unittest discover -s tests -v
 | `notify/` | 알림 문장 생성, 템플릿, 관리요령 문서(RAG) |
 | `api/` | FastAPI |
 | `web/` | React (어민 화면, 지자체 대시보드) |
-| `config/` | thresholds, cause_rules, release_rules, costs, first_aid (YAML) |
+| `config/` | thresholds, cause_rules, release_rules, costs, first_aid, vision (YAML) |
 | `scenarios/` | 시뮬레이터 시나리오 YAML |
 | `docs/` | SRS(요구사항), SDD(설계) 문서. 구현과 달라지면 PR로 같이 고친다 |
 | `SBOM.md` | 오픈소스 라이선스 목록 |

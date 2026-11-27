@@ -46,23 +46,18 @@ class ApiContractTests(unittest.TestCase):
         self.assertTrue({"from", "to", "metric"}.issubset({p["name"] for p in params}))
 
     def test_all_read_routes_and_image(self):
-        for path in ["/health", "/cages/7/status", "/cages/3/timeseries?metric=activity",
+        for path in ["/health", "/cages/7/status",
                      "/cages/3/recommendation", "/areas/stress-map", "/areas/1/release-demand"]:
             with self.subTest(path=path):
                 result = self.client.get(path)
                 self.assertEqual(result.status_code, 200, result.text)
                 self.assertEqual(result.headers["x-data-mode"], "mock")
         self.assertEqual(self.client.get("/cages/7/status").json()["cage_id"], 7)
-        image = self.client.get("/cages/3/echogram")
-        self.assertEqual(image.status_code, 200)
-        self.assertIn("image/svg+xml", image.headers["content-type"])
-        self.assertIn("MOCK echogram", image.text)
 
     def test_mock_writes_never_claim_persistence_or_change_status(self):
         before = self.client.get("/cages/3/status").json()
         requests = [
             ("post", "/recommendations/1/choice", {"option_id": "reduce_feed"}),
-            ("put", "/cages/3/stock", {"stock": [{"size_group": "mid", "count": 100, "avg_weight_kg": 0.2}], "insured": False}),
             ("post", "/cages/3/diagnosis-request", {"note": "demo"}),
             ("put", "/admin/config/thresholds", {"values": {"warning": 60}}),
         ]
@@ -77,11 +72,7 @@ class ApiContractTests(unittest.TestCase):
     def test_invalid_paths_bodies_and_parameters(self):
         requests = [
             ("get", "/cages/0/status", None), ("get", "/cages/abc/status", None),
-            ("get", "/cages/3/timeseries?metric=invalid", None),
-            ("get", "/cages/3/timeseries", None),
-            ("get", "/cages/3/timeseries?metric=activity&from=2026-08-12T05:00:00", None),
             ("post", "/recommendations/1/choice", {}),
-            ("put", "/cages/3/stock", {"stock": [{"size_group": "mid", "count": -1, "avg_weight_kg": 0.2}], "insured": False}),
             ("put", "/admin/config/unknown", {"values": {"x": 1}}),
             ("put", "/admin/config/thresholds", {"values": {}}),
             ("post", "/demo/scenario/unknown", None),
@@ -92,14 +83,11 @@ class ApiContractTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.client.request(method, path, json=payload).status_code, 422)
 
-    def test_time_window_filters_and_validates_both_endpoints(self):
-        for endpoint in ["timeseries?metric=activity&", "echogram?"]:
-            url = f"/cages/3/{endpoint}from=2026-08-13T00:00:00Z&to=2026-08-12T00:00:00Z"
-            self.assertEqual(self.client.get(url).status_code, 422)
-        result = self.client.get("/cages/3/timeseries?metric=activity&from=2026-08-13T00:00:00Z")
-        self.assertEqual(result.json()["points"], [])
-        result = self.client.get("/cages/3/timeseries?metric=activity&from=2026-08-12T14:00:00%2B09:00")
-        self.assertEqual(len(result.json()["points"]), 1)
+    def test_real_data_routes_require_authentication(self):
+        self.assertEqual(self.client.post("/ingest/metrics", json=[]).status_code, 401)
+        for path in ["/cages/3/timeseries?metric=activity", "/cages/3/echogram"]:
+            self.assertEqual(self.client.get(path).status_code, 401)
+        self.assertEqual(self.client.put("/cages/3/stock", json={"stock": [], "insured": False}).status_code, 401)
 
     def test_demo_scenarios_are_explicit_mock(self):
         for scenario in ["heatwave_typhoon", "turbidity_event", "disease_suspect", "parasite_suspect"]:

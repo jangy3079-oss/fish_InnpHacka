@@ -2,7 +2,7 @@
 
 from typing import Annotated, Any, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 Metric = Literal[
     "vertical_dist", "activity", "cohesion", "feeding", "still_ratio",
@@ -45,12 +45,16 @@ class CageStatus(Contract):
 class Point(Contract):
     ts: AwareDatetime
     value: float | list[float]
+    source: Literal["sonar", "camera", "env"] | None = None
+    confidence: Ratio | None = None
 
 
 class Timeseries(Contract):
     cage_id: int
     metric: Metric
     points: list[Point]
+    has_more: bool = False
+    next_before: AwareDatetime | None = None
 
 
 class Option(Contract):
@@ -75,13 +79,31 @@ class ChoiceRequest(Contract):
 
 class StockItem(Contract):
     size_group: Literal["fry", "mid", "market"]
-    count: Annotated[int, Field(strict=True, ge=0)]
-    avg_weight_kg: Annotated[float, Field(gt=0)]
+    count: Annotated[int, Field(strict=True, ge=0, le=9223372036854775807)]
+    avg_weight_kg: Annotated[float, Field(strict=True, gt=0)]
 
 
 class StockRequest(Contract):
-    stock: Annotated[list[StockItem], Field(min_length=1)]
+    stock: Annotated[list[StockItem], Field(min_length=1, max_length=3)]
+    insured: Annotated[bool, Field(strict=True)]
+
+    @model_validator(mode="after")
+    def unique_groups(self):
+        if len({row.size_group for row in self.stock}) != len(self.stock):
+            raise ValueError("Stock size groups must be unique")
+        return self
+
+
+class SavedStockItem(StockItem):
+    updated_at: AwareDatetime
+
+
+class StockReceipt(Contract):
+    persisted: Literal[True]
+    cage_id: int
+    received_count: int
     insured: bool
+    stock: list[SavedStockItem]
 
 
 class DiagnosisRequest(Contract):

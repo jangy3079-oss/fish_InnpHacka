@@ -35,3 +35,11 @@ select pg_temp.expect_error($q$insert into public.metric values(3,'2026-09-06T00
 reset role;
 select pg_temp.check_ok((select count(*)=2 from public.metric where ts='2026-09-01T00:00:00Z'), 'edge batch committed');
 select pg_temp.check_ok((select count(*)=0 from public.metric where ts between '2026-09-02' and '2026-09-06'), 'failed batches leave no partial rows');
+
+-- The #10 ingest policy and #29 read RPC coexist after the main merge.
+set role authenticated;
+set request.jwt.claims = '{"sub":"00000000-0000-4000-8000-000000000001"}';
+select pg_temp.check_ok(
+  public.cage_metric_series(3,'do','2026-09-01T00:00:00Z','2026-09-01T00:00:00Z')->'points'->0->>'value' = '6.5',
+  'owner series RPC reads the edge-ingested observation');
+reset role;

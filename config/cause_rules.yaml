@@ -15,7 +15,8 @@ env_constants:
   feeding_drop_temp_c: 23      # [논문] 23℃ 이상 먹이섭취량 감소
   behavior_disturb_temp_c: 25  # [논문] 25℃ 행동·대사 교란 시작
   advisory_temp_c: 28          # [논문] 28℃ 고수온 주의보 기준 (VC-04 비교점)
-  do_low_mg_l: 4.0             # [확인] 저산소 기준 DO. SDD에 "값 확인 필요"로 남아 있음. 임시값
+  do_low_mg_l: 4.0             # [가정] 저산소 기준 DO. 수과원·해수부의 양식 어류 공식 DO 기준은 찾지 못함 (2026-11-27, #20).
+                               # 시스템 내부 판정용 임시값이며 알림 문구에 수치로 쓰지 않는다 (C-04). 참고: 현장에서 빈산소수괴를 3 mg/L 이하로 설명하는 사례가 있음
   # "수온·DO 정상"의 정의 (R5, R8)
   normal_env:
     temp_surface_max_c: 25
@@ -42,8 +43,11 @@ rules:
     name: 피난처 소실
     phase: mvp
     behavior:
-      cohesion_change_max: -0.30 # 응집도 급락 [확인] 급락의 기준값 미정, 임시값
-      activity_change_max: -0.40 # 활동량 -40% 이하 [가정]
+      # 둘 중 하나를 만족하면 행동 조건 충족 (#60). SDD 원안은 둘 다였으나 밤에는 기준선 대비 값이
+      # 잘 안 보여 데이터 쪽 stress/levels.py 가 "하나"로 구현함. 백엔드 #25 도 같게 맞춘다.
+      activity_change_max: -0.40 # 활동량 기준선 대비 -40% 이하 [가정]
+      cohesion_drop: 0.30        # 응집도 급락: 직전 lookback_h 시간 최고값보다 0.3 이상 하락 [가정, #60]
+      lookback_h: 12             # 위 최고값을 보는 시간 (시간) [가정, #60]
     env:
       temp_diff_max_c: 1         # 표층-중층 차 1℃ 미만으로 떨어짐 [사례]
       temp_surface_min_c: 25     # [논문]

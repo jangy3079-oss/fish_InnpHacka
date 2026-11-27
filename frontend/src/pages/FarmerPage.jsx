@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useDemo } from '../demo/DemoContext.jsx';
 import { api } from '../api/client.js';
+import { FarmerTabs } from '../components/SiteChrome.jsx';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
 import { FirstAidCard, ProfitCompare } from '../components/ProfitCards.jsx';
-import { LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
+import { BASELINE_WINDOWS, LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
 
 const CAGE_ID = 3;
 
@@ -14,47 +16,68 @@ export default function FarmerPage() {
   const [rec, setRec] = useState(null);
   const [error, setError] = useState(null);
 
+  const { demo } = useDemo();
+
+  // 시나리오·시각이 바뀌면 다시 불러온다. 이전 화면은 새 값이 올 때까지 유지해 깜빡임을 줄인다.
   useEffect(() => {
-    Promise.all([api.getStatus(CAGE_ID), api.getRecommendation(CAGE_ID)])
+    let alive = true;
+    Promise.all([api.getStatus(CAGE_ID, demo), api.getRecommendation(CAGE_ID, demo)])
       .then(([s, r]) => {
+        if (!alive) return;
         setStatus(s);
         setRec(r);
+        setError(null);
       })
-      .catch((e) => setError(e.message));
-  }, []);
+      .catch((e) => alive && setError(e.message));
+    return () => {
+      alive = false;
+    };
+  }, [demo]);
 
   if (error) return <p className="error big">불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>;
   if (!status || !rec) return <p className="big">불러오는 중…</p>;
 
+  const isProfit = rec.kind !== 'none' && rec.kind !== 'first_aid';
+
+  // 넓은 화면에서는 왼쪽에 지금 상태와 조치, 오른쪽에 판단 근거를 둔다.
   return (
-    <div className="farmer">
-      <LevelCard status={status} />
-      <SourceNotice status={status} />
-      <CauseList causes={status.cause} />
-      {rec.kind === 'first_aid' ? (
-        <FirstAidCard rec={rec} />
-      ) : (
-        <>
-          <Recommendation rec={rec} />
-          <ProfitCompare rec={rec} />
-        </>
-      )}
-      <EvidenceCharts cageId={CAGE_ID} alertAt={isAlert(status) ? status.ts : undefined} />
+    <div className="farmer-page">
+      <FarmerTabs />
+      <div className="farmer-grid">
+        <div className="farmer">
+          <LevelCard status={status} />
+          <SourceNotice status={status} />
+          <CauseList causes={status.cause} />
+          {rec.kind === 'none' && (
+            <section className="card"><h2>지금 추천하는 조치</h2><p>지금은 따로 할 조치가 없습니다.</p></section>
+          )}
+          {rec.kind === 'first_aid' && <FirstAidCard key={rec.ts} rec={rec} />}
+          {isProfit && <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />}
+        </div>
+        <div className="farmer">
+          {isProfit && <ProfitCompare rec={rec} />}
+          <EvidenceCharts cageId={CAGE_ID} alertAt={isAlert(status) ? status.ts : undefined} />
+        </div>
+      </div>
     </div>
   );
 }
 
 function LevelCard({ status }) {
-  if (status.baseline_status === 'warming_up' || status.level == null) {
+  const warming = status.baseline_status === 'warming_up';
+  const lv = LEVELS[status.level];
+
+  // 단계 자체가 없으면(null) 준비 중 카드만 보여준다.
+  if (!lv) {
     return (
       <section className="card level" style={{ background: '#eef2f6' }}>
         <h1>가두리 {status.cage_id}번</h1>
         <p className="level-name">준비 중</p>
         <p>평소 상태를 파악하는 중입니다. 잠시만 기다려 주세요.</p>
+        <Warmup status={status} />
       </section>
     );
   }
-  const lv = LEVELS[status.level];
   return (
     <section className="card level" style={{ background: lv.bg, color: lv.color }}>
       <h1>가두리 {status.cage_id}번</h1>
@@ -62,11 +85,32 @@ function LevelCard({ status }) {
         <span aria-hidden="true">{lv.icon}</span> {status.level}
       </p>
       <p>{lv.message}</p>
-      <p className="score">
-        스트레스 지수 <strong>{Math.round(status.stress_score)}</strong> / 100
-      </p>
+      {warming || status.stress_score == null ? (
+        <>
+          <p className="score">스트레스 지수는 평소 상태를 파악한 뒤에 나옵니다.</p>
+          <Warmup status={status} />
+        </>
+      ) : (
+        <p className="score">
+          스트레스 지수 <strong>{Math.round(status.stress_score)}</strong> / 100
+        </p>
+      )}
       <p className="time">{formatTime(status.ts)} 기준</p>
     </section>
+  );
+}
+
+// 기준선 학습 진행률 (FR-DIA-06). baseline_windows가 없으면 문구만 보여준다.
+function Warmup({ status }) {
+  if (status.baseline_status !== 'warming_up') return null;
+  const n = status.baseline_windows;
+  if (n == null) return <p className="warmup">평소 상태를 학습하는 중입니다.</p>;
+  const done = Math.min(n, BASELINE_WINDOWS);
+  return (
+    <div className="warmup">
+      <p>평소 상태 학습 {done}/{BASELINE_WINDOWS}</p>
+      <progress value={done} max={BASELINE_WINDOWS} aria-label="평소 상태 학습 진행률" />
+    </div>
   );
 }
 

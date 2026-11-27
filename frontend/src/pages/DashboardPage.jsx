@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useDemo } from '../demo/DemoContext.jsx';
 import { api } from '../api/client.js';
 import AreaMap from '../components/AreaMap.jsx';
+import ReleaseDemandPanel from '../components/ReleaseDemandPanel.jsx';
 import { LEVELS, formatTime } from '../constants.js';
 
 // 지자체 대시보드: 해역 단위 집계만 보여준다. 개별 어가의 손익·재고는 표시하지 않는다.
@@ -10,17 +12,25 @@ export default function DashboardPage() {
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
 
+  const { demo } = useDemo();
+
   useEffect(() => {
-    Promise.all([api.getStressMap(), api.getAreaShapes()])
+    let alive = true;
+    // 해역 경계는 아직 API에 없을 수 있어, 실패해도 표와 차트는 보여준다.
+    Promise.all([api.getStressMap(demo), api.getAreaShapes().catch(() => null)])
       .then(([m, s]) => {
+        if (!alive) return;
         setMap(m);
         setShapes(s);
       })
-      .catch((e) => setError(e.message));
-  }, []);
+      .catch((e) => alive && setError(e.message));
+    return () => {
+      alive = false;
+    };
+  }, [demo]);
 
   if (error) return <p className="error big">불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>;
-  if (!map || !shapes) return <p className="big">불러오는 중…</p>;
+  if (!map) return <p className="big">불러오는 중…</p>;
 
   const counts = Object.keys(LEVELS).map((lv) => ({ lv, n: map.areas.filter((a) => a.level === lv).length }));
 
@@ -40,7 +50,11 @@ export default function DashboardPage() {
       <div className="dash-grid">
         <section className="card">
           <h2>해역 지도</h2>
-          <AreaMap shapes={shapes} areas={map.areas} selectedId={selected} onSelect={setSelected} />
+          {shapes ? (
+            <AreaMap shapes={shapes} areas={map.areas} selectedId={selected} onSelect={setSelected} />
+          ) : (
+            <p className="hint">해역 경계 데이터를 아직 받을 수 없어 지도를 표시하지 못합니다. 오른쪽 표를 확인해 주세요.</p>
+          )}
         </section>
 
         <section className="card">
@@ -65,6 +79,7 @@ export default function DashboardPage() {
         </section>
       </div>
 
+      <ReleaseDemandPanel areas={map.areas} />
       <CauseChart items={map.cause_distribution} />
     </div>
   );

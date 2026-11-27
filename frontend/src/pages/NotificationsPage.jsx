@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useDemo } from '../demo/DemoContext.jsx';
+import { FarmerTabs } from '../components/SiteChrome.jsx';
 import { api } from '../api/client.js';
 import { LEVELS, formatTime } from '../constants.js';
 
@@ -10,14 +12,22 @@ export default function NotificationsPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
 
+  const { demo } = useDemo();
+
   useEffect(() => {
-    api.getNotifications(CAGE_ID).then(setData).catch(() => setError(true));
-  }, []);
+    let alive = true;
+    api.getNotifications(CAGE_ID, demo).then((d) => alive && setData(d)).catch(() => alive && setError(true));
+    return () => {
+      alive = false;
+    };
+  }, [demo]);
 
   if (error) return <p className="error big">알림을 불러오지 못했습니다.</p>;
   if (!data) return <p className="big">불러오는 중…</p>;
 
   return (
+    <div className="narrow">
+    <FarmerTabs />
     <div className="chat">
       <h1>알림</h1>
       <p className="hint">시연용 모의 화면입니다. 실제 메시지는 발송되지 않습니다.</p>
@@ -36,6 +46,7 @@ export default function NotificationsPage() {
           );
         })}
       </ul>
+    </div>
     </div>
   );
 }
