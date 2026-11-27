@@ -1,0 +1,5 @@
+# #19 VC-07 시험 조건. 합격 기준이 아닌 비교·상자 대응의 시험 가정값.
+# SDD 5.1: 기본 conf 0.3과 낮춘 conf 0.1을 같은 이미지에서 비교한다.
+confidence_thresholds: [0.3, 0.1]
+iou_threshold: 0.5           # 정답 상자와 예측 상자 1:1 대응 기준 (시험 가정)
+sample_count: 20
