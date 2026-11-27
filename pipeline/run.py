@@ -8,10 +8,11 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 
 from fusion.fuse import fuse, load_jsonl
-from cause import CauseContext, CauseEngine
+from cause import CauseEngine
 from cause.store import save_jsonl as save_causes
 from common.config_loader import ConfigLoader
 from pipeline import export
+from pipeline.contexts import scenario_contexts
 from simulator.generate import DEFAULT, generate
 from simulator.scenario import load_scenario
 from stress.levels import apply_levels
@@ -34,8 +35,8 @@ def score_scenario(name: str, out_dir: Path, model: StressModel) -> dict:
     scores = model.score_series(fused)
     sc = load_scenario(name)
     snapshot_loader = ConfigLoader()
-    context = CauseContext(advisory_active=sc.env.get("advisory_active"))
-    results = CauseEngine(snapshot_loader).evaluate_series(scores, fused, contexts=[context] * len(scores))
+    contexts = scenario_contexts(sc, [s.ts for s in scores])
+    results = CauseEngine(snapshot_loader).evaluate_series(scores, fused, contexts=contexts)
     changes = apply_levels(scores, [r.immediate_danger for r in results],
                            cfg=snapshot_loader.last_good.to_dict()["thresholds"])
     labels = json.loads((d / "labels.json").read_text(encoding="utf-8"))

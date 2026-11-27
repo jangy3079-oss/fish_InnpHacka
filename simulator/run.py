@@ -64,8 +64,18 @@ def _event_levels(sc: Scenario, hours: np.ndarray) -> Dict[str, np.ndarray]:
         lv = window_level(hours, ev["start_h"], ev.get("end_h"), ev.get("ramp_h", 2))
         turbid = np.maximum(turbid, lv)
         turbid_q = np.minimum(turbid_q, np.where(lv > 0, float(ev.get("quality", 0.15)), 1.0))
+    red_tide = np.zeros_like(hours)
+    for ev in sc.events_of("red_tide"):
+        red_tide = np.maximum(red_tide, window_level(hours, ev["start_h"], ev.get("end_h"), ev.get("ramp_h", 3)))
+    work = np.zeros_like(hours)
+    for ev in sc.events_of("work"):
+        # 작업 직후 30분 안에 최대, 그 뒤 recovery_h에 걸쳐 선형 회복 (가정값, #174)
+        at, rec = float(ev["at_h"]), max(float(ev.get("recovery_h", 60)), 1e-6)
+        up = smoothstep((hours - at) / 0.5)
+        down = np.clip(1 - (hours - at) / rec, 0, 1)
+        work = np.maximum(work, up * down * float(ev.get("intensity", 1.0)))
     return {"disease": disease, "parasite": parasite, "rub_mult": np.full_like(hours, rub_mult),
-            "turbid": turbid, "turbid_q": turbid_q}
+            "turbid": turbid, "turbid_q": turbid_q, "red_tide": red_tide, "work": work}
 
 
 def simulate(sc: Scenario) -> SimulationResult:
@@ -86,7 +96,7 @@ def simulate(sc: Scenario) -> SimulationResult:
     positions = np.empty((n_pings, sc.n_fish), dtype=np.float32)
 
     keys = ["temp_surface", "temp_mid", "do", "day", "activity", "still", "feeding",
-            "rubbing_rate", "disorder", "disease", "parasite", "turbid", "quality", "typhoon"]
+            "rubbing_rate", "disorder", "disease", "parasite", "turbid", "quality", "typhoon", "red_tide", "work"]
     truth = {k: np.empty(n_cycles) for k in keys}
     truth["vertical_dist"] = np.empty((n_cycles, 3))
 
@@ -95,7 +105,8 @@ def simulate(sc: Scenario) -> SimulationResult:
         i0 = c * ppc
         dr = Drivers(temp_surface=float(env.temp_surface[i0]), temp_mid=float(env.temp_mid[i0]),
                      do=float(env.do[i0]), day=float(day[i0]),
-                     disease=float(ev["disease"][i0]), parasite=float(ev["parasite"][i0]))
+                     disease=float(ev["disease"][i0]), parasite=float(ev["parasite"][i0]),
+                     red_tide=float(ev["red_tide"][i0]), work=float(ev["work"][i0]))
         b = behavior(dr, school.grid, rubbing_multiplier=float(ev["rub_mult"][i0]))
         if c == 0:
             school.warm_start(b.pdf)
@@ -117,7 +128,8 @@ def simulate(sc: Scenario) -> SimulationResult:
         vals = dict(temp_surface=dr.temp_surface, temp_mid=dr.temp_mid, do=dr.do, day=dr.day,
                     activity=b.activity, still=b.still, feeding=last_feeding,
                     rubbing_rate=rub_base * b.rubbing_mult, disorder=b.disorder,
-                    disease=dr.disease, parasite=dr.parasite, turbid=ev["turbid"][i0], quality=q, typhoon=env.typhoon[i0])
+                    disease=dr.disease, parasite=dr.parasite, turbid=ev["turbid"][i0], quality=q, typhoon=env.typhoon[i0],
+                    red_tide=dr.red_tide, work=dr.work)
         for k, v in vals.items():
             truth[k][c] = v
         truth["vertical_dist"][c] = layer_fractions(positions[i0:i0 + ppc], sc.depth_m)

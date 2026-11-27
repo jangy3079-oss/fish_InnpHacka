@@ -1,5 +1,18 @@
 # API 계약 초안 — #4
 
+> #36 관리자 설정 GET/PUT은 보호된 관리자 역할·revision·재전송 키를 사용하는 실제 파일 저장 경로다. [관리자 계약](admin-config-api.md)을 따른다.
+
+> #44 추천의 deadline/deadlines는 게시 시점의 실행 기한·다음 판단 정보다. [기한 계약](recommendation-deadlines.md)을 따른다.
+
+> #35 해역 두 GET은 공무원 인증·허용 해역의 실제 DB 집계다. nullable/부분 집계·방류 추천 기준은
+> [해역 집계 API 계약](area-aggregates.md)을 따른다. 아래 기존 목업 응답은 #4 당시 기록이다.
+
+> #30 시나리오 재생은 실제 합성 센서 분석으로 교체했다. `t`는 시간 단위, `mock=false/simulated=true/persisted=false`다.
+> [시나리오 재생 API 계약](scenario-replay-api.md)을 따른다. 알림·R4/R6(#34/#45)은 별도 담당 범위다.
+
+> #104 상태·추천 조회·선택 저장은 인증된 실제 게시 데이터 경로다. 선택에는 request_key UUID가 필요하다.
+> [분석 저장·어민 API 계약](analysis-api.md)을 따른다. 아래 #4 목업 설명은 당시 기록이다.
+
 > #28 진단 POST는 소유자 인증·DB 저장 경로이며201/pending이다. note 대신 request_key UUID를 보낸다.
 > [진단 API 계약](diagnosis-api.md)을 따른다.
 
@@ -38,6 +51,7 @@
 | GET | `/areas/stress-map` | `{ts, areas: [{area_id, name, level, stress_score, cage_count}]}`. 개별 어가 손익 제외 |
 | GET | `/areas/{id}/release-demand` | `{area_id, ts, estimated_fish_count, cage_count}` |
 | POST | `/cages/{id}/diagnosis-request` | `{note: ""}` → MockReceipt |
+| POST | `/cages/{id}/work-log` | 실제 DB. `{kind, performed_at, request_key}` → WorkLogReceipt (201). [적조 특보·작업 기록 안내](red-tide-work-log.md) |
 | POST | `/demo/scenario/{name}?t=0` | `{mock: true, scenario, t, status}`. 실제 재생하지 않음 |
 | PUT | `/admin/config/{file}` | `{values: {warning: 60}}` → MockReceipt. YAML 파일 수정 없음 |
 

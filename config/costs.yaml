@@ -7,6 +7,20 @@
 
 currency: KRW
 
+# #44 출하 가능 기한은 거래처/운송 확인 전에는 시각을 만들지 않는다.
+harvest_deadline:
+  source_status: pending
+  hours_from_assessment: null
+  at: null
+  source: null
+
+# [가정, #44] 경보 단계별 다음 판단 권고 시점. 법정 신청/출하 마감이 아니다.
+reassessment_minutes_by_level:
+  normal: 60
+  caution: 30
+  warning: 15
+  danger: 5
+
 # 크기 그룹별 시세·무게 (P_g: 원/kg, W_g: 마리당 kg)
 size_groups:
   fry:

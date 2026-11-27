@@ -19,25 +19,49 @@ export default function FarmerPage() {
   const [rec, setRec] = useState(null);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
+  const [slow, setSlow] = useState(false);
   usePageTitle('어민 현황');
 
-  const { demo } = useDemo();
+  // 첫 분석은 준비에 오래 걸릴 수 있어, 3초가 넘으면 기다리는 이유를 알려 준다.
+  useEffect(() => {
+    if (status && rec) {
+      setSlow(false);
+      return undefined;
+    }
+    const id = setTimeout(() => setSlow(true), 3000);
+    return () => clearTimeout(id);
+  }, [status, rec]);
+
+  const { demo, setBusy } = useDemo();
 
   // 시나리오·시각이 바뀌면 다시 불러온다. 이전 화면은 새 값이 올 때까지 유지해 깜빡임을 줄인다.
   useEffect(() => {
     let alive = true;
-    Promise.all([api.getStatus(CAGE_ID, demo), api.getRecommendation(CAGE_ID, demo)])
-      .then(([s, r]) => {
-        if (!alive) return;
-        setStatus(s);
-        setRec(r);
-        setError(null);
-      })
-      .catch((e) => alive && setError(e.message));
+    setBusy(true); // 응답이 올 때까지 재생을 멈춘다
+    // 슬라이더를 빠르게 움직일 때 중간 값마다 요청하지 않고 마지막 값만 보낸다(실제 서버만).
+    const timer = setTimeout(() => {
+      Promise.all([api.getStatus(CAGE_ID, demo), api.getRecommendation(CAGE_ID, demo)])
+        .then(([s, r]) => {
+          if (!alive) return;
+          setBusy(false);
+          setStatus(s);
+          setRec(r);
+          setError(null);
+        })
+        .catch((e) => {
+          if (!alive) return;
+          setBusy(false);
+          setError(e.message);
+        });
+    }, api.debounceMs);
     return () => {
       alive = false;
+      clearTimeout(timer);
     };
-  }, [demo, attempt]);
+  }, [demo, attempt, setBusy]);
+
+  // 화면을 떠나면 재생이 멈춘 채로 남지 않게 푼다.
+  useEffect(() => () => setBusy(false), [setBusy]);
 
   if (error && (!status || !rec)) {
     return (
@@ -51,6 +75,7 @@ export default function FarmerPage() {
       <div className="farmer-page">
         <FarmerTabs />
         <LoadingBlock label="어민 현황을 불러오는 중입니다">
+          {slow && <p className="notice">분석을 준비하는 중입니다. 처음에는 1분 가까이 걸릴 수 있습니다.</p>}
           <div className="farmer-grid">
             <div className="farmer">
               <Skeleton height={230} />
@@ -109,22 +134,27 @@ function LevelCard({ status }) {
       </section>
     );
   }
+  const hasScore = !warming && status.stress_score != null;
   return (
     <section className="card level" style={{ background: lv.bg, color: lv.color }}>
       <h1>가두리 {status.cage_id}번</h1>
-      <p className="level-name">
-        <span aria-hidden="true">{lv.icon}</span> {status.level}
-      </p>
+      <div className="level-main">
+        {hasScore && (
+          <p className="level-score" aria-label={`스트레스 지수 ${Math.round(status.stress_score)} / 100`}>
+            <strong>{Math.round(status.stress_score)}</strong>
+            <span>/ 100</span>
+          </p>
+        )}
+        <p className="level-name">
+          <span aria-hidden="true">{lv.icon}</span> {status.level}
+        </p>
+      </div>
       <p>{lv.message}</p>
-      {warming || status.stress_score == null ? (
+      {!hasScore && (
         <>
           <p className="score">스트레스 지수는 평소 상태를 파악한 뒤에 나옵니다.</p>
           <Warmup status={status} />
         </>
-      ) : (
-        <p className="score">
-          스트레스 지수 <strong>{Math.round(status.stress_score)}</strong> / 100
-        </p>
       )}
       <p className="time">{formatTime(status.ts)} 기준</p>
     </section>
@@ -205,21 +235,30 @@ function CauseList({ causes, status }) {
 }
 
 function Recommendation({ rec }) {
-  const [done, setDone] = useState(null);
+  const chosen = rec.options.find((o) => o.id === rec.chosen_option);
+  const [done, setDone] = useState(chosen ? chosen.label : null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
 
   const main = rec.options.find((o) => o.id === rec.recommended_option);
   if (!main) return null;
+  const simulated = rec.simulated || rec.id === 0; // 시연 추천은 표시 전용이라 저장하지 않는다
+  const blocked = rec.selectable === false && !simulated;
 
   const choose = async (option) => {
     setSending(true);
     setError(null);
     try {
-      await api.chooseOption(rec.id, option.id);
+      if (!simulated) await api.chooseOption(rec.id, option.id);
       setDone(option.label);
-    } catch {
-      setError('기록하지 못했습니다. 다시 눌러 주세요.');
+    } catch (e) {
+      setError(
+        e.status === 409
+          ? '그 사이 분석이 바뀌었습니다. 화면을 새로 불러온 뒤 추천을 다시 확인해 주세요.'
+          : e.status === 422
+            ? '이 조치는 지금 선택할 수 없습니다.'
+            : '기록하지 못했습니다. 다시 눌러 주세요.',
+      );
     } finally {
       setSending(false);
     }
@@ -232,10 +271,12 @@ function Recommendation({ rec }) {
       {main.reason && <p>{main.reason}</p>}
       <p className="rec-loss">예상 손해 <strong>{formatKrw(main.estimated_loss_krw)}</strong></p>
       {done ? (
-        <p className="done" role="status">✔ “{done}” 선택을 기록했습니다.</p>
+        <p className="done" role="status">
+          {simulated ? `✔ “${done}”을(를) 선택해 보았습니다. 시연이라 저장하지 않습니다.` : `✔ “${done}” 선택을 기록했습니다.`}
+        </p>
       ) : (
-        <button className="primary" disabled={sending || !main.available} onClick={() => choose(main)}>
-          {sending ? '기록 중…' : `${main.label} 하기`}
+        <button className="primary" disabled={sending || blocked || !main.available} onClick={() => choose(main)}>
+          {sending ? '기록 중…' : simulated ? '시연: 선택해 보기' : `${main.label} 하기`}
         </button>
       )}
       {error && <p className="error">{error}</p>}

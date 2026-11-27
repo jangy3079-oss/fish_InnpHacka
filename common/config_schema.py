@@ -1,6 +1,7 @@
 """Structural contracts for the five config files; no runtime default values."""
 
 import re
+from datetime import datetime, timezone
 from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError, field_validator, model_validator
@@ -59,6 +60,18 @@ class Fusion(ConfigModel):
         return self
 
 
+class AnalysisPolicy(ConfigModel):
+    max_age_minutes: Annotated[float, Field(gt=0, le=1440)]
+    confidence_good_min: Ratio
+    confidence_limited_min: Ratio
+
+    @model_validator(mode="after")
+    def ordered_confidence(self) -> Self:
+        if self.confidence_limited_min >= self.confidence_good_min:
+            raise ValueError("confidence thresholds must be ordered")
+        return self
+
+
 class Thresholds(ConfigModel):
     cycle_minutes: Positive
     levels: dict[Level, Score]
@@ -71,6 +84,7 @@ class Thresholds(ConfigModel):
     baseline: Baseline
     quality: Quality
     fusion: Fusion
+    analysis: AnalysisPolicy
 
     @model_validator(mode="after")
     def level_order(self) -> Self:
@@ -82,15 +96,18 @@ class Thresholds(ConfigModel):
         return self
 
 
+IMPLEMENTED_RULES = {"R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"}
+
+
 class Probability(ConfigModel):
     method: Literal["normalize_sum_to_one"]
     min_display: Ratio
     scoring: Literal["binary_all_required"]
-    tie_break_order: list[Literal["R1", "R2", "R3", "R5", "R8"]]
+    tie_break_order: list[Literal["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"]]
 
     @model_validator(mode="after")
     def implemented_order(self) -> Self:
-        if len(self.tie_break_order) != 5 or set(self.tie_break_order) != {"R1", "R2", "R3", "R5", "R8"}:
+        if len(self.tie_break_order) != len(IMPLEMENTED_RULES) or set(self.tie_break_order) != IMPLEMENTED_RULES:
             raise ValueError("tie_break_order must list each implemented rule once")
         return self
 
@@ -147,6 +164,53 @@ class R8Behavior(ConfigModel):
     missing_observation: Literal["pause"]
 
 
+class R7Behavior(ConfigModel):
+    feeding_response_only: Literal[True]
+    feeding_change_max: Annotated[float, Field(ge=-1, lt=0)]
+    activity_change_abs_max: Annotated[float, Field(gt=0, le=1)]
+    lower_layers_ratio_x_max: Annotated[float, Field(gt=1)]
+    missing_observation: Literal['pause']
+    max_hold_hours: Annotated[float, Field(gt=0, le=48)]
+
+
+class R7Environment(ConfigModel):
+    temp_surface_min_c: float
+
+
+class R4Behavior(ConfigModel):
+    activity_change_abs_min: Annotated[float, Field(gt=0, le=1)]
+
+
+class R4Environment(ConfigModel):
+    red_tide_advisory: Literal[True]
+    advisory_stages: Annotated[list[Literal["watch", "advisory", "warning"]], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def unique_stages(self) -> Self:
+        if len(set(self.advisory_stages)) != len(self.advisory_stages):
+            raise ValueError("R4 advisory_stages must not repeat")
+        return self
+
+
+class R6Behavior(ConfigModel):
+    score_rise_after_work: Literal[True]
+    pre_work_hours: Positive
+    rise_window_hours: Positive
+    min_score_rise: Annotated[float, Field(gt=0, le=100)]
+    not_recovered_hours: Positive
+    max_hours_after_work: Positive
+
+    @model_validator(mode="after")
+    def windows(self) -> Self:
+        if not self.rise_window_hours <= self.not_recovered_hours < self.max_hours_after_work:
+            raise ValueError("R6 windows must satisfy rise_window <= not_recovered < max_hours_after_work")
+        return self
+
+
+class R6Environment(ConfigModel):
+    work_log: Texts
+
+
 class Rule(ConfigModel):
     # Rule-specific evidence names are evolving in #25/#60, so these maps and
     # additional rule fields are preserved rather than silently discarded.
@@ -169,7 +233,9 @@ class CauseRules(ConfigModel):
             raise ValueError("rules must contain R1 through R8")
         for rid, behavior, environment in (("R1", R1Behavior, R1Environment), ("R2", R2Behavior, R2Environment),
                                             ("R3", R3Behavior, R3Environment), ("R5", R5Behavior, NormalEnvironment),
-                                            ("R8", R8Behavior, NormalEnvironment)):
+                                            ("R7", R7Behavior, R7Environment),
+                                            ("R8", R8Behavior, NormalEnvironment), ("R4", R4Behavior, R4Environment),
+                                            ("R6", R6Behavior, R6Environment)):
             behavior.model_validate(self.rules[rid].behavior)
             environment.model_validate(self.rules[rid].env)
         if type(self.rules["R2"].model_extra.get("immediate_danger")) is not bool:
@@ -177,6 +243,8 @@ class CauseRules(ConfigModel):
         if self.rules["R1"].env["temp_diff_min_c"] < self.rules["R2"].env["temp_diff_max_c"]:
             raise ValueError("R1/R2 temperature difference ranges must not overlap")
         NormalEnvironmentBounds.model_validate(self.env_constants.get("normal_env"))
+        if self.rules['R7'].env['temp_surface_min_c'] >= self.env_constants['normal_env']['temp_surface_max_c']:
+            raise ValueError('R7 feeding range must be below the normal-environment upper bound')
         return self
 
 
@@ -212,11 +280,38 @@ class Subsidy(ConfigModel):
     per_fish_krw: NonNegative
 
 
+class DeadlinePolicy(ConfigModel):
+    source_status: Literal['pending','assumed','confirmed']
+    hours_from_assessment: Annotated[float, Field(gt=0, le=8760)] | None
+    at: Text | None
+    source: Text | None
+
+    @field_validator('at')
+    @classmethod
+    def aware_time(cls,value):
+        if value is None:
+            return value
+        stamp = datetime.fromisoformat(value.replace('Z','+00:00'))
+        if stamp.tzinfo is None or stamp.utcoffset() is None:
+            raise ValueError('Deadline requires an aware ISO timestamp')
+        return stamp.astimezone(timezone.utc).isoformat()
+
+    @model_validator(mode='after')
+    def complete_policy(self):
+        count = int(self.at is not None)+int(self.hours_from_assessment is not None)
+        if (self.source_status=='pending' and count!=0) or (self.source_status!='pending' and count!=1):
+            raise ValueError('Pending deadlines have no time; other policies require exactly one time basis')
+        if self.source_status=='confirmed' and (not self.source or not self.source.strip()):
+            raise ValueError('Confirmed deadlines require a source')
+        return self
+
+
 class ReleaseRules(ConfigModel):
     species: Species
     size_groups: dict[Size, ReleaseGroup]
     simultaneous_limit: ReleaseLimit
     subsidy: Subsidy
+    application_deadline: DeadlinePolicy
 
 
 class CostGroup(ConfigModel):
@@ -244,6 +339,8 @@ class Insurance(ConfigModel):
 
 class Costs(ConfigModel):
     currency: Literal["KRW"]
+    harvest_deadline: DeadlinePolicy
+    reassessment_minutes_by_level: dict[Literal['normal','caution','warning','danger'],Positive]
     size_groups: dict[Size, CostGroup]
     expected_mortality_by_level: dict[Literal["normal", "caution", "warning", "danger"], Ratio]
     option_loss: dict[str, LossOption]
@@ -252,6 +349,8 @@ class Costs(ConfigModel):
 
     @model_validator(mode="after")
     def complete_options(self) -> Self:
+        if set(self.reassessment_minutes_by_level)!={'normal','caution','warning','danger'}:
+            raise ValueError('Reassessment intervals require all four levels')
         if set(self.expected_mortality_by_level) != {"normal", "caution", "warning", "danger"}:
             raise ValueError("mortality rates require all four levels")
         if not self.option_loss or set(self.option_loss) != set(self.action_cost_krw):

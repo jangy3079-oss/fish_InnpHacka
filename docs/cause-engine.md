@@ -1,5 +1,8 @@
 # 원인 추정 엔진 — #25 / #26 / #60
 
+> #152에서 R7 섭식 저하와 지수 게이트 예외·야간 관측 유지·관리 추천을 추가했다.
+> [R7 판정·근거·유지 정책·API 계약](r7-feeding.md)을 따른다. 아래 R1/R2/R3/R5/R8 설명은 해당 구현 범위의 기록이다.
+
 ## 입력과 실행
 
 원시 센서는 기존 `MetricRecord` 계약을 유지한다. 새 엔진은 기존 파생 산출물인
@@ -27,7 +30,7 @@ apply_levels(scores, [r.immediate_danger for r in results],
 ## 조건과 확률 초안
 
 모든 업무 임계값은 `cause_rules.yaml`과 `thresholds.yaml`에서 읽는다.
-구현된 R1/R2/R3/R5/R8 조건 키·범위·R2 boolean·점수 정책은 공통 로더에서 검증하며,
+구현된 R1/R2/R3/R4/R5/R6/R8 조건 키·범위·R2 boolean·점수 정책은 공통 로더에서 검증하며,
 잘못된 설정이나 미지원 조건을 조용히 무시하지 않는다.
 
 | 규칙 | 행동 | 환경 |
@@ -72,7 +75,7 @@ warming_up에는 R2 경보 신호도 만들지 않는다. 이 표시·게이트 
 
 DB 행 변환까지 제공하며 원격 DB 쓰기·계정/RLS 변경은 하지 않는다. 재전송 시 중복을 피할 키와
 저장 주체는 합의해야 한다. 현재 HTTP `/status`는 기존 목업이다. 실제 조회/DB 저장 연결은 #104 후속이며
-파이프라인 JSONL을 API가 즉시 읽는다고 가정하면 안 된다. R4/R6/R7·추천·알림은 후속 범위다.
+파이프라인 JSONL을 API가 즉시 읽는다고 가정하면 안 된다. R4/R6은 아래 #174 절, R7·추천·알림은 후속 범위다.
 
 ## 설정 적용과 검증
 
@@ -126,7 +129,7 @@ R8은 저품질·비비기 미관측 시 이력을 유지하지만 그 시간은
 따라서 6시간은 벽시계 6시간이 아닌 **유효하게 관측한 이상 시간**이며 밤을 사이에 두고 합산될 수 있다.
 이 pause 정책과 실서비스 최대 허용 관측 공백은 팀 합의 대상이다.
 
-같은 이진 점수는 `R2 → R3 → R8 → R1 → R5` 순으로 표시한다(가정). R8의 구체적 비비기 신호와 R5의
+같은 이진 점수는 `R2 → R3 → R4 → R8 → R6 → R1 → R5` 순으로 표시한다(가정, #174에서 R4·R6 추가). R8의 구체적 비비기 신호와 R5의
 일반 상승 추세가 함께 맞으면 각각 0.5이면서 R8이 먼저 나온다. 우선순위를 진단 정확도로 해석하지 않는다.
 
 ## #26 실행·설정 호환·검증 범위
@@ -154,3 +157,29 @@ evidence에는 DO·표층 비율·정상 환경 경계·특보 상태·카메라
 관측된 비비기 누적시간·시작 시각을 추가한다. 기존 JSONL 및 DB 행 변환 계약은 유지한다.
 실제 HTTP status 연결·원격 DB 저장·외부 특보 조회·질병/기생충 확정 및 조치/약품 안내는 구현하지 않는다.
 시뮬레이터 기본 시드의 결과이며 현장 진단 성능이나 모든 시드에 대한 일반화를 의미하지 않는다.
+
+## #174: R4 적조·R6 작업 스트레스
+
+#45 중 원인 엔진 판정을 먼저 구현했다. DB 입력(작업 기록 API, 적조 특보 적재)과 분석 연결은 [적조 특보·작업 기록 안내](red-tide-work-log.md)에 있다.
+외부 입력은 `CauseContext`로 받고, 값이 없으면(None) 해당 규칙은 후보가 되지 않는다.
+
+| 규칙 | 외부 입력 | 조건 (`cause_rules.yaml`) |
+| --- | --- | --- |
+| R4 적조 | `red_tide_advisory` (적조 특보 발령 해역, 미확인=None) | 특보 True, 기준선 대비 활동량 변화 \|activity_change\| ≥ 0.50 [확인] |
+| R6 작업 스트레스 | `work_log_at`·`work_log_type` (그 주기까지 가장 최근 작업 기록, 둘 다 있거나 둘 다 없음) | 종류가 `work_log`(net_change, sorting) 중 하나. 작업 전 6시간 평균 대비 작업 후 6시간 안 최고 지수가 20점 이상 상승. 작업 24시간 뒤에도 지수 ≥ cause_min_stress. 작업 후 72시간까지만 후보 [가정] |
+
+- R6의 지수 이력은 ready 주기만 쓴다. 점수가 없는 주기는 회복 근거로 보지 않는다. revision이 바뀌면 이력을 초기화한다.
+- 둘 다 cause_min_stress 예외가 아니다. 지수 40 미만이면 low_stress로 억제된다.
+- evidence에 `red_tide_advisory`, `work_log_type`, `work_log_at`, `hours_since_work`, `pre_work_mean_score`,
+  `post_work_peak_score`, `score_rise_after_work`를 추가한다.
+
+시연·검증에서는 시나리오 YAML 이벤트로 컨텍스트를 만든다 (`pipeline/contexts.py`의 `scenario_contexts`).
+`red_tide` 이벤트의 `advisory_h`(기본 start_h)~`end_h`가 특보 기간이고, `work` 이벤트의 `at_h`·`kind`가 작업 기록이다.
+
+```sh
+python -m pipeline red_tide net_change
+python -m unittest tests.test_cause_r4_r6 -v
+```
+
+합성 시나리오 `red_tide.yaml`, `net_change.yaml`의 행동 변화 크기는 시뮬레이터 가정값이다 (각 YAML 머리말).
+검증(`python -m pipeline.validate`)은 두 시나리오의 VC-02·03을 따로 계산하고 기존 요약 합격에는 넣지 않는다.

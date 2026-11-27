@@ -30,6 +30,8 @@ def ensure_safe(value, snapshot):
             if field in {"config_revision", "creation_config_revision", "context_version", "request_key"} and re.fullmatch(
                     r"(?:[0-9a-f]{32,64}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", text):
                 return  # Valid opaque identifiers may contain digits followed by hex 'cc'; they are not dose text.
+            if field == 'model_version' and re.fullmatch(r'm5-iforest-\d+(?:\.\d+)+\+[a-z0-9._-]+\.\d{8}\.[0-9a-f]{8}',text):
+                return
             compact = re.sub(r"\s+", "", text)
             if any(term in compact for term in blocked) or any(p.search(text) or p.search(compact) for p in patterns):
                 raise UnsafeFirstAid("Response content is not permitted")

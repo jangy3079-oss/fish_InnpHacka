@@ -1,8 +1,8 @@
-"""Explicit external context and per-cage R5/R8 observation history (#26)."""
+"""Explicit external context and per-cage R5/R6/R8 observation history (#26, #174)."""
 
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from statistics import fmean
 
 
@@ -11,11 +11,24 @@ class CauseContext:
     # Unknown is not evidence that an advisory is absent. No labels/truth inputs.
     advisory_active: bool | None = None
     camera_surface_breathing: bool | None = None
+    # R4: red-tide advisory for the cage's sea area (unknown is not "no advisory").
+    red_tide_advisory: bool | None = None
+    # R6: most recent recorded handling work (net change, sorting) at or before this cycle.
+    work_log_at: datetime | None = None
+    work_log_type: str | None = None
 
     def __post_init__(self):
-        for value in (self.advisory_active, self.camera_surface_breathing):
+        for value in (self.advisory_active, self.camera_surface_breathing, self.red_tide_advisory):
             if value is not None and type(value) is not bool:
                 raise ValueError("Context flags must be booleans or null")
+        if (self.work_log_at is None) != (self.work_log_type is None):
+            raise ValueError("work_log_at and work_log_type must be given together")
+        if self.work_log_at is not None:
+            if (not isinstance(self.work_log_at, datetime) or self.work_log_at.tzinfo is None
+                    or self.work_log_at.utcoffset() is None):
+                raise ValueError("work_log_at must be an aware datetime")
+            if type(self.work_log_type) is not str or not self.work_log_type.strip():
+                raise ValueError("work_log_type must be a non-empty string")
 
 
 class TemporalRules:
@@ -72,3 +85,46 @@ class TemporalRules:
                             "trend_window_complete": complete, "rubbing_observed_hours": duration.total_seconds() / 3600,
                             "rubbing_window_start": None if began is None else began.isoformat(),
                             "rubbing_current_observed": observed}}
+
+
+class WorkRules:
+    """R6: score rise right after recorded work, still not recovered later (#174).
+
+    Keeps per-cage (ts, score) of ready cycles. A missing or warming-up score is not
+    evidence either way, so it is skipped rather than counted as recovered.
+    """
+
+    def __init__(self):
+        self.scores = defaultdict(deque)
+
+    def evaluate(self, cage, ts, score, ready, context, cfg, thresholds):
+        b = cfg["rules"]["R6"]["behavior"]
+        kinds = cfg["rules"]["R6"]["env"]["work_log"]
+        pre_h, rise_h = timedelta(hours=b["pre_work_hours"]), timedelta(hours=b["rise_window_hours"])
+        recover_h, max_h = timedelta(hours=b["not_recovered_hours"]), timedelta(hours=b["max_hours_after_work"])
+        history = self.scores[cage]
+        while history and history[0][0] < ts - (pre_h + max_h):
+            history.popleft()
+        if ready and score is not None:
+            history.append((ts, score))
+        work_at = None if context.work_log_at is None else context.work_log_at.astimezone(timezone.utc)
+        logged = work_at is not None and context.work_log_type in kinds and work_at <= ts
+        elapsed = ts - work_at if logged else None
+        pre = [v for t, v in history if logged and work_at - pre_h <= t < work_at]
+        post = [v for t, v in history if logged and work_at < t <= work_at + rise_h]
+        pre_mean = fmean(pre) if pre else None
+        post_peak = max(post) if post else None
+        rise = None if pre_mean is None or post_peak is None else post_peak - pre_mean
+        checks = {
+            "work_logged": bool(logged),
+            "within_window": bool(logged and elapsed <= max_h),
+            "score_rose_after_work": bool(rise is not None and rise >= b["min_score_rise"]),
+            "not_recovered": bool(logged and elapsed >= recover_h and ready and score is not None
+                                  and score >= thresholds["cause_min_stress"]),
+        }
+        details = {"work_log_type": context.work_log_type if logged else None,
+                   "work_log_at": work_at.isoformat() if logged else None,
+                   "hours_since_work": None if elapsed is None else elapsed.total_seconds() / 3600,
+                   "pre_work_mean_score": pre_mean, "post_work_peak_score": post_peak,
+                   "score_rise_after_work": rise}
+        return checks, details

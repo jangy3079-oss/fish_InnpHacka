@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
+import RecommendationDeadlines from './RecommendationDeadlines.jsx';
 
 export function formatKrw(v) {
   if (v == null) return '계산 전';
@@ -20,6 +21,7 @@ export function ProfitCompare({ rec }) {
     <section className="card flat">
       <h2>조치별 예상 손해</h2>
       <p className="hint">손해가 적은 순서입니다. 추정값이며 실제와 다를 수 있습니다.</p>
+      <RecommendationDeadlines rec={rec} />
       <div className="loss-head" aria-hidden="true">
         <span>조치</span>
         <span>예상 손해</span>
@@ -91,7 +93,7 @@ export function FirstAidCard({ rec }) {
   const request = async () => {
     setState('sending');
     try {
-      await api.requestDiagnosis(rec.cage_id);
+      if (!rec.simulated && rec.id !== 0) await api.requestDiagnosis(rec.cage_id); // 시연 화면은 접수하지 않는다
       setState('done');
     } catch {
       setState('error');
@@ -101,16 +103,19 @@ export function FirstAidCard({ rec }) {
     <section className="card key">
       <h2>질병이 의심됩니다</h2>
       <p>원인을 확정하지 못했습니다. 먼저 아래 조치를 해 주세요.</p>
-      <ol className="steps">
+      <RecommendationDeadlines rec={rec} />
+      <ol className="aid-steps">
         {rec.first_aid.map((s) => (
           <li key={s}>{s}</li>
         ))}
       </ol>
       {state === 'done' ? (
-        <p className="done" role="status">✔ 진단을 요청했습니다.</p>
+        <p className="done" role="status">
+          {rec.simulated || rec.id === 0 ? '✔ 시연 화면이라 실제로 접수되지 않습니다.' : '✔ 진단을 요청했습니다.'}
+        </p>
       ) : (
         <button className="primary" disabled={state === 'sending'} onClick={request}>
-          {state === 'sending' ? '요청 중…' : '진단 요청하기'}
+          {state === 'sending' ? '요청 중…' : rec.simulated || rec.id === 0 ? '시연: 진단 요청해 보기' : '진단 요청하기'}
         </button>
       )}
       {state === 'error' && <p className="error">요청하지 못했습니다. 다시 눌러 주세요.</p>}

@@ -20,18 +20,21 @@ def config_dir() -> Path:
     return Path(os.environ.get("ROCKFISH_CONFIG_DIR", DEFAULT_DIR))
 
 
-@lru_cache(maxsize=None)
-def _load(path: str) -> dict:
-    p = Path(path)
-    if not p.exists():
-        return {}
-    with p.open(encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+@lru_cache(maxsize=32)
+def _load(path: str, version: tuple) -> dict:
+    return yaml.safe_load(Path(path).read_text(encoding='utf-8-sig')) or {}
 
 
 def load_yaml(name: str) -> dict:
     """config/<name>.yaml 전체 dict (없으면 빈 dict)."""
-    return _load(str(config_dir() / f"{name}.yaml"))
+    path = config_dir()/f'{name}.yaml'
+    try:
+        info = path.stat()
+    except FileNotFoundError:
+        return {}
+    # API updates replace the file atomically: identity + nanosecond mtime + size detects the new version.
+    # Avoid rereading the whole YAML for every feature lookup in offline fusion loops.
+    return _load(str(path),(info.st_dev,info.st_ino,info.st_mtime_ns,info.st_size))
 
 
 def get(name: str, dotted: str, default: Any) -> Any:

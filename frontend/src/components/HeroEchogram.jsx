@@ -108,7 +108,7 @@ export default function HeroEchogram() {
             <rect className="reveal-rect" x="0" y="0" width={W} height={H} />
           </clipPath>
         </defs>
-        <rect x={PAD.l} y={PAD.t} width={IW} height={IH} fill="url(#water)" rx="4" />
+        <rect x={PAD.l} y={PAD.t} width={IW} height={IH} fill="url(#water)" rx="2" />
 
         {[0, 3, 6, 9].map((d) => (
           <g key={d}>
@@ -133,7 +133,7 @@ export default function HeroEchogram() {
             return (
               <g key={m.level}>
                 <line x1={x(m.i)} x2={x(m.i)} y1={PAD.t} y2={PAD.t + IH} stroke="#fff" strokeWidth="1.5" strokeDasharray="5 4" />
-                <rect x={lx - 26} y={PAD.t - 24} width="52" height="22" rx="11" fill={lv.color} />
+                <rect x={lx - 26} y={PAD.t - 24} width="52" height="22" rx="2" fill={lv.color} />
                 <text x={lx} y={PAD.t - 9} textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff">{m.level}</text>
               </g>
             );

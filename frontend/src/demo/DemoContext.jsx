@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_DEMO, maxTOf } from '../mocks/demo.js';
 
 const DemoContext = createContext(null);
@@ -9,11 +9,17 @@ export function DemoProvider({ children }) {
   const [scenario, setScenario] = useState(DEFAULT_DEMO.scenario);
   const [t, setT] = useState(DEFAULT_DEMO.t);
   const [playing, setPlaying] = useState(false);
+  // 화면이 데이터를 불러오는 중이면 재생이 다음 칸으로 가지 않는다(서버는 요청을 하나씩 계산한다).
+  const busyRef = useRef(false);
+  const setBusy = useCallback((v) => {
+    busyRef.current = v;
+  }, []);
   const maxT = maxTOf(scenario); // 시나리오마다 프레임 수가 다를 수 있다
 
   useEffect(() => {
     if (!playing) return undefined;
     const id = setInterval(() => {
+      if (busyRef.current) return;
       setT((cur) => {
         if (cur >= maxT) {
           setPlaying(false);
@@ -30,6 +36,7 @@ export function DemoProvider({ children }) {
       demo: { scenario, t },
       maxT,
       playing,
+      setBusy,
       selectScenario: (s) => {
         setScenario(s);
         setT(0);
@@ -44,7 +51,7 @@ export function DemoProvider({ children }) {
         setPlaying((p) => !p);
       },
     }),
-    [scenario, t, playing, maxT],
+    [scenario, t, playing, maxT, setBusy],
   );
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 }

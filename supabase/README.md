@@ -1,6 +1,7 @@
 # Supabase 스키마 — #3
 
 SDD 7장 테이블 10개, RLS, 로컬 시연용 seed를 제공한다.
+#104는 `20261127000500_analysis_api.sql`과 전용 분석 사용자 metadata가 필요하다. [운영/API 계약](../docs/analysis-api.md)을 확인한다.
 설계·권한·합의 사항은 [DB 계약](../docs/database-contract.md)을 확인한다.
 이 PR은 SQL 파일만 제공하며 원격 Supabase에 자동 적용하지 않는다.
 
@@ -46,3 +47,7 @@ RLS는 소유자/다른 어가/공무원/익명/service_role로 `SET ROLE`하여
 `seed.sql`은 인증 수단 없는 로컬 전용 Auth 소유자 UUID를 만든다.
 실제 사용자 로그인 계정은 생성하지 않는다. 시연 앱을 로그인으로 연결하려면
 실제 Auth 사용자와 farm.owner_user_id를 관리자가 연결해야 한다.
+# 추천 기한 (#44)
+
+`20261127000800_recommendation_deadlines.sql`은 기존 recommendation.deadline과 게시 snapshot을 함께 검증·저장합니다.
+기존 회차는 수정하지 않으며 정책·표시 계약은 [추천 기한 문서](../docs/recommendation-deadlines.md)를 따릅니다.

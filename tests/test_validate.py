@@ -44,6 +44,12 @@ class ValidateSeed3Test(unittest.TestCase):
         for n in ("heatwave_typhoon", "turbidity_event", "disease_suspect", "parasite_suspect"):
             self.assertTrue(r[n]["vc03"]["pass"], n)
         self.assertEqual(r["turbidity_event"]["vc03"]["cycles_with_cause"], 0)
+        # VC-03 R7 (#180): 섭식 저하 주 구간 1순위 R7, 다른 원인 0건, 경보 없음
+        v7 = r["feeding_drop"]["vc03_r7"]
+        self.assertTrue(v7["main_interval_pass"])
+        self.assertEqual(v7["other_cause_cycles"], 0)
+        for n in ("red_tide", "net_change"):
+            self.assertTrue(r[n]["vc03"]["pass"], n)
 
     def test_markdown(self):
         res = {"run_at": "test", "config_revision": "x", "runs": [self.r], "summary": summarize([self.r]),
@@ -51,6 +57,7 @@ class ValidateSeed3Test(unittest.TestCase):
         md = to_markdown(res)
         self.assertIn("VC-02", md)
         self.assertIn("R8 기생충 의심", md)
+        self.assertIn("R7 섭식 저하", md)
 
 
 if __name__ == "__main__":

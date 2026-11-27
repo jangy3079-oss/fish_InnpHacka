@@ -23,6 +23,8 @@
       - {type: disease,   start_h: 24, ramp_h: 72, severity: 1.0}
       - {type: parasite,  start_h: 24, end_h: 72, ramp_h: 2, rubbing_multiplier: 4.0}
       - {type: hypoxia,   start_h: 10, end_h: 20, ramp_h: 2, do: 3.0}
+      - {type: red_tide,  start_h: 30, end_h: 66, ramp_h: 3, advisory_h: 28}   # advisory_h: 적조 특보 발령 (R4)
+      - {type: work,      at_h: 36, kind: net_change, intensity: 1.0, recovery_h: 60}   # 작업 기록 (R6)
 """
 
 from __future__ import annotations

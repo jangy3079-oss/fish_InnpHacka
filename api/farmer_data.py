@@ -11,7 +11,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import ValidationError
 
-from .schemas import StockReceipt, StockRequest, Timeseries
+from .schemas import StockReceipt, StockRequest, Timeseries, WorkLogReceipt, WorkLogRequest
 
 
 def data_error(status: int, code: str, message: str):
@@ -94,6 +94,20 @@ class FarmerDataStore:
             return receipt
         except (ValidationError, ValueError):
             raise data_error(503, "invalid_upstream_response", "Invalid stock acknowledgement; check storage before retrying") from None
+
+    def record_work_log(self, cage_id: int, body: WorkLogRequest) -> WorkLogReceipt:
+        self.require_cage(cage_id)
+        data = self.request("POST", "/rest/v1/rpc/record_work_log", json={
+            "p_cage_id": cage_id, "p_kind": body.kind, "p_performed_at": body.performed_at.isoformat(),
+            "p_request_key": str(body.request_key)})
+        try:
+            receipt = WorkLogReceipt.model_validate(data)
+            if (receipt.cage_id != cage_id or receipt.kind != body.kind
+                    or receipt.performed_at != body.performed_at):
+                raise ValueError
+            return receipt
+        except (ValidationError, ValueError):
+            raise data_error(503, "invalid_upstream_response", "Invalid work log acknowledgement; retry with the same request_key") from None
 
     def timeseries(self, cage_id: int, metric: str, start, end, source, limit: int, before) -> Timeseries:
         self.require_cage(cage_id)

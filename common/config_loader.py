@@ -1,4 +1,4 @@
-"""Validated YAML snapshots with on-access reload. No HTTP/admin mutation endpoint."""
+"""Validated YAML snapshots with on-access reload; shared validation for #36 edits."""
 
 import argparse
 import hashlib
@@ -14,6 +14,7 @@ from types import MappingProxyType
 import yaml
 
 from .config_schema import CONFIG_MODELS, validate_bundle
+from .config import config_dir
 
 CONFIG_NAMES = tuple(CONFIG_MODELS)
 DEFAULT_DIRECTORY = Path(__file__).resolve().parents[1] / "config"
@@ -78,9 +79,38 @@ class ConfigSnapshot:
         return _thaw(self.configs)
 
 
+def config_revision(raw):
+    digest = hashlib.sha256()
+    for name in CONFIG_NAMES:
+        digest.update(name.encode()+b'\0'+raw[name]+b'\0')
+    return digest.hexdigest()
+
+
+def validate_contents(raw):
+    documents = {}
+    for name in CONFIG_NAMES:
+        content = raw[name]
+        if len(content)>MAX_FILE_BYTES:
+            raise ConfigError(f'{name}.yaml exceeds the 1 MiB limit')
+        try:
+            value = yaml.load(content.decode('utf-8-sig'),Loader=UniqueSafeLoader)
+            if not isinstance(value,dict) or not value:
+                raise ConfigError('Root must be a non-empty mapping')
+            _freeze(value)
+            documents[name] = value
+        except (UnicodeError,yaml.YAMLError,ConfigError) as exc:
+            reason = str(exc) if isinstance(exc,ConfigError) else 'Invalid UTF-8 or YAML syntax/tag'
+            raise ConfigError(f'{name}.yaml: {reason}') from None
+    try:
+        validated = validate_bundle(documents)
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from None
+    return ConfigSnapshot(config_revision(raw),datetime.now(timezone.utc),_freeze(validated))
+
+
 class ConfigLoader:
-    def __init__(self, directory: str | Path = DEFAULT_DIRECTORY):
-        self.directory = Path(directory).resolve()
+    def __init__(self, directory: str | Path | None = None):
+        self.directory = Path(config_dir() if directory is None else directory).resolve()
         self._lock = RLock()
         self._snapshot = None
         self._last_error = None
@@ -113,32 +143,13 @@ class ConfigLoader:
         with self._lock:
             try:
                 raw = self._read_files()
-                digest = hashlib.sha256()
-                for name, content in raw.items():
-                    digest.update(name.encode() + b"\0" + content + b"\0")
-                revision = digest.hexdigest()
+                revision = config_revision(raw)
                 if not force and self._snapshot is not None and self._snapshot.revision == revision:
                     self._last_error = None
                     return self._snapshot
-                documents = {}
-                for name, content in raw.items():
-                    try:
-                        value = yaml.load(content.decode("utf-8-sig"), Loader=UniqueSafeLoader)
-                        if not isinstance(value, dict) or not value:
-                            raise ConfigError("Root must be a non-empty mapping")
-                        # Validate dynamic rule maps as well as schema-defined numeric fields.
-                        _freeze(value)
-                        documents[name] = value
-                    except (UnicodeError, yaml.YAMLError, ConfigError) as exc:
-                        reason = str(exc) if isinstance(exc, ConfigError) else "Invalid UTF-8 or YAML syntax/tag"
-                        raise ConfigError(f"{name}.yaml: {reason}") from None
-                try:
-                    validated = validate_bundle(documents)
-                except ValueError as exc:
-                    raise ConfigError(str(exc)) from None
+                snapshot = validate_contents(raw)
                 if raw != self._read_files():
                     raise ConfigError("Configuration changed while loading; retry after files are saved")
-                snapshot = ConfigSnapshot(revision, datetime.now(timezone.utc), _freeze(validated))
                 self._snapshot = snapshot
                 self._last_error = None
                 return snapshot
@@ -162,7 +173,7 @@ class ConfigLoader:
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Validate all five config YAML files")
-    parser.add_argument("--directory", type=Path, default=DEFAULT_DIRECTORY)
+    parser.add_argument("--directory", type=Path)
     args = parser.parse_args(argv)
     try:
         snapshot = ConfigLoader(args.directory).reload()

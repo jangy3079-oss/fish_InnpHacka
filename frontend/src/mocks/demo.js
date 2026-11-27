@@ -53,7 +53,7 @@ export function hoursAt(demo) {
 
 export function statusAt(cageId, demo) {
   const { t, ...status } = structuredClone(frameAt(demo)); // t는 API 응답에 없는 프레임 번호
-  return { cage_id: Number(cageId), ...status };
+  return { ...status, cage_id: Number(cageId) };
 }
 
 export function timeseriesAt(cageId, metric, demo) {

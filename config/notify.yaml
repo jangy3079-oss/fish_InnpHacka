@@ -1,0 +1,23 @@
+# #34: 생성 정책. 운영 경보 임계값·6시간 중복 기준은 thresholds.yaml을 읽는다.
+max_sentences: 3
+max_characters: 600
+llm_timeout_seconds: 5
+llm_max_completion_tokens: 384
+
+# 출처를 확인한 짧은 구절만 검색 대상으로 둔다. 임의 문서 전체를 LLM에 넣지 않는다.
+# quote는 지정 문서에 실제 존재해야 하며, 규칙·문맥도 함께 고정한다.
+passages:
+  - id: high_temp_monitoring
+    rules: [R1, R2, R7]
+    source: notify/docs/nifs_high_temp_stage_manual.md
+    source_url: https://nifs.go.kr/news/actionNewsView.do?MENU_ID=M0000307&NEWS_SEQ=3013
+    scope: "수과원 2018년 고수온 관리요령"
+    quote: "수온·용존산소 모니터링 등 자기 어장 점검"
+  - id: red_tide_information
+    rules: [R4]
+    source: notify/docs/nifs_red_tide_cage_manual.md
+    source_url: https://nifs.go.kr/portal/pcon0000051/systA/actionConts.do
+    scope: "수과원 적조 매뉴얼"
+    quote: "출현 정보는 국립수산과학원 홈페이지 적조속보에서 확인한다."
+# R5/R8: first_aid.yaml의 official 조치만 reviewed_guide()로 검색한다.
+# R3/R6: 상황에 맞는 공식 구절을 확정하기 전까지 조치 문장을 추가하지 않는다.
