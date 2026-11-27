@@ -42,6 +42,19 @@
 | api/echogram (#29) | [NumPy](https://github.com/numpy/numpy) | BSD-3-Clause, [LICENSE](https://github.com/numpy/numpy/blob/main/LICENSE.txt) | 2026-11-27 | NPZ 읽기·선형 강도 축소. 검증 2.5.5 |
 | api/echogram (#29) | [Matplotlib](https://github.com/matplotlib/matplotlib) | PSF 기반 Matplotlib license, [공식 라이선스](https://matplotlib.org/stable/project/license.html) | 2026-11-27 | Agg PNG 미리보기. 검증 3.11.2 |
 
+### 카메라 실행 조합 (#18)
+
+`requirements-vision.txt`: OpenCV 5.1.0.95, RF-DETR 1.12.1, trackers 2.7.0,
+supervision 0.32.3을 검증했다. 라이선스는 위 OpenCV(Apache-2.0),
+[RF-DETR LICENSE](https://github.com/roboflow/rf-detr/blob/develop/LICENSE)(Apache-2.0),
+[trackers LICENSE](https://github.com/roboflow/trackers/blob/develop/LICENSE)(Apache-2.0),
+[supervision LICENSE](https://github.com/roboflow/supervision/blob/develop/LICENSE.md)(MIT)를 따른다.
+M3는 CFD의 RF-DETR Nano 가중치를 사용하며 **Ultralytics를 설치하지 않는다**.
+2.2의 가중치·학습 데이터 이용 조건 미확인 사항은 그대로 남는다.
+공개 시험 영상의 출처·해시와 실행 결과는 [카메라 시험 기록](docs/vision-pipeline.md)에 있다.
+CFD 공식 README는 시험 영상 출처를 Pexels @amnart-keawted-2221199로 밝힌다.
+영상·가중치는 저장소에 재배포하지 않는다. 조피볼락 적합성은 #19에서 별도 검증한다.
+
 ### 2.1 FUnIE-GAN (이슈 #46)
 
 - 저장소 LICENSE 파일은 **MIT**다 (Copyright 2019 Md Jahidul Islam). SDD와 SRS의 "확인 필요"는 이 결과로 해소된다.

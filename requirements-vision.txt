@@ -1,0 +1,6 @@
+-r requirements.txt
+# #18 실행 검증 버전. RF-DETR CFD 가중치 사용 (Ultralytics 불필요).
+opencv-python==5.1.0.95
+rfdetr==1.12.1
+trackers==2.7.0
+supervision==0.32.3

@@ -54,6 +54,16 @@ python -m unittest discover -s tests -v
 라우트·응답 형식·목업의 한계·합의할 항목은 [API 계약](docs/api-contract.md)을 확인하세요.
 다른 모듈의 실행법은 각 구현 PR과 이슈 #42에서 이어 정리합니다.
 
+### 카메라 파일 영상 시험 (M1~M3)
+
+```sh
+python -m pip install -r requirements-vision.txt
+python -m vision --help
+```
+
+공개 영상·CFD 가중치 다운로드, 실행 명령, 품질 게이트와 수심·활동량 보정,
+시험 결과는 [카메라 파이프라인 안내](docs/vision-pipeline.md)를 확인하세요.
+
 ## 디렉터리 구조
 
 ### 공통 설정 검증·로더
@@ -79,7 +89,7 @@ python -m common.config_loader
 | `notify/` | 알림 문장 생성, 템플릿, 관리요령 문서(RAG) |
 | `api/` | FastAPI |
 | `web/` | React (어민 화면, 지자체 대시보드) |
-| `config/` | thresholds, cause_rules, release_rules, costs, first_aid (YAML) |
+| `config/` | thresholds, cause_rules, release_rules, costs, first_aid, vision (YAML) |
 | `scenarios/` | 시뮬레이터 시나리오 YAML |
 | `docs/` | SRS(요구사항), SDD(설계) 문서. 구현과 달라지면 PR로 같이 고친다 |
 | `SBOM.md` | 오픈소스 라이선스 목록 |
