@@ -64,6 +64,12 @@ export const api = {
   getNotifications: (cageId, demo) =>
     USE_MOCK ? delay(notificationsAt(cageId, demo)) : http(`/cages/${cageId}/notifications`),
 
+  // body: {stock: [{size_group: 'fry'|'mid'|'market', count, avg_weight_kg}], insured}
+  putStock: (cageId, body) =>
+    USE_MOCK
+      ? delay({ mock: true, persisted: false })
+      : http(`/cages/${cageId}/stock`, { method: 'PUT', body: JSON.stringify(body) }),
+
   getStressMap: (demo) => (USE_MOCK ? delay(stressMapAt(demo)) : http('/areas/stress-map')),
 
   // 해역 경계(GeoJSON). 계약상 지도 응답 형식이 미정이라 프론트는 area_id로 stress-map과 이어 붙인다.
