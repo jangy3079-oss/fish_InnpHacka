@@ -1,0 +1,18 @@
+# 평시 급이 관리 (UC-04, R7, #39): 표층 23℃대 진입 후 급이 반응만 감소, 나머지 정상
+# 가정: 표층 22 → 23.8℃, 중층 20℃. 스트레스 지수는 40 미만으로 남고 R7(사료 20% 감량)만 해당.
+name: feeding_drop
+description: 23℃ 진입 — 급이 반응만 감소
+cage_id: cage-003
+start: "2026-08-05T00:00:00+09:00"
+duration_days: 3
+seed: 41
+baseline: normal_14d
+cage: {depth_m: 9.0, n_fish: 300}
+sampling: {ping_interval_s: 60, cycle_minutes: 5}
+env:
+  temp_surface: [[0, 22.0], [24, 23.2], [72, 23.7]]
+  temp_mid:     [[0, 20.0], [72, 20.4]]
+  do:           [[0, 7.0], [72, 6.9]]
+  diurnal_amp:  {temp_surface: 0.3}
+camera: {enabled: true, day_quality: 0.85, night_quality: 0.35}
+events: []
