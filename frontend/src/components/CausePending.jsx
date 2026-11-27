@@ -5,7 +5,8 @@ const NAME = { R5: '질병', R8: '기생충' };
 function progressText(p) {
   if (!p || typeof p.done !== 'number' || typeof p.needed !== 'number') return '';
   const unit = p.unit === 'hour' ? '시간' : p.unit === 'minute' ? '분' : '';
-  return `(현재 ${p.done}/${p.needed}${unit})`;
+  // 서버 값이 소수(61.9166...)로 올 수 있다. 완료한 것처럼 보이지 않게 내림해서 정수로 보여 준다.
+  return `(현재 ${Math.floor(p.done)}/${Math.floor(p.needed)}${unit})`;
 }
 
 export function pendingText(item) {
