@@ -110,7 +110,7 @@ class ReplayEngine:
                 baseline = load_scenario(baseline_path)
                 if baseline.start+timedelta(days=baseline.duration_days)>sc.start or baseline.cage_id!=sc.cage_id or baseline.cycle_minutes!=sc.cycle_minutes:
                     raise ConfigError('Replay baseline must be independent, earlier and match the cage/cycle')
-                model = StressModel(baseline.cage_id).fit(fuse(self._records(baseline), sc.cycle_minutes, configuration=fusion_cfg))
+                model = StressModel(baseline.cage_id).fit(fuse(self._records(baseline), sc.cycle_minutes, configuration=fusion_cfg), snapshot=snapshot)
                 self._model, self._model_key = model, model_key
             if self._model.cage_id!=sc.cage_id:
                 raise ConfigError('Replay model cage mismatch')
@@ -123,7 +123,7 @@ class ReplayEngine:
             self._prepared.move_to_end(prep_key)
             fused = [f for f in all_fused if f.ts+cycle<=cutoff]
             visible_records = [r for r in records if r.ts<cutoff]
-            scores = self._model.score_series(fused)
+            scores = self._model.score_series(fused, snapshot=snapshot)
             causes = CauseEngine(FixedSnapshot(snapshot)).evaluate_series(scores,fused,
                 contexts=scenario_contexts(sc,[s.ts for s in scores]))
             apply_levels(scores,[c.immediate_danger for c in causes],cfg=snapshot.to_dict()['thresholds'])
@@ -140,7 +140,10 @@ class ReplayEngine:
                     'camera_weight':f.camera_weight,'missing_sources':f.missing_sources,
                     'metric_reliability':reliability(f,current,th['analysis']),
                     'baseline_windows':last.baseline_windows,'model_version':last.model_version,
-                    'last_observation_at':max((r.ts for r in visible_records),default=None)}
+                    'last_observation_at':max((r.ts for r in visible_records),default=None),
+                    'level_held_due_to_missing':getattr(last,'level_held_due_to_missing',False),
+                    'r7_held_due_to_missing':cause.metadata()['r7_held_due_to_missing'],
+                    'feeding_last_observed_at':cause.metadata()['feeding_last_observed_at']}
                 primary = cause.estimates[0] if state=='ready' and cause.estimates else None
                 rec, reason = recommendation_for(context,primary,{'정상':'normal','주의':'caution','경고':'warning','위험':'danger'}.get(last.level,'normal'),snapshot)
                 rec = with_deadlines(rec,cutoff,{'정상':'normal','주의':'caution','경고':'warning','위험':'danger'}.get(last.level,'normal'),snapshot)

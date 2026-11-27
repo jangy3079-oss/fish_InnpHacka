@@ -12,6 +12,8 @@ class FeedingRule:
         cycle = timedelta(minutes=thresholds['cycle_minutes'])
         gap = cage in self.last and ts-self.last[cage]!=cycle
         self.last[cage] = ts
+        had_previous = cage in self.confirmed
+        reset_reason = 'observation_gap' if gap else 'conditions_changed' if not eligible and had_previous else None
         if not eligible or gap:
             self.confirmed.pop(cage,None)
         observed = feeding is not None and quality is not None and quality>=thresholds['quality']['camera_only_min']
@@ -20,11 +22,13 @@ class FeedingRule:
                 self.confirmed[cage] = (ts,feeding)
             else:
                 self.confirmed.pop(cage,None)
+                reset_reason = 'observed_normal' if had_previous else None
         previous = self.confirmed.get(cage)
         if previous and ts-previous[0]>timedelta(hours=rule['max_hold_hours']):
             self.confirmed.pop(cage,None)
             previous = None
+            reset_reason = 'hold_expired'
         matched = eligible and previous is not None
-        return matched, {'feeding_current_observed':observed,'feeding_held_due_to_missing':bool(matched and not observed),
+        return matched, {'feeding_reset_reason':reset_reason,'feeding_current_observed':observed,'feeding_held_due_to_missing':bool(matched and not observed),
             'feeding_last_observed_at':previous[0].isoformat() if previous else None,
             'feeding_change_last_observed':previous[1] if previous else None}

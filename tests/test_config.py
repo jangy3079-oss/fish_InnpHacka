@@ -1,9 +1,12 @@
 import os
 import tempfile
+import shutil
+import yaml
 import unittest
 from pathlib import Path
 
 from common import config
+from common.config_loader import ConfigError, DEFAULT_DIRECTORY
 from fusion import fuse as fuse_mod
 from tests.pipeline_cache import scenario, scores
 
@@ -15,9 +18,17 @@ class ConfigTest(unittest.TestCase):
 
     def use(self, text):
         d = tempfile.mkdtemp()
-        Path(d, "thresholds.yaml").write_text(text, encoding="utf-8")
-        os.environ["ROCKFISH_CONFIG_DIR"] = d
+        self.addCleanup(shutil.rmtree, d)
+        for name in ('thresholds', 'cause_rules', 'costs', 'release_rules', 'first_aid'):
+            shutil.copy(DEFAULT_DIRECTORY/f'{name}.yaml', Path(d)/f'{name}.yaml')
+        path = Path(d, 'thresholds.yaml')
+        full = yaml.safe_load(path.read_text())
+        for key, value in yaml.safe_load(text).items():
+            full[key].update(value) if isinstance(value, dict) else full.__setitem__(key, value)
+        path.write_text(yaml.safe_dump(full, allow_unicode=True), encoding='utf-8')
+        os.environ['ROCKFISH_CONFIG_DIR'] = d
         config.clear_cache()
+        return d
 
     def test_repo_yaml_is_read(self):
         p = fuse_mod.params()
@@ -34,17 +45,17 @@ class ConfigTest(unittest.TestCase):
         self.assertAlmostEqual(fuse_mod.camera_weight(0.7), 0.2)
         self.assertEqual(fuse_mod.camera_weight(0.95), 0.4)
 
-    def test_missing_file_uses_defaults(self):
+    def test_missing_file_fails_instead_of_using_defaults(self):
         os.environ["ROCKFISH_CONFIG_DIR"] = tempfile.mkdtemp()
         config.clear_cache()
-        self.assertEqual(fuse_mod.camera_weight(0.7), fuse_mod.W_MAX)
+        with self.assertRaises(ConfigError):
+            fuse_mod.camera_weight(0.7)
 
     def test_stress_min_windows_from_yaml(self):
         # 모듈 상수는 import 시점에 읽으므로 별도 프로세스에서 확인한다 (reload하면 pickle 클래스가 어긋남)
         import subprocess
         import sys
-        d = tempfile.mkdtemp()
-        Path(d, "thresholds.yaml").write_text("baseline: {min_windows: 400}\n", encoding="utf-8")
+        d = self.use("baseline: {min_windows: 400}\n")
         code = ("from stress import model; from tests.pipeline_cache import scenario;"
                 "_, _, fused, _ = scenario('normal_14d');"
                 "print(model.MIN_BASELINE_WINDOWS, model.StressModel('cage-003').fit(fused).status)")

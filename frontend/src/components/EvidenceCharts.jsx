@@ -309,6 +309,7 @@ export default function EvidenceCharts({ cageId, alertAt }) {
 }
 
 function Echogram({ cageId }) {
+  const { demo } = useDemo();
   const [failed, setFailed] = useState(false);
   const ref = useRef(null);
   return (
@@ -317,7 +318,7 @@ function Echogram({ cageId }) {
       {failed ? (
         <p className="hint">이미지를 불러오지 못했습니다.</p>
       ) : (
-        <img className="echogram" src={api.getEchogramUrl(cageId)} alt="시간에 따른 물고기 깊이 분포 에코그램" onError={() => setFailed(true)} />
+        <img className="echogram" src={api.getEchogramUrl(cageId, { demo })} alt="시간에 따른 물고기 깊이 분포 에코그램" onError={() => setFailed(true)} />
       )}
     </figure>
   );

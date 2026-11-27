@@ -62,10 +62,73 @@ export function timeseriesAt(cageId, metric, demo) {
   return { cage_id: Number(cageId), metric, points: points.slice(0, clampIn(sc, demo?.t ?? DEFAULT_DEMO.t) + 1) };
 }
 
+// 다음 판단까지의 간격(분). 단계별 가정값이다(costs.reassessment_minutes_by_level).
+const REASSESS_MIN = { 정상: 60, 주의: 30, 경고: 15, 위험: 5 };
+
+// 추천에 기한 목록을 붙인다(docs/recommendation-deadlines.md). 다음 판단은 모든 추천에 있고,
+// 방류 신청·출하 기한은 해당 선택지가 있을 때만 넣는다. 확인된 시각이 없으므로 pending, at=null이다(시각을 만들지 않는다).
+function withDeadlines(rec, level) {
+  const next = new Date(new Date(rec.ts).getTime() + (REASSESS_MIN[level] ?? 60) * 60000).toISOString();
+  const deadlines = [
+    { kind: 'next_assessment', label: '다음 판단', action_id: null, applicable: true, at: next, source_status: 'assumed', basis: 'relative', source: '시연용 가정', expired: false },
+  ];
+  const pending = (kind, label, action_id) => {
+    const o = rec.options.find((x) => x.id === action_id);
+    if (o) deadlines.push({ kind, label, action_id, applicable: !!o.available, at: null, source_status: 'pending', basis: 'unconfirmed', source: null, expired: false });
+  };
+  pending('release_application', '방류 신청 마감', 'release');
+  pending('harvest', '출하 기한', 'harvest');
+  const times = deadlines.filter((d) => d.applicable && d.at).map((d) => d.at).sort();
+  return { ...rec, deadline: times[0] ?? null, deadline_expired: false, deadlines };
+}
+
+// 목업 손익 선택지에 서버의 calculation 모양을 붙인다(결과 금액과 맞는 가정값. 경제 산식이 아니라 표시용 목업이다).
+function withCalculation(rec) {
+  const STOCK_VALUE = 3000000; // 중간어 1000마리 x 0.3kg x 10,000원
+  const options = rec.options.map((o) => {
+    if (o.estimated_loss_krw == null || !o.available) return o;
+    const cost = ['keep', 'stop_feed', 'reduce_feed'].includes(o.id) ? 0 : Math.round((o.estimated_loss_krw * 0.2) / 1000) * 1000;
+    const stock = o.estimated_loss_krw - cost;
+    return {
+      ...o,
+      calculation: {
+        hypothetical: false,
+        groups: [{ size_group: 'mid', count: 1000, price_per_kg: '10000.0', avg_weight_kg: '0.3', insured: false, price_source: 'config_assumption', weight_source: 'stock_input', stock_value_krw: `${STOCK_VALUE}.00`, loss_rate: (stock / STOCK_VALUE).toFixed(4), loss_krw: `${stock}.000` }],
+        stock_loss_krw: `${stock}.000`,
+        action_cost_krw: `${cost}.0`,
+        insurance_krw: '0',
+        subsidy_krw: '0',
+        exact_loss_krw: `${o.estimated_loss_krw}.000`,
+        insurance_confirmed: false,
+      },
+    };
+  });
+  return { ...rec, options, config_revision: '16241d793c95c4230d7639bca7a9c76f68b2675d331ca8fb1be2e501434d15a5' };
+}
+
 export function recommendationAt(cageId, demo) {
   const f = frameAt(demo);
+  const rec = buildRecommendation(cageId, f);
+  return rec.kind === 'none' ? rec : withDeadlines(rec.kind === 'profit' ? withCalculation(rec) : rec, f.level);
+}
+
+function buildRecommendation(cageId, f) {
   const base = { id: 1, cage_id: Number(cageId), ts: f.ts };
-  if (!f.level || f.level === '정상') return { ...base, kind: 'none', recommended_option: null, options: [] };
+  if (!f.level) return { ...base, kind: 'none', recommended_option: null, options: [] };
+  if (f.level === '정상') {
+    // R7(섭식 저하)은 정상 단계에서도 사료 관리 권고를 낸다. 손해 최솟값(keep)과 권고(reduce_feed)가 다르다. 금액은 목업 가정값이다.
+    if (f.cause?.[0]?.rule_id !== 'R7') return { ...base, kind: 'none', recommended_option: null, options: [] };
+    return {
+      ...base,
+      kind: 'profit',
+      recommended_option: 'reduce_feed',
+      details: { lowest_loss_option: 'keep', recommendation_basis: 'R7_feeding_management' },
+      options: [
+        { id: 'keep', label: '그대로 유지', available: true, estimated_loss_krw: 80000, reason: '먹이 반응이 낮은 상태가 이어질 때의 손해를 가정한 값입니다' },
+        { id: 'reduce_feed', label: '사료 줄이기', available: true, estimated_loss_krw: 150000, reason: '사료 투입량을 줄이고 먹는 상태를 살핍니다' },
+      ],
+    };
+  }
 
   const top = f.cause?.[0]?.rule_id;
   if (top === 'R5' || top === 'R8') {

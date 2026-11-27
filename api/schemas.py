@@ -284,8 +284,15 @@ class MockReceipt(Contract):
 
 class IngestReceipt(Contract):
     persisted: Literal[True] = True
-    received_count: int
-    inserted_count: int
+    received_count: Annotated[int, Field(strict=True, ge=1, le=1000)]
+    inserted_count: Annotated[int, Field(strict=True, ge=0, le=1000)]
+    duplicate_count: Annotated[int, Field(strict=True, ge=0, le=1000)]
+
+    @model_validator(mode='after')
+    def counts_match(self):
+        if self.received_count != self.inserted_count + self.duplicate_count:
+            raise ValueError('Inconsistent ingestion counts')
+        return self
 
 
 AreaCount = Annotated[int, Field(strict=True, ge=0, le=9_007_199_254_740_991)]

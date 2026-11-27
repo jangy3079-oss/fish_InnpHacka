@@ -13,7 +13,7 @@
   근거가 안 보이는 것과 증상이 사라진 것은 다르므로, 그 동안은 해제 시간을 세지 않는다.
 - 같은 단계 알림 6시간 1회 억제(NFR-REL-04)는 notify가 맡는다. 여기서는 단계 변화만 기록한다.
 
-임계값은 `config/thresholds.yaml`이 있으면 거기서 읽고, 없으면 아래 기본값을 쓴다.
+임계값은 검증된 전체 설정 snapshot에서 읽고 누락/오류 시 실패한다.
 
     levels:        {주의: 40, 경고: 60, 위험: 80}
     hold_hours:    {주의: 2, 경고: 2, 위험: 1}
@@ -28,27 +28,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
 LEVELS = ["정상", "주의", "경고", "위험"]
-DEFAULTS = {
-    "levels": {"주의": 40, "경고": 60, "위험": 80},
-    "hold_hours": {"주의": 2, "경고": 2, "위험": 1},
-    "release_hours": 6,
-}
-CONFIG_PATH = Path(__file__).resolve().parents[1] / "config" / "thresholds.yaml"
-
-
 def load_thresholds(path: Optional[Path] = None) -> dict:
-    cfg = {k: (dict(v) if isinstance(v, dict) else v) for k, v in DEFAULTS.items()}
-    p = Path(path) if path else CONFIG_PATH
-    if p.exists():
-        import yaml
-        with p.open(encoding="utf-8") as f:
-            d = yaml.safe_load(f) or {}
-        for k in ("levels", "hold_hours"):
-            if isinstance(d.get(k), dict):
-                cfg[k].update({kk: d[k][kk] for kk in d[k] if kk in LEVELS})
-        if "release_hours" in d:
-            cfg["release_hours"] = d["release_hours"]
-    return cfg
+    from common.config_loader import ConfigLoader
+    # An explicit thresholds path still requires its complete config bundle.
+    directory = Path(path).parent if path is not None else None
+    return ConfigLoader(directory).snapshot().to_dict()['thresholds']
 
 
 def level_of(score: float, cfg: dict) -> int:
@@ -128,7 +112,9 @@ class LevelJudge:
 def apply_levels(scores: Sequence, refuge_loss: Optional[Sequence[bool]] = None,
                  cfg: Optional[dict] = None) -> List[LevelChange]:
     """StressScore 시계열(한 가두리, 시간 순)에 level을 채운다. 단계 변화 목록을 돌려준다."""
-    judge = LevelJudge(cfg=cfg or load_thresholds())
+    resolved = load_thresholds() if cfg is None else cfg
+    judge = LevelJudge(cfg=resolved)
+    cycle = timedelta(minutes=resolved["cycle_minutes"])
     raised_by: Optional[str] = None       # 지금 단계를 만든 묶음 (가장 높은 묶음 점수)
     for i, s in enumerate(scores):
         r2 = bool(refuge_loss[i]) if refuge_loss is not None else False
@@ -137,7 +123,8 @@ def apply_levels(scores: Sequence, refuge_loss: Optional[Sequence[bool]] = None,
         if judge.level > 0 and raised_by and comps and raised_by not in comps and not r2:
             score = None                  # 근거 묶음이 안 보임 → 정보 없음
         before = judge.level
-        s.level = judge.update(s.ts, score, r2)
+        s.level = judge.update(s.ts, score, r2, cycle=cycle)
+        s.level_held_due_to_missing = s.baseline_status != "warming_up" and judge.level > 0 and score is None
         if judge.level > before and comps:
             raised_by = max(comps, key=comps.get)
         elif judge.level == 0:
@@ -145,9 +132,9 @@ def apply_levels(scores: Sequence, refuge_loss: Optional[Sequence[bool]] = None,
     return judge.changes
 
 
-def refuge_loss_signal(scores: Sequence, fused: Sequence, min_temp: float = 25.0,
-                       max_diff: float = 1.0, max_activity_change: float = -0.4,
-                       cohesion_drop: float = 0.3, lookback_h: float = 12.0) -> List[bool]:
+def refuge_loss_signal(scores: Sequence, fused: Sequence, min_temp: float | None = None,
+                       max_diff: float | None = None, max_activity_change: float | None = None,
+                       cohesion_drop: float | None = None, lookback_h: float | None = None, *, snapshot=None) -> List[bool]:
     """R2(피난처 소실) 발동 여부 (SDD 6.3).
 
     환경: 표층 ≥ 25℃ 이고 표층−중층 < 1℃
@@ -158,11 +145,20 @@ def refuge_loss_signal(scores: Sequence, fused: Sequence, min_temp: float = 25.0
     백엔드 원인 규칙 엔진(cause, #25)이 R2 결과를 주면 그것을 apply_levels에 넘기면 된다.
     이 함수는 데이터 파이프라인 단독 실행·검증용이다.
     """
+    from common.data_config import snapshot_or_current
+    snapshot = snapshot_or_current(snapshot)
+    rule = snapshot['cause_rules']['rules']['R2']
+    min_temp = rule['env']['temp_surface_min_c'] if min_temp is None else min_temp
+    max_diff = rule['env']['temp_diff_max_c'] if max_diff is None else max_diff
+    max_activity_change = rule['behavior']['activity_change_max'] if max_activity_change is None else max_activity_change
+    cohesion_drop = rule['behavior']['cohesion_drop'] if cohesion_drop is None else cohesion_drop
+    lookback_h = rule['behavior']['lookback_h'] if lookback_h is None else lookback_h
+    cycle = timedelta(minutes=snapshot['thresholds']['cycle_minutes'])
     env = {f.ts: f.env for f in fused}
     out: List[bool] = []
     hist: List[tuple] = []          # (ts, cohesion_change)
     for s in scores:
-        e = env.get(s.ts - timedelta(minutes=5), {}) or {}
+        e = env.get(s.ts - cycle, {}) or {}
         ev = s.evidence or {}
         coh = ev.get("cohesion_change")
         hist = [(t, c) for t, c in hist if s.ts - t <= timedelta(hours=lookback_h)]

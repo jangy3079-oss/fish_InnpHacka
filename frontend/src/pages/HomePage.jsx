@@ -80,7 +80,7 @@ export default function HomePage() {
             <article>
               <h3>어민</h3>
               <p>내 가두리의 단계와 의심 원인, 지금 하면 좋은 조치 하나를 큰 글자로 보여줍니다. 판단 근거 그래프와 방법별 예상 손해도 펼쳐 볼 수 있습니다.</p>
-              <p>재고와 보험을 입력하면 손해 계산에 반영됩니다.</p>
+              <p>재고를 입력하면 조치별 예상 손해를 계산합니다. 보험은 보상 적용이 확인된 경우에만 반영됩니다.</p>
               <Link to="/farmer" className="btn btn-dark">어민 화면 열기</Link>
             </article>
             <article>

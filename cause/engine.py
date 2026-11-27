@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import math
 from collections import defaultdict, deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 from common.config_loader import ConfigLoader
@@ -64,8 +64,20 @@ class CauseResult:
     immediate_danger: bool
     suppression: str | None
     config_revision: str
+    pending: tuple[dict, ...] = ()
+    observation_details: dict = field(default_factory=dict)
 
-    def status_causes(self):
+    def metadata(self):
+        feeding = self.observation_details
+        return {'cause_source': 'cause_engine', 'cause_pending': list(self.pending),
+                'r7_held_due_to_missing': feeding.get('feeding_held_due_to_missing', False),
+                'feeding_last_observed_at': feeding.get('feeding_last_observed_at'),
+                'feeding_reset_reason': feeding.get('feeding_reset_reason')}
+
+    def status_causes(self, *, include_metadata=False):
+        if include_metadata:
+            return [{'name': c.cause, 'rule_id': c.rule_id, 'probability': c.probability,
+                     'display': c.display, 'cause_source': 'cause_engine'} for c in self.estimates]
         return [{"name": c.cause, "rule_id": c.rule_id, "probability": c.probability}
                 for c in self.estimates if c.display]
 
@@ -232,4 +244,26 @@ class CauseEngine:
         if coh is not None:
             history.append((ts, coh))  # Only previous points participate in the current peak.
         immediate = bool(triggered and r2["immediate_danger"] and "R2" in thresholds["immediate_danger_rules"])
-        return CauseResult(s.cage_id, ts, tuple(estimates), triggered, immediate, suppression, snapshot.revision)
+        pending = []
+        matched_set = set(matched)
+        if ready and normal:
+            for rid in ('R5', 'R8'):
+                if rid in matched_set:
+                    continue
+                if context.advisory_active is None:
+                    pending.append({'rule_id': rid, 'reason': 'advisory_unknown'})
+                elif context.advisory_active is False:
+                    if rid=='R5' and not temporal['R5'] and not temporal['details']['trend_window_complete']:
+                        pending.append({'rule_id': rid, 'reason': 'trend_waiting',
+                            'progress': {'done': temporal['details']['trend_observed_hours'],
+                                         'needed': temporal['details']['trend_needed_hours'], 'unit': 'hour'}})
+                    elif rid=='R5' and not temporal['R5'] and any(v<rules['R5']['behavior']['min_daily_coverage'] for v in temporal['details']['daily_coverage']):
+                        pending.append({'rule_id': rid, 'reason': 'observation_gap'})
+                    elif rid=='R8' and not temporal['details']['rubbing_current_observed']:
+                        pending.append({'rule_id': rid, 'reason': 'observation_gap'})
+                    elif rid=='R8' and rubbing is not None and rubbing>=rules['R8']['behavior']['rubbing_rate_x_min'] and not temporal['R8']:
+                        pending.append({'rule_id': rid, 'reason': 'observing',
+                            'progress': {'done': temporal['details']['rubbing_observed_hours'],
+                                         'needed': rules['R8']['behavior']['sustained_hours_min'], 'unit': 'hour'}})
+        return CauseResult(s.cage_id, ts, tuple(estimates), triggered, immediate, suppression, snapshot.revision,
+                           tuple(pending), {**temporal['details'], **feeding_details})

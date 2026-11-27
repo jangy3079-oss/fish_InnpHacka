@@ -108,7 +108,7 @@ class Stub:
     def __init__(self, score_at, act=0.0):
         self.score_at, self.act = score_at, act
 
-    def score_series(self, fused):
+    def score_series(self, fused, *, snapshot=None):
         return [StressScore(self.cage_id, f.ts + timedelta(minutes=5), self.score_at(f.ts + timedelta(minutes=5)), "ready",
                             "m5-iforest-1.1+cage-003.20260804.123ccdef",
                             evidence={"lower_layers_ratio_x": 1.0, "activity_change": self.act, "cohesion_change": 0},
