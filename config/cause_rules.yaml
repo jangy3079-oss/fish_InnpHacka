@@ -42,8 +42,11 @@ rules:
     name: 피난처 소실
     phase: mvp
     behavior:
-      cohesion_change_max: -0.30 # 응집도 급락 [확인] 급락의 기준값 미정, 임시값
-      activity_change_max: -0.40 # 활동량 -40% 이하 [가정]
+      # 둘 중 하나를 만족하면 행동 조건 충족 (#60). SDD 원안은 둘 다였으나 밤에는 기준선 대비 값이
+      # 잘 안 보여 데이터 쪽 stress/levels.py 가 "하나"로 구현함. 백엔드 #25 도 같게 맞춘다.
+      activity_change_max: -0.40 # 활동량 기준선 대비 -40% 이하 [가정]
+      cohesion_drop: 0.30        # 응집도 급락: 직전 lookback_h 시간 최고값보다 0.3 이상 하락 [가정, #60]
+      lookback_h: 12             # 위 최고값을 보는 시간 (시간) [가정, #60]
     env:
       temp_diff_max_c: 1         # 표층-중층 차 1℃ 미만으로 떨어짐 [사례]
       temp_surface_min_c: 25     # [논문]
