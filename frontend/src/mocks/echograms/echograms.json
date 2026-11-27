@@ -1,0 +1,27 @@
+{
+ "heatwave_typhoon": {
+  "start_ms": 1785855600000,
+  "end_ms": 1786546740000,
+  "depth_max": 9.0
+ },
+ "disease_suspect": {
+  "start_ms": 1785855600000,
+  "end_ms": 1786373940000,
+  "depth_max": 9.0
+ },
+ "parasite_suspect": {
+  "start_ms": 1785855600000,
+  "end_ms": 1786201140000,
+  "depth_max": 9.0
+ },
+ "turbidity_event": {
+  "start_ms": 1785855600000,
+  "end_ms": 1786114740000,
+  "depth_max": 9.0
+ },
+ "feeding_drop": {
+  "start_ms": 1785855600000,
+  "end_ms": 1786114740000,
+  "depth_max": 9.0
+ }
+}
