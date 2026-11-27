@@ -28,9 +28,11 @@ npm run dev
 python -m pip install -r requirements.txt
 python -m pipeline                 # 시나리오별 API용 파일 → data/out/
 python -m pipeline.frontend        # 프론트 시연용 scenarios.json
+python -m pipeline.frontend --dest frontend/src/mocks/scenarios.json   # 시연 화면 데이터 교체 (선택)
 python -m pipeline.validate --seeds 10   # VC-01~05 검증 (시드 10개, 약 1분)
 ```
 
+- 옵션, 결과 파일, 단계별 실행, 실제 수온(NIFS) 자료 연결은 [데이터 파이프라인 안내](docs/data-pipeline.md)에 있습니다.
 - 검증 결과(VC-01~08)와 실행 환경은 [docs/validation-results.md](docs/validation-results.md)에 있습니다. 결과는 합성 데이터 기준이며 현장 검증이 아닙니다.
 - 설정(`config/*.yaml`)을 바꾸면 `python -m common.config_loader`와 `python -m unittest tests.test_config_loader`를 먼저 실행합니다.
 
