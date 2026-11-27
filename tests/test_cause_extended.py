@@ -86,6 +86,80 @@ class ExtendedCauseTest(unittest.TestCase):
         self.assertFalse(engine.evaluate(*observation(74), context=CLEAR).estimates)
         self.assertFalse(engine.evaluate(*observation(74, cage="B"), context=CLEAR).estimates)
 
+    def test_r8_exact_max_pause_keeps_only_observed_duration(self):
+        # 5h55 observed + 16h unobserved + 5min observed = 6h, not 22h.
+        pairs = [observation(i, quality=0.2 if 71 < i <= 263 else 0.9)
+                 for i in range(1, 265)]
+        results = run_observations(pairs)
+        self.assertFalse(any(r.estimates for r in results[:-1]))
+        evidence = results[-1].estimates[0].evidence
+        self.assertEqual(evidence['rubbing_observed_hours'], 6)
+        self.assertEqual(evidence['rubbing_window_start'], T.isoformat())
+
+    def test_r8_one_cycle_over_max_pause_requires_six_new_hours(self):
+        pairs = [observation(i, rubbing=None if 71 < i <= 264 else 4)
+                 for i in range(1, 337)]
+        results = run_observations(pairs)
+        self.assertFalse(any(r.estimates for r in results[:-1]))
+        evidence = results[-1].estimates[0].evidence
+        self.assertEqual(evidence['rubbing_observed_hours'], 6)
+        self.assertEqual(evidence['rubbing_window_start'], (T + timedelta(minutes=5*264)).isoformat())
+
+    def test_r8_confirmed_cause_is_not_published_during_pause_or_low_score(self):
+        engine = CauseEngine()
+        run_observations([observation(i) for i in range(1, 73)], engine=engine)
+        paused = engine.evaluate(*observation(73, quality=0.2), context=CLEAR)
+        self.assertFalse(paused.estimates)
+        low = engine.evaluate(*observation(74, score=35), context=CLEAR)
+        self.assertFalse(low.estimates)
+        self.assertEqual(low.suppression, 'low_stress')
+        missing = engine.evaluate(*observation(75, score=None), context=CLEAR)
+        self.assertFalse(missing.estimates)
+        self.assertEqual(missing.suppression, 'missing_score')
+        self.assertEqual(engine.evaluate(*observation(76), context=CLEAR).estimates[0].rule_id, 'R8')
+
+    def test_r8_each_valid_observation_restarts_pause_budget(self):
+        # Independent pauses, each 16h, never add to the six observed hours.
+        pairs = [observation(1)]
+        pairs += [observation(i, quality=None) for i in range(2, 194)]
+        pairs += [observation(194)]
+        pairs += [observation(i, rubbing=None) for i in range(195, 387)]
+        pairs += [observation(i) for i in range(387, 457)]
+        results = run_observations(pairs)
+        self.assertFalse(any(r.estimates for r in results[:-1]))
+        self.assertEqual(results[-1].estimates[0].evidence['rubbing_observed_hours'], 6)
+
+    def test_r8_pause_budget_comes_from_validated_yaml(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / 'config'
+            shutil.copytree(DEFAULT_DIRECTORY, folder)
+            path = folder / 'cause_rules.yaml'
+            config = yaml.safe_load(path.read_text(encoding='utf-8'))
+            config['rules']['R8']['behavior']['max_pause_hours'] = 1
+            path.write_text(yaml.safe_dump(config, allow_unicode=True), encoding='utf-8')
+            for missing_cycles, expected in ((12, True), (13, False)):
+                end_pause = 71 + missing_cycles
+                pairs = [observation(i, quality=0.2 if 71 < i <= end_pause else 0.9)
+                         for i in range(1, end_pause + 2)]
+                result = run_observations(pairs, engine=CauseEngine(ConfigLoader(folder)))[-1]
+                self.assertEqual(bool(result.estimates), expected)
+
+    def test_r8_normal_observation_after_pause_resets_immediately(self):
+        pairs = [observation(i, quality=0.2 if 72 <= i <= 83 else 0.9,
+                             rubbing=2.99 if i == 84 else 4) for i in range(1, 157)]
+        results = run_observations(pairs)
+        self.assertFalse(any(r.estimates for r in results[:-1]))
+        self.assertEqual(results[-1].estimates[0].evidence['rubbing_observed_hours'], 6)
+
+    def test_r8_ineligible_cycle_during_pause_discards_prior_observations(self):
+        for context in (CauseContext(), CauseContext(advisory_active=True)):
+            pairs = [observation(i, quality=0.2 if i == 72 else 0.9) for i in range(1, 145)]
+            contexts = [CLEAR]*len(pairs)
+            contexts[71] = context
+            results = run_observations(pairs, contexts)
+            self.assertFalse(any(r.estimates for r in results[:-1]))
+            self.assertEqual(results[-1].estimates[0].evidence['rubbing_observed_hours'], 6)
+
     def test_r8_advisory_active_unknown_or_missing_environment_blocks(self):
         for context in (CauseContext(), CauseContext(advisory_active=True)):
             pairs = [observation(i) for i in range(1, 90)]
@@ -131,6 +205,16 @@ class ExtendedCauseTest(unittest.TestCase):
         self.assertEqual([c.rule_id for c in r.estimates], ["R8", "R5"])
         self.assertEqual(sum(c.probability for c in r.estimates), 1)
 
+    def test_r5_low_current_score_does_not_automatically_keep_previous_cause(self):
+        engine = CauseEngine()
+        first = run_observations(trend_pairs(), engine=engine)[-1]
+        self.assertEqual(first.estimates[0].rule_id, 'R5')
+        low = engine.evaluate(*observation(865, score=35, rubbing=1), context=CLEAR)
+        self.assertFalse(low.estimates)
+        self.assertEqual(low.suppression, 'low_stress')
+        resumed = engine.evaluate(*observation(866, score=60, rubbing=1), context=CLEAR)
+        self.assertEqual(resumed.estimates[0].rule_id, 'R5')
+
     def test_invalid_context_or_numeric_input_does_not_advance_history(self):
         for flag in (1, "false"):
             with self.assertRaises(ValueError):
@@ -163,6 +247,9 @@ class ExtendedCauseTest(unittest.TestCase):
             self.assertFalse(engine.evaluate(*observation(73), context=CLEAR).estimates)
             for mutate in (lambda d: d["rules"]["R5"]["behavior"].update(min_daily_coverage=0),
                            lambda d: d["rules"]["R8"]["behavior"].update(missing_observation="invent"),
+                           lambda d: d["rules"]["R8"]["behavior"].pop('max_pause_hours'),
+                           lambda d: d["rules"]["R8"]["behavior"].update(max_pause_hours=0),
+                           lambda d: d["rules"]["R8"]["behavior"].update(max_pause_hours=-1),
                            lambda d: d["probability"].update(tie_break_order=["R5"]),
                            lambda d: d["rules"]["R3"]["env"].update(do_max_mg_l=-1)):
                 data = json.loads(json.dumps(config))

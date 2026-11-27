@@ -125,8 +125,8 @@ rules:
     behavior:
       rubbing_rate_x_min: 3.0        # 기준선 대비 3배 이상 [가정]
       sustained_hours_min: 6         # 6시간 이상 지속 [가정]
-      max_pause_hours: 16            # #201 [가정] 연속 저품질/야간 대기 상한, 관측 시간에는 미포함
       missing_observation: pause      # [가정, #26] 저품질/야간 시간은 누적하지 않음. 관측된 정상은 초기화
+      max_pause_hours: 16             # [MVP 가정, #127] 연속 미관측 16h까지 유지, 초과 시 누적 초기화
     env:
       normal_env: true
       advisory_active: false
