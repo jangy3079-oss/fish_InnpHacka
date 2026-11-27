@@ -127,3 +127,46 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .reveal-rect { animation: none; }
 }
+
+/* 재고 입력: 표 형태와 안내 */
+.page-head { margin-bottom: 22px; }
+.page-head h1 { margin: 0 0 8px; font-size: 30px; font-weight: 800; letter-spacing: -0.01em; }
+.page-head .lead { margin: 0; font-size: 18px; color: var(--ink-soft); max-width: 56ch; }
+.stock-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (min-width: 1000px) { .stock-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; } }
+.stock { font-size: 18px; padding: 8px 24px 24px; }
+.stock-head, .stock-row { display: grid; grid-template-columns: minmax(150px, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) minmax(90px, 0.8fr); gap: 8px 16px; align-items: center; }
+.stock-head { padding: 14px 0 10px; border-bottom: 2px solid var(--ink); font-size: 15px; font-weight: 700; color: var(--ink-soft); }
+.stock-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+.stock-name { display: flex; flex-direction: column; gap: 2px; }
+.stock-name strong { font-size: 19px; }
+.stock-name span { font-size: 14px; color: #6b7785; }
+.stock .input-unit { display: flex; align-items: center; gap: 6px; }
+.stock input[inputmode] { width: 100%; min-width: 0; padding: 12px; font: inherit; font-size: 20px; border: 2px solid #c5d3da; border-radius: 10px; text-align: right; background: #fff; }
+.stock input[aria-invalid='true'] { border-color: #b3261e; }
+.stock-sum { margin: 0; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stock-error { grid-column: 1 / -1; margin: 0; font-size: 16px; }
+.stock-total { margin: 18px 0 8px; text-align: right; font-size: 18px; }
+.stock-total strong { font-size: 22px; }
+.insured { border: 0; margin: 20px 0 0; padding: 18px 0 0; border-top: 1px solid var(--line); }
+.insured legend { padding: 0; font-weight: 800; font-size: 19px; float: left; width: 100%; margin-bottom: 6px; }
+.insured legend + * { clear: both; }
+.choices { display: flex; flex-wrap: wrap; gap: 4px 28px; }
+.choices label { display: flex; align-items: center; gap: 10px; font-size: 19px; padding: 10px 0; }
+.choices input { width: 22px; height: 22px; }
+.form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-wrap: wrap; margin-top: 20px; }
+.form-actions p { margin: 0; }
+.form-actions .primary { width: auto; margin: 0; padding: 14px 40px; font-size: 19px; }
+.aside h2 { margin: 0 0 12px; font-size: 19px; }
+.aside ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; font-size: 16px; line-height: 1.65; color: var(--ink-soft); }
+@media (max-width: 720px) {
+  .stock { padding: 8px 16px 20px; }
+  .stock-head { display: none; }
+  .stock-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 18px 0; }
+  .stock-name { grid-column: 1 / -1; }
+  .stock-sum { grid-column: 1 / -1; text-align: left; }
+  .stock label::before { content: attr(data-label); display: block; font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-bottom: 4px; }
+  .stock-sum::before { content: attr(data-label); font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-right: 8px; }
+  .form-actions { justify-content: stretch; }
+  .form-actions .primary { width: 100%; }
+}
