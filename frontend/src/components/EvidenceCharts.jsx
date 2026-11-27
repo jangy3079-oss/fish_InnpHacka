@@ -131,6 +131,11 @@ function useTimeseries(cageId, metric) {
   return data;
 }
 
+// 알림에서 '#evidence' 링크로 들어오면 그래프가 그려진 뒤 해당 위치로 이동한다.
+function scrollToHash(node) {
+  if (node && window.location.hash === '#evidence') node.scrollIntoView();
+}
+
 export default function EvidenceCharts({ cageId, alertAt }) {
   const vd = useTimeseries(cageId, 'vertical_dist');
   const act = useTimeseries(cageId, 'activity');
@@ -145,7 +150,7 @@ export default function EvidenceCharts({ cageId, alertAt }) {
   const tMax = Math.ceil(Math.max(...temps)) + 1;
 
   return (
-    <section className="card">
+    <section className="card" id="evidence" ref={scrollToHash}>
       <h2>왜 이렇게 판단했나요?</h2>
       <VerticalDistChart points={vd.points} alertAt={alertAt} />
       <LineChart title="움직임 (평소 대비 활발한 정도)" series={[{ label: '활동량', color: '#13243b', points: act.points }]} yMin={0} yMax={1} alertAt={alertAt} />
