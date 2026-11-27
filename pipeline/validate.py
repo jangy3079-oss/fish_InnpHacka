@@ -12,7 +12,8 @@ VC-02 이상 구간 재현율        정답 경보 구간(labels alert_expected)
                               구간 시작부터 첫 경보까지 걸린 시간
 VC-04 경고 선행 시간          heatwave_typhoon 28℃ 주의보 기준 도달 − 첫 '주의' (시간)
 VC-05 거짓 경보               turbidity_event 경보 발령(정상 → 그 이상) 횟수 (덤: feeding_drop, normal_14d)
-VC-03 원인 추정               데이터 쪽은 시나리오별 정답 원인만 제공 (1순위는 원인 엔진 #25 결과 필요)
+VC-03 원인 추정 정확도        정답 경보 구간의 원인 엔진(cause/) 1순위 원인. 구간마다 가장 많이 나온 1순위가 정답이면 합격,
+                              경보 구간이 없는 turbidity_event는 원인이 한 번도 안 나와야 합격
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ from simulator.labels import build_labels
 from simulator.run import simulate
 from simulator.scenario import load_scenario
 from sonar.metrics import extract
-from cause import CauseEngine
+from cause import CauseContext, CauseEngine
 from common.config_loader import ConfigLoader
 from stress.levels import apply_levels
 from stress.model import StressModel
@@ -56,14 +57,53 @@ def _run(name: str, seed_k: int):
     return sim, recs, fuse(recs), build_labels(sim)
 
 
-def _levels(model: StressModel, fused):
+def _levels(model: StressModel, fused, advisory_active=None):
     """시연 파이프라인(pipeline/run.py)과 같게: 원인 엔진의 R2 즉시 위험 신호로 경보 단계."""
+    scores, changes, _ = _levels_causes(model, fused, advisory_active)
+    return scores, changes
+
+
+def _levels_causes(model: StressModel, fused, advisory_active=None):
+    """advisory_active: 시나리오 YAML env.advisory_active (특보 발령 여부). None이면 미확인 → R5·R8 억제."""
     scores = model.score_series(fused)
     loader = ConfigLoader()
-    results = CauseEngine(loader).evaluate_series(scores, fused)
+    ctx = CauseContext(advisory_active=advisory_active)
+    results = CauseEngine(loader).evaluate_series(scores, fused, contexts=[ctx] * len(scores))
     changes = apply_levels(scores, [r.immediate_danger for r in results],
                            cfg=loader.last_good.to_dict()["thresholds"])
-    return scores, changes
+    return scores, changes, results
+
+
+def _top1(result):
+    """원인 엔진 결과의 1순위 rule_id (표시 대상 중 확률 최대, 동점은 엔진 순서). 없으면 None."""
+    shown = [c for c in result.estimates if c.display]
+    if not shown:
+        return None
+    return max(shown, key=lambda c: c.probability).rule_id
+
+
+def vc03(results, labels) -> dict:
+    """정답 경보 구간별 1순위 원인 집계."""
+    from collections import Counter
+    out = {}
+    intervals = [iv for iv in labels["intervals"] if iv["alert_expected"]]
+    if not intervals:
+        n = sum(1 for r in results if _top1(r))
+        return {"no_alert_scenario": True, "cycles_with_cause": n, "pass": n == 0, "by_interval": {}}
+    ok = True
+    for iv in intervals:
+        sub = [r for r in results if _in(r.ts, iv)]
+        tops = [_top1(r) for r in sub]
+        named = [t for t in tops if t]
+        cnt = Counter(named)
+        mode = cnt.most_common(1)[0][0] if cnt else None
+        hit = cnt.get(iv["rule_id"], 0)
+        out[iv["cause"]] = {"expected": iv["rule_id"], "mode_top1": mode,
+                            "top1_accuracy": round(hit / len(named), 3) if named else None,
+                            "coverage": round(len(named) / len(sub), 3) if sub else None,
+                            "counts": dict(cnt)}
+        ok = ok and mode == iv["rule_id"]
+    return {"no_alert_scenario": False, "pass": ok, "by_interval": out}
 
 
 def _in(ts: datetime, iv: dict) -> bool:
@@ -151,7 +191,7 @@ def run_seed(k: int) -> dict:
 
     for name in ALERT_SCENARIOS + QUIET_SCENARIOS:
         sim, recs, fused, labels = _run(name, k)
-        scores, changes = _levels(model, fused)
+        scores, changes, causes = _levels_causes(model, fused, sim.scenario.env.get("advisory_active"))
         r = {"alarms": alarms(changes), "level_changes": len(changes),
              "max_level": max((s.level for s in scores if s.level), key=["정상", "주의", "경고", "위험"].index)}
         if name in ALERT_SCENARIOS:
@@ -160,6 +200,8 @@ def run_seed(k: int) -> dict:
             r["vc04"] = vc04(changes, labels)
         if name == "turbidity_event":
             r["vc01"] = vc01(recs, fused, labels)
+        if name in VC03_SCENARIOS:
+            r["vc03"] = vc03(causes, labels)
         out[name] = r
     base_scores, base_changes = _levels(model, base_fused)
     out["normal_14d"] = {"alarms": alarms(base_changes)}
@@ -203,6 +245,8 @@ def summarize(runs: List[dict]) -> dict:
     rec = [s[f"vc02_recall_{n}"]["mean"] for n in ALERT_SCENARIOS]
     s["vc02_recall_mean"] = round(float(np.mean(rec)), 3)
     s["vc02_pass_all"] = all(r[n]["vc02"]["recall"] >= 0.8 for r in runs for n in ALERT_SCENARIOS)
+    s["vc03_pass_by_scenario"] = {n: sum(r[n]["vc03"]["pass"] for r in runs) for n in VC03_SCENARIOS}
+    s["vc03_pass_all"] = all(r[n]["vc03"]["pass"] for r in runs for n in VC03_SCENARIOS)
     return s
 
 
@@ -219,6 +263,7 @@ def to_markdown(res: dict) -> str:
          f"| VC-01 | 탁한 구간 활동량 표준편차: 카메라 단독 {s['vc01_camera_std']['mean']} / 융합 {s['vc01_fused_std']['mean']} | {ok(s['vc01_pass_all'])} (모든 시드) |",
          f"| VC-02 | 재현율 평균 {s['vc02_recall_mean']} (고수온 {s['vc02_recall_heatwave_typhoon']['mean']}, 질병 {s['vc02_recall_disease_suspect']['mean']}, 기생충 {s['vc02_recall_parasite_suspect']['mean']}) | {ok(s['vc02_pass_all'])} (모든 시드·시나리오 ≥ 0.8) |",
          f"| VC-04 | 28℃ 기준 선행 {s['vc04_lead_h']['mean']}h ({s['vc04_lead_h']['min']}~{s['vc04_lead_h']['max']}h), 27℃ 기준 {s['vc04_lead_27c_h']['mean']}h ({s['vc04_lead_27c_h']['min']}~{s['vc04_lead_27c_h']['max']}h) | {ok(s['vc04_pass_all'])} |",
+         f"| VC-03 | 4개 시나리오 정답 원인 1순위: " + ", ".join(f"{k} {v}/{len(runs)}" for k, v in s["vc03_pass_by_scenario"].items()) + f" | {ok(s['vc03_pass_all'])} |",
          f"| VC-05 | 탁도 경보 {s['vc05_turbidity_alarms']}건 (덤: 급이 저하 {s['vc05_feeding_drop_alarms']}, 정상 14일 {s['vc05_normal_alarms']}) | {ok(s['vc05_pass_all'])} |",
          "", "## 시드별", "",
          "| 시드 | VC-01 카메라/융합 std | VC-01 탁도 중 평균 이탈 카메라/융합 | VC-02 고수온 | VC-02 질병 | VC-02 기생충 | VC-04 선행(h) | VC-05 탁도 경보 |",
@@ -236,16 +281,24 @@ def to_markdown(res: dict) -> str:
     v4 = r0["heatwave_typhoon"]["vc04"]
     L += ["", f"VC-04 (시드 0): 27℃ 도달 {v4['advisory_27c_h']}h, 28℃ 도달 {v4['advisory_28c_h']}h, 첫 '주의' {v4['first_caution_h']}h, "
           f"선행 28℃ 기준 {v4['lead_h']}h / 27℃ 기준 {v4['lead_27c_h']}h", "",
-          "## VC-03 정답 원인 (1순위 원인은 원인 엔진 #25 결과로 채움)", "", "| 시나리오 | 정답 원인 (경보 구간 순서) |", "| --- | --- |"]
+          f"## VC-03 원인 추정 정확도 (시드 {n}개 중 합격 시드 수)", "",
+          "| 시나리오 | 정답 원인 | 합격 시드 | 시드 0: 구간별 최빈 1순위 · 1순위 정답률 · 원인 나온 비율 |", "| --- | --- | --- | --- |"]
     for n_, cs in res["vc03_expected"].items():
-        L.append(f"| `{n_}` | {' → '.join(cs)} |")
+        v = r0[n_]["vc03"]
+        if v["no_alert_scenario"]:
+            det = f"원인 나온 주기 {v['cycles_with_cause']}건"
+        else:
+            det = "; ".join(f"{c}: {d['mode_top1']} · {d['top1_accuracy']} · {d['coverage']}" for c, d in v["by_interval"].items())
+        L.append(f"| `{n_}` | {' → '.join(cs)} | {s['vc03_pass_by_scenario'][n_]}/{n} | {det} |")
     L += ["", "## 정의", "",
           "- VC-01: `turbidity_event` 탁도 정답 구간 중 낮(KST 09~16시) 5분 주기, 활동량(activity). 이탈은 첫날 같은 시간대 평균 대비",
           "- VC-02: labels.json의 `alert_expected` 구간 5분 주기 중 경보 단계가 '정상'이 아닌 비율. 첫 경보까지 = 구간 시작 → 첫 비정상 단계 (앞 구간부터 경보 중이면 0)",
           "- VC-04: `advisory_28c`(표층 참값 28℃ 첫 도달, SRS 주의보 표기) − 첫 '주의' 이상 단계 시각. "
           "수과원 2018 단계표는 주의보 27~28℃라 27℃ 기준(`advisory_27c`)도 함께 적음",
           "- 경보 단계는 시연 파이프라인과 같게 원인 엔진(`cause/`)의 R2 즉시 위험 신호를 씀",
-          "- VC-05: 경보 단계가 '정상'에서 올라간 횟수"]
+          "- VC-05: 경보 단계가 '정상'에서 올라간 횟수",
+          "- VC-03: 정답 경보 구간 5분 주기마다 원인 엔진의 표시 대상 중 확률 최대(동점은 엔진 순서) = 1순위. 구간 최빈 1순위가 정답이면 합격. "
+          "1순위 정답률 = 원인이 나온 주기 중 1순위가 정답인 비율, 원인 나온 비율 = 구간 주기 중 원인이 하나라도 나온 비율"]
     return "\n".join(L) + "\n"
 
 

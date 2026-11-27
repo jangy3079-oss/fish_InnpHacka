@@ -39,6 +39,12 @@ class FrontendExportTest(unittest.TestCase):
             self.assertTrue(set(mock[n]["frames"][0]) <= set(self.data[n]["frames"][0]), n)
             self.assertTrue(set(mock[n]["series"]) <= set(self.data[n]["series"]), n)
 
+    def test_cause_suppression_passed(self):
+        for f in self.data["parasite_suspect"]["frames"]:
+            self.assertIn(f["cause_suppression"], (None, "warming_up", "missing_score", "low_stress"))
+            self.assertIn("r2_triggered", f)
+        self.assertTrue(any(f["r2_triggered"] for f in self.data["heatwave_typhoon"]["frames"]))
+
     def test_label_causes_marked(self):
         hw = self.data["heatwave_typhoon"]["frames"]
         rules = {f["cause"][0]["rule_id"] for f in hw if f["cause"]}
