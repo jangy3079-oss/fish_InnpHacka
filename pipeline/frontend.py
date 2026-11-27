@@ -32,6 +32,8 @@ LABELS = {
     "disease_suspect": "질병 의심",
     "parasite_suspect": "기생충 의심",
     "feeding_drop": "급이 저하",
+    "red_tide": "적조",
+    "net_change": "망갈이 작업 스트레스",
 }
 FRONT_KEYS = ("ts", "stress_score", "level", "baseline_status", "cause", "evidence", "camera_weight",
               "missing_sources")

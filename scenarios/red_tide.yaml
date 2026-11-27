@@ -1,0 +1,24 @@
+# 적조 (R4, #174·#45): 적조 특보 발령 해역에서 활동량이 기준선 대비 ±50% 이상 급변.
+# 가정: 26h(2일차 02시) 적조 특보 발령, 30h부터 66h까지 적조 노출(앞뒤 3시간 전환).
+#       아가미 자극으로 급하게 돌아다니고(활동 배율 최대 2.2배) 표층 쪽으로 오르며, 급이 반응이 줄어든다.
+# 근거 범위: 수과원 적조 매뉴얼(notify/docs/nifs_red_tide_cage_manual.md)은 대응 요령만 있고 행동 수치는 없다.
+#       행동 변화의 방향·크기와 ±50% 판정은 시뮬레이터·규칙 가정값이다. 적조는 보통 22~26℃에서 나지만,
+#       고수온(R1)·섭식 저하(R7)와 섞이지 않게 표층 22℃대로 둔다.
+name: red_tide
+description: 적조 — 적조 특보 해역, 활동 급변·표층 쪽 이동
+cage_id: cage-003
+start: "2026-08-05T00:00:00+09:00"
+duration_days: 4
+seed: 51
+baseline: normal_14d
+cage: {depth_m: 9.0, n_fish: 300}
+sampling: {ping_interval_s: 60, cycle_minutes: 5}
+env:
+  advisory_active: false # 고수온 등 다른 특보 없음 (#26), 실서비스 기본값 아님
+  temp_surface: [[0, 22.0], [96, 22.3]]
+  temp_mid:     [[0, 19.2], [96, 19.4]]
+  do:           [[0, 7.0], [96, 6.8]]
+  diurnal_amp:  {temp_surface: 0.3}
+camera: {enabled: true, day_quality: 0.85, night_quality: 0.35}
+events:
+  - {type: red_tide, start_h: 30, end_h: 66, ramp_h: 3, advisory_h: 26}

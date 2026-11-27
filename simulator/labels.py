@@ -6,6 +6,8 @@ YAML에 구간을 손으로 적지 않고 참값에서 만들기 때문에 수�
 정답 원인 (SDD 6.3 규칙 ID)
   R5 disease_suspect   질병 진행도 ≥ 0.25
   R8 parasite_suspect  기생충(비비기 증가) 정도 ≥ 0.5
+  R4 red_tide          적조 노출 정도 ≥ 0.5 (#174)
+  R6 work_stress       작업(망갈이·선별) 직후 스트레스 ≥ 0.25 (#174)
   R3 hypoxia           DO < 4.0 mg/L
   R2 refuge_loss       표층 ≥ 25℃, 표층−중층 < 1℃
   R1 heat_hiding       표층 ≥ 25℃, 표층−중층 ≥ 1℃
@@ -33,6 +35,8 @@ CAUSES = {
     "hypoxia": ("R3", "저산소", True),
     "disease_suspect": ("R5", "질병 의심", True),
     "parasite_suspect": ("R8", "기생충 의심", True),
+    "red_tide": ("R4", "적조", True),
+    "work_stress": ("R6", "작업 스트레스", True),
 }
 MIN_SEGMENT_H = 2.0   # 수온 일교차로 경계에서 깜박이는 짧은 구간은 앞 구간에 합친다
 
@@ -45,6 +49,10 @@ def cycle_causes(truth: Dict[str, np.ndarray]) -> List[str]:
             c = "disease_suspect"
         elif truth["parasite"][i] >= 0.5:
             c = "parasite_suspect"
+        elif truth.get("red_tide") is not None and truth["red_tide"][i] >= 0.5:
+            c = "red_tide"
+        elif truth.get("work") is not None and truth["work"][i] >= 0.25:
+            c = "work_stress"
         elif do[i] < 4.0:
             c = "hypoxia"
         elif ts[i] >= 25.0:
