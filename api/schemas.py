@@ -208,6 +208,25 @@ class DiagnosisRequest(Contract):
     request_key: UUID
 
 
+WorkKind = Literal["net_change", "sorting"]
+
+
+class WorkLogRequest(Contract):
+    """망갈이·선별 작업 기록 (#45, 원인 규칙 R6 입력). 시각은 실제 작업한 때."""
+    kind: WorkKind
+    performed_at: AwareDatetime
+    request_key: UUID
+
+
+class WorkLogReceipt(Contract):
+    persisted: Literal[True]
+    work_log_id: Annotated[int, Field(gt=0)]
+    cage_id: Annotated[int, Field(gt=0)]
+    kind: WorkKind
+    performed_at: AwareDatetime
+    created_at: AwareDatetime
+
+
 class DiagnosisReceipt(Contract):
     persisted: Literal[True]
     id: Annotated[int, Field(gt=0)]

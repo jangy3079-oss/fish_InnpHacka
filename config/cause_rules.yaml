@@ -74,6 +74,7 @@ rules:
       activity_change_abs_min: 0.50  # 급격한 활동 변화 [확인] 기준값 미정, 임시값. 기준선 대비 ±50% 이상
     env:
       red_tide_advisory: true    # 적조 특보 발령 해역 (수과원 자료, 이슈 #43). 외부 입력 CauseContext.red_tide_advisory
+      advisory_stages: [advisory, warning]  # [가정, #45] 주의보·경보를 '특보 발령'으로 본다. 예비주의보(watch)는 제외
     first_action: [stop_feeding, red_tide_guideline]
 
   R5:

@@ -7,12 +7,13 @@ from pydantic import ValidationError
 
 from common import MetricName, MetricRecord
 from common.config_loader import ConfigError
-from cause import CauseContext, CauseEngine
+from cause import CauseEngine
 from decision import ComparisonRequest, LossCalculator
-from decision.actions import ACTIONS, canonical_action
+from decision.actions import ACTIONS, GUIDANCE_ACTIONS, canonical_action
 from decision.first_aid import ensure_safe, reviewed_guide
 from decision.deadlines import with_deadlines
 from fusion.fuse import FusedFeatures, _bucket, fuse
+from pipeline.contexts import observed_contexts
 from stress.levels import apply_levels
 from stress import model as model_config
 
@@ -82,7 +83,7 @@ def recommendation_for(context, primary, level, snapshot):
     rule = snapshot['cause_rules']['rules'][primary.rule_id]
     allowed = {'keep'}
     for action in (*rule['first_action'], *rule.get('compare_options', ())):
-        if action in ('immediate_alert', 'compare_options'):
+        if action in GUIDANCE_ACTIONS:
             continue
         try:
             allowed.add(canonical_action(action))
@@ -136,7 +137,11 @@ def build_bundle(context, model, producer_id, species, snapshot, *, advisory_act
     for s, f in zip(scores, fused):
         if f.features.get('activity') is None or f.features.get('vertical_dist') is None:
             s.score, s.evidence, s.components = None, {}, {}
-    causes = CauseEngine(FixedSnapshot(snapshot)).evaluate_series(scores, fused, contexts=[CauseContext(advisory_active=advisory_active)]*len(scores))
+    # #45: 작업 기록(R6)·적조 특보(R4)는 analysis_input에서 함께 온다. 없는 키는 빈 목록(입력 없음)으로 본다.
+    contexts = observed_contexts([s.ts for s in scores], advisory_active=advisory_active,
+                                 work_logs=context.get('work_logs') or (), red_tide_advisories=context.get('red_tide_advisories') or (),
+                                 advisory_stages=snapshot['cause_rules']['rules']['R4']['env']['advisory_stages'])
+    causes = CauseEngine(FixedSnapshot(snapshot)).evaluate_series(scores, fused, contexts=contexts)
     apply_levels(scores,[c.immediate_danger for c in causes],cfg=snapshot.to_dict()['thresholds'])
     last, f, cause = scores[-1], fused[-1], causes[-1]
     warm = last.baseline_status=='warming_up'

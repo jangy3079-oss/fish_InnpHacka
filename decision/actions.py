@@ -13,6 +13,11 @@ ACTIONS = {
     "release": ("release", "긴급 방류"),
 }
 
+# 원인 규칙의 first_action 중 손익 비교 선택지가 아닌 것: 화면·알림 안내로만 쓴다 (#45).
+# immediate_alert(R2 즉시 알림), compare_options(R2 비교 목록 표시), red_tide_guideline(R4 적조 대응 요령),
+# recovery_monitoring(R6 회복 모니터링).
+GUIDANCE_ACTIONS = frozenset({"immediate_alert", "compare_options", "red_tide_guideline", "recovery_monitoring"})
+
 ALIASES = {key: key for key in ACTIONS}
 ALIASES.update({cost: public for public, (cost, _) in ACTIONS.items()})
 ALIASES.update(stop_feeding="stop_feed", oxygen_supply="oxygen", emergency_release="release",
