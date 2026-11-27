@@ -9,7 +9,7 @@ import yaml
 from fastapi.testclient import TestClient
 
 from api.main import app
-from cause import CauseEngine
+from cause import CauseEngine,CauseContext
 from common.config_loader import ConfigLoader,ConfigError,DEFAULT_DIRECTORY
 from fusion.fuse import FusedFeatures
 from pipeline.analysis import recommendation_for,build_bundle
@@ -133,6 +133,17 @@ class FeedingRuleTest(unittest.TestCase):
         self.assertEqual(rec['details']['recommendation_basis'],'R7_feeding_management')
         self.assertEqual(rec['details']['lowest_loss_option'],'keep')
         self.assertEqual({o['id'] for o in rec['options'] if o['available']},{'keep','reduce_feed'})
+
+    def test_main_r4_r6_candidates_exclude_r7_without_changing_their_rules(self):
+        e=CauseEngine(self.loader)
+        r=e.evaluate(*pair(score=70,activity=-0.6),context=CauseContext(red_tide_advisory=True))
+        self.assertEqual([c.rule_id for c in r.estimates],['R4'])
+        e=CauseEngine(self.loader)
+        e.evaluate(*pair())
+        context=CauseContext(work_log_at=T+timedelta(minutes=5),work_log_type='net_change')
+        for i in range(1,290):
+            r=e.evaluate(*pair(i,score=70),context=context)
+        self.assertEqual([c.rule_id for c in r.estimates],['R6'])
 
 
 class FeedingScenarioTest(unittest.TestCase):
