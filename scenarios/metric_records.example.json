@@ -1,0 +1,12 @@
+[
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"sonar","metric":"vertical_dist","value":[0.5,0.35,0.15],"confidence":0.95},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"sonar","metric":"activity","value":12.5,"confidence":0.95},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"sonar","metric":"cohesion","value":0.8,"confidence":0.95},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"camera","metric":"feeding","value":0.7,"confidence":0.9},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"camera","metric":"still_ratio","value":0.1,"confidence":0.9},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"camera","metric":"rubbing_rate","value":0.02,"confidence":0.9},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"camera","metric":"quality","value":0.9,"confidence":0.9},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"env","metric":"temp_surface","value":26.5,"confidence":1.0},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"env","metric":"temp_mid","value":21.5,"confidence":1.0},
+  {"cage_id":"cage-001","ts":"2026-11-27T09:00:00Z","source":"env","metric":"do","value":6.5,"confidence":1.0}
+]
