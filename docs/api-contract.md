@@ -1,0 +1,62 @@
+# API 계약 초안 — #4
+
+근거: 제공된 SDD 8장. `/cages/3/status`의 필드·값은 문서 예시 그대로다.
+다른 가두리의 status는 같은 fixture에서 cage_id만 바꾼다. 가두리 존재 여부는 조회하지 않는다.
+그 외 본문 구조는 프론트와 검토할 제안이며 실제 비즈니스 기능은 후속 이슈에서 구현한다.
+
+## 공통 동작
+
+- 성공 JSON은 별도 `data` envelope 없이 직접 반환한다. 이미지 API는 SVG를 반환한다.
+- 모든 응답에 `X-Data-Mode: mock` 헤더를 포함한다. Swagger에도 목업임을 명시한다.
+- POST/PUT은 HTTP 200의 `MockReceipt`를 반환한다. `mock=true`, `persisted=false`,
+  action, resource_id, received_count만 반환하며 저장·수정·진단 요청 발송은 수행하지 않는다.
+- 요청 형식 오류는 FastAPI 기본 HTTP 422 `{"detail": [...]}`.
+  빈 지표 객체·역전 시간 구간은 `{"detail": "설명"}`. 통일된 오류 envelope는 합의 대상이다.
+- API ID는 SDD 예시에 맞춰 양의 정수다. `from`, `to`는 시간대가 있는 ISO 8601,
+  둘 다 있으면 from ≤ to. 시계열의 범위는 양 끝 포함이다.
+- 인증은 아직 없다. 합성 fixture만 로컬에서 사용하며 Supabase 인증·RLS는 #3 등 후속 작업이다.
+
+## 경로와 현재 응답
+
+| 메서드 | 경로 | 요청/응답 |
+| --- | --- | --- |
+| GET | `/health` | `{status: "ok", mode: "mock"}` |
+| POST | `/ingest/metrics` | 비어 있지 않은 객체 배열 → MockReceipt. 현재 envelope만 검증 |
+| GET | `/cages/{id}/status` | SDD 그대로의 CageStatus |
+| GET | `/cages/{id}/timeseries?from&to&metric` | `{cage_id, metric, points: [{ts, value}]}`. metric 필수, 범위 밖은 빈 points |
+| GET | `/cages/{id}/echogram?from&to` | `image/svg+xml` 정적 합성 이미지. 시간 범위는 검증만 하며 그림은 변하지 않음 |
+| GET | `/cages/{id}/recommendation` | `{id, cage_id, ts, recommended_option, options}`. 손익 미계산은 null |
+| POST | `/recommendations/{id}/choice` | `{option_id: "reduce_feed"}` → MockReceipt |
+| PUT | `/cages/{id}/stock` | `{stock: [{size_group: "mid", count: 100, avg_weight_kg: 0.2}], insured: false}` → MockReceipt |
+| GET | `/areas/stress-map` | `{ts, areas: [{area_id, name, level, stress_score, cage_count}]}`. 개별 어가 손익 제외 |
+| GET | `/areas/{id}/release-demand` | `{area_id, ts, estimated_fish_count, cage_count}` |
+| POST | `/cages/{id}/diagnosis-request` | `{note: ""}` → MockReceipt |
+| POST | `/demo/scenario/{name}?t=0` | `{mock: true, scenario, t, status}`. 실제 재생하지 않음 |
+| PUT | `/admin/config/{file}` | `{values: {warning: 60}}` → MockReceipt. YAML 파일 수정 없음 |
+
+시나리오명: heatwave_typhoon / turbidity_event / disease_suspect / parasite_suspect.
+설정명(확장자 제외): thresholds / cause_rules / release_rules / costs / first_aid.
+세부 필드의 타입·필수 여부는 `/openapi.json`의 schema를 기준으로 한다.
+
+## 프론트·데이터 담당과 합의 필요
+
+1. **ID 충돌:** #2 초안은 cage_id 문자열, SDD status 예시는 정수다.
+   #3 DB 키 결정에 맞춰 전체 API와 MetricRecord를 통일해야 한다.
+2. **#2 연계:** 최신 main에는 #2가 없어 공통 모델을 중복 구현하지 않았다.
+   ingest는 객체 배열까지만 검증한다. #2 병합 후 #10에서 `list[MetricRecord]`로 교체하고
+   전체 성공/부분 실패·중복 전송 정책을 정한다. 현재 200은 실제 수집 성공을 뜻하지 않는다.
+3. **비율 순서·단위:** 시계열 vertical_dist 예시는 #2 초안과 같은 [저층, 중층, 표층].
+   구간 경계와 최종 순서·활동량 등 단위는 데이터 담당과 확정한다.
+4. **빈 상태:** 현재 nullable score/level과 warming_up enum을 정의했으나 관련 fixture는 없다.
+   측정 없음·권한 없음·존재하지 않는 ID의 응답, 센서 누락·워밍업 화면을 합의한다.
+5. **추천·입력:** 선택지 ID, 예상 손익의 단위(현재 KRW)/null,
+   재고·보험 필드, 진단 요청 본문과 실제 생성 시 201/202 여부를 합의한다.
+6. **시연 시간:** t는 음수 아닌 숫자만 검증한다. 분/초/시나리오 기준 시각 중 단위를 정해야 한다.
+   현재 모든 시나리오·t에서 동일한 status를 반환한다. #30에서 실제 결과로 교체한다.
+7. **이미지·지도:** 에코그램을 바이너리로 받을지 URL JSON으로 받을지,
+   지도 응답을 현재 요약 배열에서 GeoJSON으로 바꿀지 확정한다(#29·#35).
+8. **오류·인증·CORS:** 공통 에러 구조, Supabase Bearer 토큰의 역할 구분,
+   프론트 실제 origin을 정한다. 현재 인증 검사나 권한 확인 기능은 제공하지 않는다.
+
+SDD cause 확률 예시 합은 0.9지만 원문 일치를 위해 그대로 반환한다.
+실제 확률 정규화는 #25에서 구현한다. 이 PR은 #2·#3 등 미병합 변경을 포함하지 않는다.
