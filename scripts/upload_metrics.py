@@ -1,4 +1,4 @@
-"""Upload simulator records.jsonl or the shared JSON fixture without rewriting it."""
+"""Upload producer metrics.jsonl or the shared JSON fixture without rewriting it."""
 
 import argparse
 import json
@@ -27,7 +27,15 @@ def read_records(path: Path) -> list[MetricRecord]:
 
 def upload(records: list[MetricRecord], client: httpx.Client, base_url: str, token: str,
            batch_size: int = 500) -> int:
-    inserted = 0
+    """Compatibility API: return records confirmed (inserted + duplicate)."""
+    return upload_counts(records, client, base_url, token, batch_size)['received_count']
+
+
+def upload_counts(records: list[MetricRecord], client: httpx.Client, base_url: str, token: str,
+                  batch_size: int = 500) -> dict[str, int]:
+    if type(batch_size) is not int or not 1 <= batch_size <= 1000:
+        raise ValueError('batch-size must be between 1 and 1000')
+    counts = {'received_count': 0, 'inserted_count': 0, 'duplicate_count': 0}
     for start in range(0, len(records), batch_size):
         batch = records[start:start + batch_size]
         try:
@@ -35,18 +43,22 @@ def upload(records: list[MetricRecord], client: httpx.Client, base_url: str, tok
                 headers={"Authorization": f"Bearer {token}"},
                 json=[r.model_dump(mode="json") for r in batch])
         except httpx.RequestError:
-            raise UploadError(f"Upload interrupted after {inserted} confirmed records; current batch outcome is unknown. Check storage before retrying.") from None
+            raise UploadError(f"Upload interrupted after {counts['received_count']} confirmed records; current batch outcome is unknown. Check storage before retrying.") from None
         if response.status_code != 201:
-            raise UploadError(f"Upload stopped: HTTP {response.status_code}, {inserted} records previously confirmed. No automatic retry.")
+            raise UploadError(f"Upload stopped: HTTP {response.status_code}, {counts['received_count']} records previously confirmed. No automatic retry.")
         try:
             receipt = response.json()
-            if (receipt.get("persisted") is not True or receipt.get("received_count") != len(batch)
-                    or receipt.get("inserted_count") != len(batch)):
+            # Legacy receipts imply zero duplicates only when every row was inserted.
+            values = {key: receipt.get(key, 0 if key == 'duplicate_count' else None) for key in counts}
+            if (receipt.get('persisted') is not True or any(type(v) is not int or v < 0 for v in values.values())
+                    or values['received_count'] != len(batch)
+                    or values['received_count'] != values['inserted_count'] + values['duplicate_count']):
                 raise ValueError
         except (ValueError, AttributeError):
             raise UploadError("Unexpected upload acknowledgement; check storage before retrying.") from None
-        inserted += len(batch)
-    return inserted
+        for key in counts:
+            counts[key] += values[key]
+    return counts
 
 
 def main(argv=None) -> int:
@@ -72,8 +84,8 @@ def main(argv=None) -> int:
         if not token:
             raise ValueError("Set INGEST_ACCESS_TOKEN to a dedicated edge account access token")
         with httpx.Client(timeout=30, follow_redirects=False) as client:
-            count = upload(records, client, args.base_url, token, args.batch_size)
-        print(json.dumps({"inserted_count": count}))
+            counts = upload_counts(records, client, args.base_url, token, args.batch_size)
+        print(json.dumps(counts))
         return 0
     except UploadError as exc:
         print(str(exc))
