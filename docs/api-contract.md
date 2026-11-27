@@ -1,5 +1,7 @@
 # API 계약 초안 — #4
 
+> #197·#200·#201의 /me·재고 GET·검증 경계/원인 분포·관측 metadata는 [접근·재고·관측 계약](access-stock-observations.md)을 따른다.
+
 > #36 관리자 설정 GET/PUT은 보호된 관리자 역할·revision·재전송 키를 사용하는 실제 파일 저장 경로다. [관리자 계약](admin-config-api.md)을 따른다.
 
 > #44 추천의 deadline/deadlines는 게시 시점의 실행 기한·다음 판단 정보다. [기한 계약](recommendation-deadlines.md)을 따른다.

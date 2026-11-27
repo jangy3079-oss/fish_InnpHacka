@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
     const started = sessionEpoch();
     const p = await api.getMe();
     if (started !== sessionEpoch() || !session()) throw new Error('Session changed');
-    const roleLabel = p.role === 'official' ? '지자체 담당자' : '어민';
+    const roleLabel = { official: '지자체 담당자', farmer: '어민', admin: '관리자', edge: '수집 계정', analysis: '분석 계정', unassigned: '역할 미지정' }[p.role];
     setUser({ ...p, real: true, name: roleLabel, roleLabel, home: p.role === 'official' ? '/dashboard' : '/farmer' });
     const selectable = p.cages.some((c) => c.can_write_stock) ? p.cages.filter((c) => c.can_write_stock) : p.cages;
     setCageId((old) => selectable.some((c) => c.id === old) ? old : selectable[0]?.id ?? null);
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
       },
       reloadAccess: async () => { setLoading(true); try { await profile(); } finally { setLoading(false); } },
       loginReal: async (email, password) => {
-        setLoading(true); setUser(null); clearSession();
+        setLoading(true); setUser(null); localStorage.removeItem(KEY); clearSession();
         try { await signIn(email, password); return await profile(); }
         catch (e) { clearSession(); throw e; }
         finally { setLoading(false); }

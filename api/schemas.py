@@ -289,7 +289,7 @@ class AreaShapes(Contract):
 class CauseCount(Contract):
     rule_id: Annotated[str, Field(pattern=r'^R[1-8]$')]
     name: str
-    count: Annotated[int, Field(strict=True, ge=0)]
+    count: Annotated[int, Field(strict=True, ge=0, le=9_007_199_254_740_991)]
 
 
 class AreaCauseDistribution(Contract):

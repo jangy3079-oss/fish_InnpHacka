@@ -126,7 +126,7 @@ function CauseChart({ items }) {
   return (
     <section className="card">
       <h2>의심 원인 분포</h2>
-      <p className="hint">경보 중인 가두리 {total}곳 기준 (복수 원인은 가장 가능성 높은 것으로 집계)</p>
+      <p className="hint">유효한 최신 분석에서 원인이 표시된 경보 가두리 {total}곳 기준입니다. 원인 미확인·관측 부족은 제외하며 복수 후보는 첫 순위로 집계합니다.</p>
       <ul className="bars">
         {items.map((i) => (
           <li key={i.name}>

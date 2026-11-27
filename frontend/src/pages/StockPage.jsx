@@ -106,7 +106,7 @@ export default function StockPage() {
     <div className="stock-page">
       <FarmerTabs />
       <header className="page-head">
-        <h1>가두리 {CAGE_ID}번 재고 입력</h1>
+        <h1>{CAGE_ID == null ? '접근 가능한 가두리가 없습니다' : `가두리 ${CAGE_ID}번 재고 입력`}</h1>
         <p className="lead">크기별로 몇 마리가 있고 평균 무게가 얼마인지 알려 주세요. 대략적인 숫자여도 괜찮습니다.</p>
       </header>
       <p className="hint">{live ? '실제 재고 · 마지막 저장이 우선하며 생략한 그룹은 삭제됩니다.' : '시연 입력이며 실제 재고로 저장하지 않습니다.'}</p>

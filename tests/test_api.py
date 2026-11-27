@@ -26,6 +26,8 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         schema = response.json()
         expected = {
+            ('/me', 'get'), ('/cages/{id}/stock', 'get'),
+            ('/areas/shapes', 'get'), ('/areas/cause-distribution', 'get'),
             ("/health", "get"), ("/ingest/metrics", "post"),
             ("/cages/{id}/status", "get"), ("/cages/{id}/timeseries", "get"),
             ("/cages/{id}/echogram", "get"), ("/cages/{id}/recommendation", "get"),

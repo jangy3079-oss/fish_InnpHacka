@@ -40,7 +40,7 @@ export default function FarmerPage() {
   useEffect(() => {
     let alive = true;
     setStatus(null); setRec(null);
-    if (CAGE_ID == null) { setError('접근 가능한 가두리가 없습니다.'); return; }
+    if (CAGE_ID == null) { setBusy(false); setError('접근 가능한 가두리가 없습니다.'); return; }
     setBusy(true); // 응답이 올 때까지 재생을 멈춘다
     // 슬라이더를 빠르게 움직일 때 중간 값마다 요청하지 않고 마지막 값만 보낸다(실제 서버만).
     const timer = setTimeout(() => {
@@ -67,6 +67,7 @@ export default function FarmerPage() {
   // 화면을 떠나면 재생이 멈춘 채로 남지 않게 푼다.
   useEffect(() => () => setBusy(false), [setBusy]);
 
+  if (CAGE_ID == null) return <div className="farmer-page"><FarmerTabs /><p>접근 가능한 가두리가 없습니다.</p></div>;
   if (error && (!status || !rec)) {
     return (
       <div className="farmer-page">

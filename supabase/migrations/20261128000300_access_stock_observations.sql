@@ -1,4 +1,5 @@
 begin;
+create index metric_source_ts_idx on public.metric(cage_id,source,ts desc);
 -- Existing demo polygons are not verified real-world boundaries.
 alter table public.sea_area add column geometry_source text;
 alter table public.sea_area add column geometry_verified boolean not null default false;
@@ -89,9 +90,9 @@ begin
       'cause_source',new.status->'cause_source') order by item.ordinality),'[]'::jsonb)
     into causes from jsonb_array_elements(coalesce(new.status->'cause','[]'::jsonb)) with ordinality item
       left join public.cause_estimate c on c.cage_id=new.cage_id and c.ts=new.ts and c.rule_id=item.value->>'rule_id';
-  select jsonb_build_object('sonar',max(m.ts) filter(where m.source='sonar'),
-    'camera',max(m.ts) filter(where m.source='camera'),'env',max(m.ts) filter(where m.source='env')) into seen
-    from public.metric m where m.cage_id=new.cage_id and m.ts<new.ts;
+  select jsonb_object_agg(src.name,observed.ts) into seen from (values('sonar'),('camera'),('env')) src(name)
+    left join lateral (select m.ts from public.metric m
+      where m.cage_id=new.cage_id and m.source=src.name and m.ts<new.ts order by m.ts desc limit 1) observed on true;
   new.status=jsonb_set(new.status,'{cause}',causes)||jsonb_build_object('last_seen',seen);
   return new;
 end;
