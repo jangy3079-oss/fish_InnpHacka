@@ -98,7 +98,11 @@ def recommendation_for(context, primary, level, snapshot):
         return None, 'stock_input_invalid'
     result = LossCalculator(FixedSnapshot(snapshot)).compare(request)
     result.pop('config_loaded_at',None)  # Publication identity must not change when an identical config is reloaded.
-    return {'mode': result['mode'], 'recommended_option': result['lowest_loss_option'],
+    recommended = result['lowest_loss_option']
+    if primary.rule_id=='R7':
+        recommended = 'reduce_feed' if any(o['id']=='reduce_feed' and o['available'] for o in result['options']) else None
+        result['recommendation_basis'] = 'R7_feeding_management'  # Rule guidance differs from the monetary minimum.
+    return {'mode': result['mode'], 'recommended_option': recommended,
             'options': result['options'], 'first_aid': None, 'diagnosis_request_required': False, 'details': result}, None
 
 
@@ -150,6 +154,9 @@ def build_bundle(context, model, producer_id, species, snapshot, *, advisory_act
               'baseline_windows': last.baseline_windows, 'cause': cause.status_causes(),
               'level_held_due_to_missing': not warm and last.score is None,
               'last_observation_at': max((r.ts for r in records), default=None).isoformat() if records else None}
+    r7_evidence = next((c.evidence for c in cause.estimates if c.rule_id=='R7'),{})
+    status.update(r7_held_due_to_missing=r7_evidence.get('feeding_held_due_to_missing',False),
+                  feeding_last_observed_at=r7_evidence.get('feeding_last_observed_at'))
     estimates = [c.to_dict() for c in cause.estimates] if state=='ready' else []
     primary = cause.estimates[0] if estimates else None
     level_map = {'정상':'normal','주의':'caution','경고':'warning','위험':'danger'}

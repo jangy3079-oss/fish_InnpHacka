@@ -123,3 +123,31 @@ select pg_temp.check_ok((select count(*)=1 from private.recommendation_choice),'
 set role anon;
 select pg_temp.expect_error($q$select public.farmer_status(3)$q$,'42501','anonymous status RPC blocked');
 reset role;
+
+-- R7 can be published below the alert threshold, with a rule-based choice different from the loss minimum.
+set role authenticated;
+set request.jwt.claims='{"sub":"00000000-0000-4000-8000-000000000004","app_metadata":{"role":"analysis","analysis_cage_ids":[3]}}';
+do $$
+declare input jsonb; b jsonb; r jsonb; t timestamptz=pg_temp.analysis_time(4);
+begin
+  input=public.analysis_input(3,t-interval '1 day',t,50000);
+  b=pg_temp.analysis_bundle(t,'R7');
+  b=jsonb_set(b,'{status,stress_score}','30'::jsonb);
+  b=jsonb_set(b,'{status,level}','"정상"'::jsonb);
+  b=jsonb_set(b,'{status,r7_held_due_to_missing}','true'::jsonb);
+  b=jsonb_set(b,'{status,feeding_last_observed_at}',to_jsonb(t-interval '6 hours'));
+  b=jsonb_set(b,'{recommendation,recommended_option}','"reduce_feed"'::jsonb);
+  b=jsonb_set(b,'{recommendation,details}','{"lowest_loss_option":"keep","recommendation_basis":"R7_feeding_management"}'::jsonb);
+  b=jsonb_set(b,'{recommendation,options}','[{"id":"keep","label":"유지","available":true,"estimated_loss_krw":0,"reason":null},{"id":"reduce_feed","label":"사료 감량","available":true,"estimated_loss_krw":0,"reason":null}]'::jsonb);
+  r=public.publish_analysis(3,t-interval '1 day',t,50000,input->>'input_version','a0101010-1010-4010-8010-101010101010',b);
+  perform pg_temp.check_ok(r->>'persisted'='true','R7 low-score generation published');
+  perform set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000001"}',false);
+  perform pg_temp.check_ok(public.farmer_status(3)->'cause'->0->>'rule_id'='R7'
+    and public.farmer_status(3)->>'r7_held_due_to_missing'='true','R7 status retains observation hold metadata');
+  perform pg_temp.check_ok(public.farmer_recommendation(3)->>'recommended_option'='reduce_feed'
+    and public.farmer_recommendation(3)->'details'->>'lowest_loss_option'='keep','R7 guidance differs from monetary minimum');
+  perform pg_temp.check_ok(public.choose_recommendation((r->>'recommendation_id')::bigint,'reduce_feed',
+    'b0101010-1010-4010-8010-101010101010',repeat('a',64))->>'persisted'='true','owner records R7 management choice');
+end;
+$$;
+reset role;

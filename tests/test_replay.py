@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from api.demo import get_replay_engine
 from api.main import app
 from api.schemas import DemoResult
-from pipeline.replay import ReplayEngine, ReplayRangeError, ROOT
+from pipeline.replay import ReplayEngine, ReplayRangeError, ROOT, SCENARIOS
 
 
 class ReplayTest(unittest.TestCase):
@@ -88,7 +88,7 @@ class ReplayTest(unittest.TestCase):
         r['status']['cause'].clear()
         r['recommendation']['options'].clear()
         self.assertEqual(before,self.result('heatwave_typhoon',108))
-        self.assertLessEqual(len(self.engine._prepared),4)
+        self.assertLessEqual(len(self.engine._prepared),len(SCENARIOS))
         self.assertLessEqual(len(self.engine._responses),32)
 
     def test_rejects_names_nonfinite_and_out_of_range_before_simulation(self):

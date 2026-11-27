@@ -27,7 +27,7 @@ probability:
   method: normalize_sum_to_one
   min_display: 0.05            # [가정] 이보다 낮은 후보는 화면에서 생략
   scoring: binary_all_required # [가정, #25] 모든 필수 조건 충족=1, 그 외=0. 정규화 값은 통계적 진단 확률이 아님
-  tie_break_order: [R2, R3, R4, R8, R6, R1, R5] # [가정, #26·#174] 같은 점수일 때 구체적 신호 우선. 확률은 바꾸지 않음
+  tie_break_order: [R2, R3, R4, R8, R6, R1, R5, R7] # [가정, #152·#174] 기존 순위 보존, R7은 다른 원인 조건이 없을 때만
 
 rules:
   R1:
@@ -105,9 +105,14 @@ rules:
 
   R7:
     name: 섭식 저하
-    phase: recommended
+    phase: mvp                     # #152 구현. 현장 검증 여부와 별개
     behavior:
       feeding_response_only: true    # 급이 반응만 감소, 나머지는 정상
+      feeding_change_max: -0.15      # [가정, #152] 밤낮 기준선 대비 15% 이상 감소
+      activity_change_abs_max: 0.2   # [가정, #152] 절댓값이 이 값 미만
+      lower_layers_ratio_x_max: 1.5  # [가정, #152] 중·저층 쏠림 비율이 이 값 미만
+      missing_observation: pause     # [가정, #152] 카메라 근거 누락은 직전 R7 유지
+      max_hold_hours: 24             # [가정, #152] 마지막 유효 급이 관측부터 최대24시간
     env:
       temp_surface_min_c: 23         # [논문]
     first_action: [feed_reduction]
