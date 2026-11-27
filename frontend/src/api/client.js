@@ -3,6 +3,7 @@
 import status from '../mocks/status.json';
 import timeseries from '../mocks/timeseries.json';
 import recommendation from '../mocks/recommendation.json';
+import recommendationDisease from '../mocks/recommendation-disease.json';
 import stressMap from '../mocks/stress-map.json';
 import areasGeo from '../mocks/areas.geojson?raw';
 import releaseDemand from '../mocks/release-demand.json';
@@ -40,10 +41,24 @@ export const api = {
   getEchogramUrl: (cageId, { from, to } = {}) =>
     USE_MOCK ? echogramMock : `${BASE}/cages/${cageId}/echogram${qs({ from, to })}`,
 
+  // 목업에서는 ?scenario=disease 로 질병 의심(1차 조치) 화면을 확인할 수 있다.
   getRecommendation: (cageId) =>
     USE_MOCK
-      ? delay({ ...recommendation, cage_id: Number(cageId) })
+      ? delay({
+          ...(new URLSearchParams(window.location.search).get('scenario') === 'disease'
+            ? recommendationDisease
+            : recommendation),
+          cage_id: Number(cageId),
+        })
       : http(`/cages/${cageId}/recommendation`),
+
+  requestDiagnosis: (cageId, note = '') =>
+    USE_MOCK
+      ? delay({ mock: true, persisted: false })
+      : http(`/cages/${cageId}/diagnosis-request`, {
+          method: 'POST',
+          body: JSON.stringify({ note }),
+        }),
 
   chooseOption: (recommendationId, optionId) =>
     USE_MOCK

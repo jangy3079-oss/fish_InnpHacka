@@ -2,10 +2,43 @@
   "id": 1,
   "cage_id": 3,
   "ts": "2026-08-12T05:00:00Z",
-  "recommended_option": "reduce_feed",
+  "kind": "profit",
+  "recommended_option": "stop_feed",
   "options": [
-    { "id": "reduce_feed", "label": "사료 감량", "available": true, "estimated_loss_krw": 0, "reason": "급이 반응 저하, 비용 없는 1차 조치" },
-    { "id": "early_harvest", "label": "조기 출하", "available": true, "estimated_loss_krw": 1200000, "reason": "중간 크기 출하 시 단가 손실" },
-    { "id": "emergency_release", "label": "긴급 방류", "available": false, "estimated_loss_krw": null, "reason": "긴급방류 요건 미충족" }
+    {
+      "id": "keep", "label": "그대로 유지", "available": true, "estimated_loss_krw": 5400000,
+      "reason": "고수온이 계속되면 폐사 위험이 큽니다",
+      "calc": { "formula": "폐사 예상 마릿수 × 평균 무게 × kg당 단가", "inputs": { "폐사 예상 마릿수": "1,800마리", "평균 무게": "0.2kg", "kg당 단가": "15,000원" } }
+    },
+    {
+      "id": "stop_feed", "label": "사료 중단", "available": true, "estimated_loss_krw": 0,
+      "reason": "급이 반응이 떨어졌습니다. 비용 없이 바로 할 수 있는 1차 조치입니다",
+      "calc": { "formula": "사료 중단 비용 = 0원 (성장 지연은 손실에 넣지 않음)", "inputs": { "중단 기간": "2일" } }
+    },
+    {
+      "id": "oxygen", "label": "산소 공급", "available": true, "estimated_loss_krw": 300000,
+      "reason": "산소 공급기를 가동합니다",
+      "calc": { "formula": "가동 시간 × 시간당 비용", "inputs": { "가동 시간": "12시간", "시간당 비용": "25,000원" } }
+    },
+    {
+      "id": "net_depth", "label": "그물 수심 조정", "available": true, "estimated_loss_krw": 150000,
+      "reason": "차가운 중층으로 그물을 내립니다",
+      "calc": { "formula": "인건비 + 장비 비용", "inputs": { "인건비": "100,000원", "장비 비용": "50,000원" } }
+    },
+    {
+      "id": "wintering", "label": "월하장 이동", "available": true, "estimated_loss_krw": 1800000,
+      "reason": "더위를 피할 수 있는 곳으로 옮깁니다",
+      "calc": { "formula": "이동 비용 + 이동 중 폐사 예상", "inputs": { "이동 비용": "1,500,000원", "이동 중 폐사 예상": "300,000원" } }
+    },
+    {
+      "id": "harvest", "label": "조기 출하", "available": true, "estimated_loss_krw": 1200000,
+      "reason": "중간 크기 출하 시 단가 손실",
+      "calc": { "formula": "(정상 단가 − 조기 출하 단가) × 출하량", "inputs": { "정상 단가": "15,000원/kg", "조기 출하 단가": "12,000원/kg", "출하량": "400kg" } }
+    },
+    {
+      "id": "release", "label": "긴급 방류", "available": false, "estimated_loss_krw": null,
+      "reason": "긴급방류 요건을 채우지 못했습니다. 경보 단계가 '위험'이고 폐사가 시작돼야 합니다",
+      "calc": null
+    }
   ]
 }
