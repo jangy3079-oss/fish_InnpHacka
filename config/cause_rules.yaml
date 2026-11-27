@@ -1,0 +1,113 @@
+# 원인 추정 규칙 R1~R8 (이슈 #17)
+# 근거: SDD 6.3 표, SRS FR-CAU-01~07, 6.1 시뮬레이터 기준값
+#
+# 출처 표기
+#   [논문]  조피볼락 수온 반응 논문 (SRS 1.4, 6.1 기준값 표)
+#   [사례]  2023년 통영 '카눈' 사례 (표층 26~27℃, 중층 21~22℃, SRS DR-05)
+#   [가정]  설계 가정값. 현장 실증에서 보정한다.
+#   [확인]  값을 아직 정하지 못했다. 정해진 뒤 채운다.
+#
+# 규칙마다 조건을 만족한 정도로 점수(0~1)를 내고, 점수를 합이 1이 되게 나눠 확률로 표시한다.
+# 화면에는 "진단"이 아닌 "의심"으로만 쓴다 (FR-CAU-04, NFR-EXP-02).
+
+# 공통 환경 기준값
+env_constants:
+  feeding_drop_temp_c: 23      # [논문] 23℃ 이상 먹이섭취량 감소
+  behavior_disturb_temp_c: 25  # [논문] 25℃ 행동·대사 교란 시작
+  advisory_temp_c: 28          # [논문] 28℃ 고수온 주의보 기준 (VC-04 비교점)
+  do_low_mg_l: 4.0             # [확인] 저산소 기준 DO. SDD에 "값 확인 필요"로 남아 있음. 임시값
+  # "수온·DO 정상"의 정의 (R5, R8)
+  normal_env:
+    temp_surface_max_c: 25
+    do_min_mg_l: 4.0           # do_low_mg_l 과 같은 값을 쓴다
+
+# 확률 표시
+probability:
+  method: normalize_sum_to_one
+  min_display: 0.05            # [가정] 이보다 낮은 후보는 화면에서 생략
+
+rules:
+  R1:
+    name: 고수온 (피신 중)
+    phase: mvp                 # 해커톤 구현
+    behavior:
+      mid_low_ratio_x_min: 1.5   # 중·저층 비율이 기준선 대비 1.5배 이상 [가정]
+      activity_change_max: -0.20 # 활동량 -20% 이하 [가정]
+    env:
+      temp_surface_min_c: 25     # [논문]
+      temp_diff_min_c: 3         # 표층-중층 차 3℃ 이상 [사례]
+    first_action: [stop_feeding, oxygen_boost]
+
+  R2:
+    name: 피난처 소실
+    phase: mvp
+    behavior:
+      cohesion_change_max: -0.30 # 응집도 급락 [확인] 급락의 기준값 미정, 임시값
+      activity_change_max: -0.40 # 활동량 -40% 이하 [가정]
+    env:
+      temp_diff_max_c: 1         # 표층-중층 차 1℃ 미만으로 떨어짐 [사례]
+      temp_surface_min_c: 25     # [논문]
+    immediate_danger: true       # thresholds.yaml 의 immediate_rules 와 연결
+    first_action: [immediate_alert, compare_options]
+    compare_options: [net_depth_adjust, overwinter_move, early_harvest, emergency_release]
+
+  R3:
+    name: 저산소
+    phase: mvp
+    behavior:
+      surface_ratio_x_min: 1.5   # 표층 비율 증가 [확인] 증가 배수 미정, 임시값
+      camera_surface_breathing: true  # 카메라가 있으면 수면 호흡도 근거로 사용
+    env:
+      do_max_mg_l: 4.0           # env_constants.do_low_mg_l 미만 [확인]
+    first_action: [oxygen_supply, density_control]
+
+  R4:
+    name: 적조
+    phase: recommended
+    behavior:
+      activity_change_abs_min: 0.50  # 급격한 활동 변화 [확인] 기준값 미정, 임시값
+    env:
+      red_tide_advisory: true    # 적조 특보 발령 해역 (수과원 자료, 이슈 #43)
+    first_action: [stop_feeding, red_tide_guideline]
+
+  R5:
+    name: 질병 의심
+    phase: mvp
+    behavior:
+      score_rising_days_min: 3   # 이상 지수가 3일 이상 서서히 상승 [가정]
+    env:
+      normal_env: true           # 수온·DO 정상
+      advisory_active: false     # 특보 없음
+    first_action: [common_first_aid, diagnosis_request]   # SDD 6.5, config/first_aid.yaml
+
+  R6:
+    name: 작업 스트레스
+    phase: recommended
+    behavior:
+      score_rise_after_work: true   # 작업 기록 직후 지수 상승
+      not_recovered_hours: 24       # 24시간 내 회복 안 됨 [가정]
+    env:
+      work_log: [net_change, sorting]  # 망갈이·선별 기록
+    first_action: [recovery_monitoring, feeding_adjust]
+
+  R7:
+    name: 섭식 저하
+    phase: recommended
+    behavior:
+      feeding_response_only: true    # 급이 반응만 감소, 나머지는 정상
+    env:
+      temp_surface_min_c: 23         # [논문]
+    first_action: [feed_reduction]
+    feed_reduction_pct: 20           # UC-04: 사료 20% 감량 권장 [가정]
+    ignore_cause_min_stress: true    # thresholds.yaml 의 cause_min_stress 예외
+
+  R8:
+    name: 기생충 의심
+    phase: mvp                       # 해커톤은 시뮬레이터 rubbing_rate 로 시연
+    behavior:
+      rubbing_rate_x_min: 3.0        # 기준선 대비 3배 이상 [가정]
+      sustained_hours_min: 6         # 6시간 이상 지속 [가정]
+    env:
+      normal_env: true
+      advisory_active: false
+    first_action: [common_first_aid, parasite_exam_request]  # 검경 진단 요청, SDD 6.5
