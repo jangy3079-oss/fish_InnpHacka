@@ -169,6 +169,21 @@ class ObservationMetadataTest(unittest.TestCase):
         result=status_rows([a,b],[fa,fb],fa.ts,records=records)
         self.assertLess(result[1]['last_seen']['env'],result[1]['ts'])
 
+    def test_completed_stable_trend_is_not_reported_as_waiting_for_more_time(self):
+        pairs=[observation(i,score=60,rubbing=1) for i in range(1,865)]
+        r=run_observations(pairs)[-1]
+        self.assertTrue(r.observation_details['trend_window_complete'])
+        self.assertFalse(any(p['rule_id']=='R5' for p in r.pending))
+
+    def test_pending_notes_only_appear_on_unexplained_alerts(self):
+        s,f=observation()
+        cause=CauseEngine().evaluate(s,f,context=CLEAR)
+        self.assertTrue(cause.pending)
+        s.level='정상'
+        self.assertEqual(status_rows([s],[f],f.ts,[cause])[0]['cause_pending'],[])
+        s.level='경고'
+        self.assertTrue(status_rows([s],[f],f.ts,[cause])[0]['cause_pending'])
+
     def test_exported_frame_preserves_r7_observation_and_revision(self):
         from types import SimpleNamespace
         row=dict(t=1,ts='2026-08-05T01:00:00Z',stress_score=30,level='정상',baseline_status='ready',

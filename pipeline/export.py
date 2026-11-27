@@ -59,6 +59,10 @@ def status_rows(scores: Sequence, fused: Sequence, start: datetime, causes: Opti
             cursor = bisect_left(observations, s.ts)-1
             last_seen[source] = _iso(observations[cursor]) if cursor>=0 else None
         metadata = causes[i].metadata() if causes is not None else {}
+        # UI-facing pending notes describe unexplained alerts, not a disease
+        # waiting state on healthy/R7 management frames or an already named cause.
+        if warm or s.level in (None, '정상') or (causes is not None and causes[i].status_causes()):
+            metadata['cause_pending'] = []
 
         evidence = dict(s.evidence or {})
         for k in STATUS_ENV_KEYS:

@@ -253,10 +253,12 @@ class CauseEngine:
                 if context.advisory_active is None:
                     pending.append({'rule_id': rid, 'reason': 'advisory_unknown'})
                 elif context.advisory_active is False:
-                    if rid=='R5' and not temporal['R5']:
+                    if rid=='R5' and not temporal['R5'] and not temporal['details']['trend_window_complete']:
                         pending.append({'rule_id': rid, 'reason': 'trend_waiting',
                             'progress': {'done': temporal['details']['trend_observed_hours'],
                                          'needed': temporal['details']['trend_needed_hours'], 'unit': 'hour'}})
+                    elif rid=='R5' and not temporal['R5'] and any(v<rules['R5']['behavior']['min_daily_coverage'] for v in temporal['details']['daily_coverage']):
+                        pending.append({'rule_id': rid, 'reason': 'observation_gap'})
                     elif rid=='R8' and not temporal['details']['rubbing_current_observed']:
                         pending.append({'rule_id': rid, 'reason': 'observation_gap'})
                     elif rid=='R8' and rubbing is not None and rubbing>=rules['R8']['behavior']['rubbing_rate_x_min'] and not temporal['R8']:

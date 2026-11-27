@@ -40,7 +40,7 @@ R8 `max_pause_hours: 16`은 #127/#201에서 채택한 **MVP 가정**이다. 6시
 
 `CauseResult.pending`는 rule_id/reason/progress를 제공한다. R5 progress는 실제 유효 관측 시간,
 R8 progress는 실제 이상 관측 누적 시간이다. 특보 unknown에는 진행률을 꾸며 넣지 않는다.
-R7 유지/마지막 확인/해제 사유도 후보가 사라진 시점의 metadata에 남는다.
+R7 유지/마지막 확인/해제 사유도 후보가 사라진 시점의 metadata에 남는다. UI용 내보내기의 cause_pending은 원인이 비어 있는 경보에만 제공하고 정상/R7 관리·이미 원인이 표시된 프레임에는 빈 목록을 보내 불필요한 질병 대기 안내를 막는다.
 
 오프라인 status_timeline/프론트 내보내기는 다음을 보존한다:
 
@@ -68,10 +68,9 @@ python -m pipeline.frontend --dest data/out/frontend/scenarios.json
 `scripts.upload_metrics.upload_report`는 confirmed_count/inserted_count/duplicate_count를 구분한다.
 새 응답은 received=inserted+duplicate를 엄격한 정수로 검사한다. 구 응답은 duplicate_count가 없고
 inserted=received일 때만 허용한다. 숫자 문자열/불리언·음수·불일치 영수증은 성공으로 처리하지 않는다.
-기존 `upload()`의 int 반환은 확인된 건수이며 CLI는 세 수를 모두 출력한다.
+기존 `upload()`의 int 반환은 확인된 건수이며 CLI는 received_count/inserted_count/duplicate_count를 출력한다. upload_report는 동일 canonical upload_counts 구현을 감싼 typed 데이터 클라이언트 뷰다.
 
-서버의 멱등 RPC/migration은 #198 백엔드 후속이다. 이 PR은 서버가 이미 동일 값 재전송을 허용한다고
-주장하거나 자동 재시도를 켜지 않는다. 서버 전환 전 중복409와 네트워크 결과 불명확 시 중단을 유지한다.
+서버의 멱등 RPC/migration과 canonical 업로더는 PR #219로 main에 병합되었다. 해당 구현/CLI 계약을 보존하며 이 PR은 typed report 호환 함수를 더한다. 원격 migration 적용을 확인한 것은 아니며 자동 재시도는 켜지 않는다. 구 서버의 중복409와 네트워크 결과 불명확 시 중단도 유지한다.
 소나가 필요한 입력은 `metrics.jsonl`이며 `records.jsonl`만으로 소나 관측을 대체하지 않는다.
 
 ## 실행 중 API 예열·재현 기록
