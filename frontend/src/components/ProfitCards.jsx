@@ -91,7 +91,7 @@ export function FirstAidCard({ rec }) {
   const request = async () => {
     setState('sending');
     try {
-      await api.requestDiagnosis(rec.cage_id);
+      if (!rec.simulated && rec.id !== 0) await api.requestDiagnosis(rec.cage_id); // 시연 화면은 접수하지 않는다
       setState('done');
     } catch {
       setState('error');
@@ -101,16 +101,18 @@ export function FirstAidCard({ rec }) {
     <section className="card key">
       <h2>질병이 의심됩니다</h2>
       <p>원인을 확정하지 못했습니다. 먼저 아래 조치를 해 주세요.</p>
-      <ol className="steps">
+      <ol className="aid-steps">
         {rec.first_aid.map((s) => (
           <li key={s}>{s}</li>
         ))}
       </ol>
       {state === 'done' ? (
-        <p className="done" role="status">✔ 진단을 요청했습니다.</p>
+        <p className="done" role="status">
+          {rec.simulated || rec.id === 0 ? '✔ 시연 화면이라 실제로 접수되지 않습니다.' : '✔ 진단을 요청했습니다.'}
+        </p>
       ) : (
         <button className="primary" disabled={state === 'sending'} onClick={request}>
-          {state === 'sending' ? '요청 중…' : '진단 요청하기'}
+          {state === 'sending' ? '요청 중…' : rec.simulated || rec.id === 0 ? '시연: 진단 요청해 보기' : '진단 요청하기'}
         </button>
       )}
       {state === 'error' && <p className="error">요청하지 못했습니다. 다시 눌러 주세요.</p>}
