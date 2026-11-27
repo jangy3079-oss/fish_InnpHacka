@@ -377,6 +377,11 @@ input, progress { accent-color: var(--accent); }
 .accounts li div { display: flex; flex-direction: column; gap: 2px; }
 .accounts strong { font-size: 19px; }
 .accounts span { font-size: 15px; color: var(--ink-soft); }
+.real-login-box { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 14px; }
+.real-login-box summary { cursor: pointer; font-size: 15px; color: var(--ink-soft); }
+.real-login { display: grid; gap: 12px; margin-top: 14px; max-width: 360px; }
+.real-login label { display: grid; gap: 4px; font-size: 15px; }
+.real-login input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); }
 .accounts .btn { border: 0; cursor: pointer; font: inherit; font-weight: 700; font-size: 16px; }
 .badge-plain { color: var(--ink-soft); border-color: #9db0bb; }
 .demo-source { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
