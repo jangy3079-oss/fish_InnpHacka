@@ -33,6 +33,12 @@
 
 ## 2. 주의가 필요한 항목
 
+### 추가 공통 의존성 (#11)
+
+| 모듈 | 패키지 | 라이선스·근거 | 확인일 | 사용·검증 |
+| --- | --- | --- | --- | --- |
+| common/config_loader | [PyYAML](https://github.com/yaml/pyyaml) | MIT, [LICENSE](https://github.com/yaml/pyyaml/blob/main/LICENSE) | 2026-11-27 | 설정 YAML 파싱. requirements.txt: `PyYAML>=6.0,<7`, 검증 버전 6.0.4 |
+
 ### 2.1 FUnIE-GAN (이슈 #46)
 
 - 저장소 LICENSE 파일은 **MIT**다 (Copyright 2019 Md Jahidul Islam). SDD와 SRS의 "확인 필요"는 이 결과로 해소된다.

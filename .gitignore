@@ -1,7 +1,9 @@
+.venv/
 __pycache__/
 *.py[cod]
-.venv/
-data/out/
 .pytest_cache/
 .DS_Store
+# 데이터·모델 생성물 (python -m pipeline 으로 다시 만듦)
+data/out/
+data/samples/
 models/
