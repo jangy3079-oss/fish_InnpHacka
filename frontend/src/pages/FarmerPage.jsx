@@ -7,7 +7,7 @@ import { FarmerTabs } from '../components/SiteChrome.jsx';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
 import EvidenceSummary from '../components/EvidenceSummary.jsx';
 import { FirstAidCard, ProfitCompare, formatKrw } from '../components/ProfitCards.jsx';
-import { BASELINE_WINDOWS, LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
+import { BASELINE_WINDOWS, LEVELS, LEVEL_RANK, SOURCE_LABELS, formatTime } from '../constants.js';
 
 const CAGE_ID = 3;
 
@@ -82,7 +82,7 @@ export default function FarmerPage() {
           )}
           {rec.kind === 'first_aid' && <FirstAidCard key={rec.ts} rec={rec} />}
           {isProfit && <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />}
-          <CauseList causes={status.cause} />
+          <CauseList causes={status.cause ?? []} status={status} />
           <EvidenceSummary evidence={status.evidence} />
         </div>
         <div className="farmer">
@@ -156,8 +156,18 @@ function SourceNotice({ status }) {
   );
 }
 
-function CauseList({ causes }) {
-  if (!causes.length) return null;
+function CauseList({ causes, status }) {
+  if (!causes.length) {
+    // 정상이거나 기준선 학습 중이면 원인이 없는 게 당연하므로 숨긴다. 주의 이상인데 비었다면 이유를 모른다고 알린다.
+    const alerting = (LEVEL_RANK[status.level] ?? 0) >= LEVEL_RANK['주의'] && status.baseline_status !== 'warming_up';
+    if (!alerting) return null;
+    return (
+      <section className="card flat">
+        <h2>의심되는 원인</h2>
+        <p>의심되는 원인을 아직 찾지 못했습니다. 단계는 지금 상태를 기준으로 계산한 것입니다.</p>
+      </section>
+    );
+  }
   return (
     <section className="card flat">
       <h2>의심되는 원인</h2>
