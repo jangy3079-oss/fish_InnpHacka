@@ -355,3 +355,10 @@ input, progress { accent-color: var(--accent); }
 .aid-steps { padding-left: 22px; margin: 8px 0; }
 .aid-steps li { padding: 4px 0; }
 .toast { top: 112px; }
+/* #44: deadline timestamps remain readable next to financial guidance. */
+.recommendation-deadlines { margin: 1rem 0; padding: .8rem; background: #f4f7f9; border-radius: .5rem; }
+.recommendation-deadlines h3 { font-size: 1rem; margin: 0 0 .5rem; }
+.recommendation-deadlines dl { margin: 0; display: grid; gap: .5rem; }
+.recommendation-deadlines dt { font-weight: 600; }
+.recommendation-deadlines dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
+.deadline-source { display: block; font-size: .8rem; color: #52606d; }

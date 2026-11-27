@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api/client.js';
+import RecommendationDeadlines from './RecommendationDeadlines.jsx';
 
 export function formatKrw(v) {
   if (v == null) return '계산 전';
@@ -20,6 +21,7 @@ export function ProfitCompare({ rec }) {
     <section className="card flat">
       <h2>조치별 예상 손해</h2>
       <p className="hint">손해가 적은 순서입니다. 추정값이며 실제와 다를 수 있습니다.</p>
+      <RecommendationDeadlines rec={rec} />
       <div className="loss-head" aria-hidden="true">
         <span>조치</span>
         <span>예상 손해</span>
@@ -101,6 +103,7 @@ export function FirstAidCard({ rec }) {
     <section className="card key">
       <h2>질병이 의심됩니다</h2>
       <p>원인을 확정하지 못했습니다. 먼저 아래 조치를 해 주세요.</p>
+      <RecommendationDeadlines rec={rec} />
       <ol className="aid-steps">
         {rec.first_aid.map((s) => (
           <li key={s}>{s}</li>

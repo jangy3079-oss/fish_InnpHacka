@@ -91,6 +91,32 @@ class Option(Contract):
     text: str | None = None
 
 
+class DeadlineEntry(Contract):
+    kind: Literal['next_assessment','release_application','harvest']
+    label: str
+    action_id: Literal['release','harvest'] | None
+    applicable: bool
+    at: AwareDatetime | None
+    source_status: Literal['pending','assumed','confirmed']
+    basis: Literal['absolute','relative','unconfirmed']
+    source: str | None
+    expired: bool = False
+
+    @model_validator(mode='after')
+    def coherent_time(self):
+        if (self.at is None)!=(self.source_status=='pending') or (self.at is None)!=(self.basis=='unconfirmed'):
+            raise ValueError('Deadline time and source state must agree')
+        if self.source_status=='confirmed' and (not self.source or not self.source.strip()):
+            raise ValueError('Confirmed deadlines require a source')
+        if (self.kind=='next_assessment')!=(self.action_id is None):
+            raise ValueError('Deadline action scope mismatch')
+        if self.kind=='next_assessment' and not self.applicable:
+            raise ValueError('Next assessment must apply to this recommendation')
+        if self.action_id is not None and self.action_id!={'release_application':'release','harvest':'harvest'}[self.kind]:
+            raise ValueError('Deadline action scope mismatch')
+        return self
+
+
 class Recommendation(Contract):
     id: int
     cage_id: int
@@ -109,9 +135,21 @@ class Recommendation(Contract):
     stale: bool = False
     config_changed: bool = False
     selectable: bool = False
+    deadline: AwareDatetime | None = None
+    deadlines: list[DeadlineEntry] = Field(default_factory=list)
+    deadline_expired: bool = False
 
     @model_validator(mode='after')
     def coherent_mode(self):
+        if self.deadlines:
+            times = [e.at for e in self.deadlines if e.applicable and e.at is not None]
+            if len({e.kind for e in self.deadlines})!=len(self.deadlines) or self.deadline!=(min(times) if times else None):
+                raise ValueError('Primary deadline must be the earliest applicable time')
+            if not any(e.kind=='next_assessment' for e in self.deadlines):
+                raise ValueError('Deadline metadata requires a next assessment')
+            for entry in self.deadlines:
+                if entry.action_id is not None and not any(o.id==entry.action_id and o.available==entry.applicable for o in self.options):
+                    raise ValueError('Deadline option availability mismatch')
         if self.mode=='first_aid_required' and (not self.first_aid or not self.first_aid.get('actions')
                 or self.recommended_option is not None or any(o.estimated_loss_krw is not None for o in self.options)):
             raise ValueError('Disease-family recommendations require non-economic reviewed actions')

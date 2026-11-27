@@ -1,5 +1,7 @@
 # API 계약 초안 — #4
 
+> #44 추천의 deadline/deadlines는 게시 시점의 실행 기한·다음 판단 정보다. [기한 계약](recommendation-deadlines.md)을 따른다.
+
 > #35 해역 두 GET은 공무원 인증·허용 해역의 실제 DB 집계다. nullable/부분 집계·방류 추천 기준은
 > [해역 집계 API 계약](area-aggregates.md)을 따른다. 아래 기존 목업 응답은 #4 당시 기록이다.
 

@@ -36,3 +36,10 @@ simultaneous_limit:
 subsidy:
   cap_per_farm_krw: 0
   per_fish_krw: 0
+
+# #44 현행 지역별 신청 마감은 미확인. null은 기한 없음이 아니라 확인 필요다.
+application_deadline:
+  source_status: pending
+  hours_from_assessment: null
+  at: null
+  source: null

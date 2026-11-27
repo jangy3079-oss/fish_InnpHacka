@@ -262,8 +262,9 @@ class FarmerAnalysisApiTest(unittest.TestCase):
         self.assertNotIn('5mg',response.text)
 
     def test_first_aid_read_has_no_economic_winner(self):
+        from decision.deadlines import with_deadlines
         r,_=recommendation_for({},SimpleNamespace(rule_id='R8'),'warning',self.snapshot)
-        self.rec.update(r)
+        self.rec.update(with_deadlines(r,END,'warning',self.snapshot))
         response=self.client.get('/cages/3/recommendation',headers=self.headers)
         self.assertEqual(response.status_code,200,response.text)
         self.assertEqual(response.json()['mode'],'first_aid_required')
