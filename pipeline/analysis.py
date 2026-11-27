@@ -11,6 +11,7 @@ from cause import CauseContext, CauseEngine
 from decision import ComparisonRequest, LossCalculator
 from decision.actions import ACTIONS, canonical_action
 from decision.first_aid import ensure_safe, reviewed_guide
+from decision.deadlines import with_deadlines
 from fusion.fuse import FusedFeatures, _bucket, fuse
 from stress.levels import apply_levels
 from stress import model as model_config
@@ -157,6 +158,7 @@ def build_bundle(context, model, producer_id, species, snapshot, *, advisory_act
     level_map = {'정상':'normal','주의':'caution','경고':'warning','위험':'danger'}
     economic_context = {**context,'species':species}
     rec, reason = recommendation_for(economic_context,primary,level_map.get(last.level,'normal'),snapshot)
+    rec = with_deadlines(rec,end,level_map.get(last.level,'normal'),snapshot)
     if primary is not None and primary.rule_id in ('R5','R8'):
         ensure_safe(status,snapshot)
     last_seen = max((r.ts for r in raw),default=start)

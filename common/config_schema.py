@@ -1,6 +1,7 @@
 """Structural contracts for the five config files; no runtime default values."""
 
 import re
+from datetime import datetime, timezone
 from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError, field_validator, model_validator
@@ -272,11 +273,38 @@ class Subsidy(ConfigModel):
     per_fish_krw: NonNegative
 
 
+class DeadlinePolicy(ConfigModel):
+    source_status: Literal['pending','assumed','confirmed']
+    hours_from_assessment: Annotated[float, Field(gt=0, le=8760)] | None
+    at: Text | None
+    source: Text | None
+
+    @field_validator('at')
+    @classmethod
+    def aware_time(cls,value):
+        if value is None:
+            return value
+        stamp = datetime.fromisoformat(value.replace('Z','+00:00'))
+        if stamp.tzinfo is None or stamp.utcoffset() is None:
+            raise ValueError('Deadline requires an aware ISO timestamp')
+        return stamp.astimezone(timezone.utc).isoformat()
+
+    @model_validator(mode='after')
+    def complete_policy(self):
+        count = int(self.at is not None)+int(self.hours_from_assessment is not None)
+        if (self.source_status=='pending' and count!=0) or (self.source_status!='pending' and count!=1):
+            raise ValueError('Pending deadlines have no time; other policies require exactly one time basis')
+        if self.source_status=='confirmed' and not self.source:
+            raise ValueError('Confirmed deadlines require a source')
+        return self
+
+
 class ReleaseRules(ConfigModel):
     species: Species
     size_groups: dict[Size, ReleaseGroup]
     simultaneous_limit: ReleaseLimit
     subsidy: Subsidy
+    application_deadline: DeadlinePolicy
 
 
 class CostGroup(ConfigModel):
@@ -304,6 +332,8 @@ class Insurance(ConfigModel):
 
 class Costs(ConfigModel):
     currency: Literal["KRW"]
+    harvest_deadline: DeadlinePolicy
+    reassessment_minutes_by_level: dict[Literal['normal','caution','warning','danger'],Positive]
     size_groups: dict[Size, CostGroup]
     expected_mortality_by_level: dict[Literal["normal", "caution", "warning", "danger"], Ratio]
     option_loss: dict[str, LossOption]
@@ -312,6 +342,8 @@ class Costs(ConfigModel):
 
     @model_validator(mode="after")
     def complete_options(self) -> Self:
+        if set(self.reassessment_minutes_by_level)!={'normal','caution','warning','danger'}:
+            raise ValueError('Reassessment intervals require all four levels')
         if set(self.expected_mortality_by_level) != {"normal", "caution", "warning", "danger"}:
             raise ValueError("mortality rates require all four levels")
         if not self.option_loss or set(self.option_loss) != set(self.action_cost_krw):

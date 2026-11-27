@@ -48,6 +48,10 @@ def read_recommendation(store,cage_id,loader):
             raise ValueError('Invalid recommendation scope')
         result.config_changed = result.config_revision != snapshot.revision
         result.stale = datetime.now(timezone.utc)>result.valid_until or result.config_changed
+        now = datetime.now(timezone.utc)
+        result.deadline_expired = result.deadline is not None and now>=result.deadline
+        for entry in result.deadlines:
+            entry.expired = entry.at is not None and now>=entry.at
         result.selectable = not(result.stale or result.stock_changed or result.chosen_option is not None)
         ensure_safe(result.model_dump(mode='json'),snapshot)
         return result

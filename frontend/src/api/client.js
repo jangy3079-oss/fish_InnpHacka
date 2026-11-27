@@ -24,7 +24,8 @@ async function http(path, options) {
 
 // 실제 추천 응답을 화면이 읽는 모양으로 맞춘다. kind가 없으면 응답 필드로 판단한다.
 function normalizeRecommendation(r) {
-  const firstAid = (r.first_aid ?? []).map((x) => (typeof x === 'string' ? x : x?.text)).filter(Boolean);
+  const aid = r.first_aid?.actions ?? r.first_aid ?? [];
+  const firstAid = (Array.isArray(aid) ? aid : []).map((x) => (typeof x === 'string' ? x : x?.text)).filter(Boolean);
   let kind = r.kind;
   if (!kind) {
     if (r.diagnosis_request_required) kind = 'first_aid';

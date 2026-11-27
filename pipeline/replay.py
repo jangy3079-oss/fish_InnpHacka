@@ -16,6 +16,7 @@ from pipeline.contexts import scenario_contexts
 from common import MetricName
 from common.config_loader import ConfigError, ConfigLoader, UniqueSafeLoader, MAX_FILE_BYTES
 from decision.first_aid import ensure_safe
+from decision.deadlines import with_deadlines
 from decision.schemas import StockGroup
 from fusion.fuse import fuse
 from pipeline.analysis import FixedSnapshot, recommendation_for, reliability
@@ -142,6 +143,7 @@ class ReplayEngine:
                     'last_observation_at':max((r.ts for r in visible_records),default=None)}
                 primary = cause.estimates[0] if state=='ready' and cause.estimates else None
                 rec, reason = recommendation_for(context,primary,{'정상':'normal','주의':'caution','경고':'warning','위험':'danger'}.get(last.level,'normal'),snapshot)
+                rec = with_deadlines(rec,cutoff,{'정상':'normal','주의':'caution','경고':'warning','위험':'danger'}.get(last.level,'normal'),snapshot)
             else:
                 status = {'cage_id':settings.cage_id,'ts':sc.start.isoformat(),'stress_score':None,'level':None,
                     'baseline_status':self._model.status,
