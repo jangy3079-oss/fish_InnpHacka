@@ -22,11 +22,13 @@ from .echogram import EchogramRenderer, get_echogram_renderer
 from .diagnosis import create_request, get_diagnosis_loader
 from .analysis import read_status,read_recommendation,choose,get_analysis_loader
 from .demo import get_replay_engine, replay
+from .admin_config import require_admin,get_config_editor,invoke as config_operation
+from common.config_editor import ConfigEditor
 from pipeline.replay import ReplayEngine
 from common.config_loader import ConfigLoader
 
 from .schemas import (
-    CageStatus, ChoiceRequest, ChoiceReceipt, ConfigFile, ConfigRequest, DemoResult,
+    CageStatus, ChoiceRequest, ChoiceReceipt, ConfigFile, ConfigRequest, ConfigView,ConfigReceipt,DemoResult,
     DiagnosisRequest, DiagnosisReceipt, Metric, MockReceipt, Recommendation,
     Scenario, StockRequest, Timeseries, StockReceipt, IngestReceipt, WorkLogReceipt, WorkLogRequest,
 )
@@ -51,9 +53,9 @@ def time_window(
 
 
 app = FastAPI(
-    title="Rockfish Guard API", version="0.8.0",
+    title="Rockfish Guard API", version="0.9.0",
     description="해역 집계와 어민 상태·추천·선택, 지표 수집·재고·시계열·에코그램·진단 접수는 인증된 실제 데이터 경로입니다. "
-                "시나리오 재생은 DB 저장 없는 합성 분석입니다. 관리자 경로는 목업입니다. docs/scenario-replay-api.md 등 API 계약 문서 참조.",
+                "시나리오 재생은 DB 저장 없는 합성 분석입니다. 관리자 설정은 보호된 역할·버전 검사 후 로컬 YAML을 저장합니다. docs/admin-config-api.md 등 API 계약 문서 참조.",
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
 app.include_router(areas_router)
@@ -68,6 +70,10 @@ async def mock_header(request, call_next):
     path = request.url.path.rstrip("/")
     real = path.startswith("/areas/") or path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request", "work-log"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
     response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
+    if path.startswith('/admin/config/'):
+        response.headers['X-Data-Mode'] = 'configuration'
+        response.headers['Cache-Control'] = 'private, no-store'
+        response.headers['Vary'] = ', '.join(filter(None,[response.headers.get('Vary'),'Authorization']))
     if path.startswith('/demo/scenario/'):
         response.headers['X-Data-Mode'] = 'simulation'
         response.headers['Cache-Control'] = 'no-store'
@@ -148,6 +154,8 @@ def stock(id: Id, body: StockRequest, store: Annotated[FarmerDataStore, Depends(
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(request, exc):
+    if request.url.path.startswith('/admin/config/'):
+        return JSONResponse(status_code=422,content={'detail':{'code':'invalid_config_request','message':'Invalid config request'}})
     if request.url.path.rstrip("/").endswith(("/diagnosis-request",'/choice','/work-log')):
         path = request.url.path.rstrip('/')
         code = ('invalid_choice_request' if path.endswith('/choice') else 'invalid_work_log_request' if path.endswith('/work-log')
@@ -180,6 +188,19 @@ def demo(name: Scenario, engine: Annotated[ReplayEngine,Depends(get_replay_engin
     return replay(engine,name,t)
 
 
-@app.put("/admin/config/{file}", response_model=MockReceipt, tags=["admin"])
-def config(file: ConfigFile, body: ConfigRequest):
-    return MockReceipt(action="update_config", resource_id=file)
+@app.get('/admin/config/{file}',response_model=ConfigView,tags=['admin'],
+         description='보호된 app_metadata.role=admin만 설정과 전체 revision을 읽습니다.')
+def read_config(file:ConfigFile,response:Response,actor:Annotated[object,Depends(require_admin)],
+                editor:Annotated[ConfigEditor,Depends(get_config_editor)]):
+    result = config_operation(editor,file)
+    response.headers['ETag'] = f'"{result.revision}"'
+    return result
+
+
+@app.put('/admin/config/{file}',response_model=ConfigReceipt,tags=['admin'],
+         description='전체 파일 값을 교체합니다. expected_revision·UUID request_key·reason 필수. 전체 설정 검증 후 원자 저장·재로드하며 필요한 모델 재시작을 구분합니다.')
+def config(file:ConfigFile,body:ConfigRequest,response:Response,actor:Annotated[object,Depends(require_admin)],
+           editor:Annotated[ConfigEditor,Depends(get_config_editor)]):
+    result = config_operation(editor,file,body,actor)
+    response.headers['ETag'] = f'"{result.revision}"'
+    return result

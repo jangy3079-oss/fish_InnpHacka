@@ -53,6 +53,8 @@ python -m pipeline.validate --seeds 10   # VC-01~05 검증 (시드 10개, 약 1�
 
 ## 실행 방법
 
+관리자 규칙·임계값 수정과 권한/버전·감사/재시작 계약은 [관리자 설정 API](docs/admin-config-api.md)를 따릅니다 (#36).
+
 시나리오 HTTP 재생은 [API 계약·실행 예시](docs/scenario-replay-api.md)를 따릅니다. 합성 센서를 실제 분석하며 운영 DB에는 저장하지 않습니다 (#30).
 
 공무원 해역 상태·방류 수요 집계는 [해역 집계 API 안내](docs/area-aggregates.md)를 확인하세요.
