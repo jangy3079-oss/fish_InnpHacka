@@ -100,6 +100,12 @@ class MockReceipt(Contract):
     received_count: int = 1
 
 
+class IngestReceipt(Contract):
+    persisted: Literal[True] = True
+    received_count: int
+    inserted_count: int
+
+
 class AreaSummary(Contract):
     area_id: int
     name: str

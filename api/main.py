@@ -3,16 +3,20 @@
 import json
 import os
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Path as PathParam, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import AwareDatetime
+from common import MetricRecord
+
+from .ingestion import MAX_BATCH_SIZE, SupabaseMetricStore, get_metric_store
 
 from .schemas import (
     CageStatus, ChoiceRequest, ConfigFile, ConfigRequest, DemoResult,
     DiagnosisRequest, Metric, MockReceipt, Recommendation, ReleaseDemand,
-    Scenario, StockRequest, StressMap, Timeseries,
+    Scenario, StockRequest, StressMap, Timeseries, IngestReceipt,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures/status.json"
@@ -35,9 +39,9 @@ def time_window(
 
 
 app = FastAPI(
-    title="Rockfish Guard Mock API", version="0.1.0",
-    description="SDD 8장 목업 API. 합성 fixture만 반환하며 인증·DB·계산·저장·발송은 수행하지 않습니다. "
-                "변경 요청도 persisted=false입니다. 실제 서비스 연결 전 docs/api-contract.md 합의가 필요합니다.",
+    title="Rockfish Guard API", version="0.2.0",
+    description="POST /ingest/metrics는 전용 edge 계정 인증·RLS를 거쳐 실제 DB에 저장합니다. "
+                "그 외 경로는 기존 목업입니다. docs/ingestion-contract.md 및 docs/api-contract.md 참조.",
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
@@ -48,21 +52,34 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=Fals
 @app.middleware("http")
 async def mock_header(request, call_next):
     response = await call_next(request)
-    response.headers["X-Data-Mode"] = "mock"
+    response.headers["X-Data-Mode"] = "database" if request.url.path.rstrip("/") == "/ingest/metrics" else "mock"
     return response
 
 
 @app.get("/health", tags=["health"])
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "mock"}
+    return {"status": "ok", "mode": "mixed"}
 
 
-@app.post("/ingest/metrics", response_model=MockReceipt, tags=["ingest"],
-          description="배열 envelope만 확인하는 임시 핸들러. #2 병합 후 MetricRecord로 교체하며 현재 지표 필드 검증·저장은 하지 않습니다.")
-def ingest(records: Annotated[list[dict[str, Any]], Body(min_length=1)]) -> MockReceipt:
-    if not records or any(not record for record in records):
-        raise HTTPException(422, detail="Provide a non-empty array of non-empty metric objects")
-    return MockReceipt(action="ingest_metrics", received_count=len(records))
+edge_bearer = HTTPBearer(auto_error=False, scheme_name="EdgeAccessToken")
+
+
+def require_edge_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(edge_bearer)]) -> str:
+    if credentials is None:
+        raise HTTPException(401, detail={"code": "missing_token", "message": "Bearer access token required"},
+                            headers={"WWW-Authenticate": "Bearer"})
+    return credentials.credentials
+
+
+@app.post("/ingest/metrics", response_model=IngestReceipt, status_code=201, tags=["ingest"],
+          responses={401: {"description": "인증 실패"}, 403: {"description": "가두리 수집 권한 없음"},
+                     409: {"description": "기존 지표 키 중복, 전체 거부"}, 503: {"description": "설정 또는 Supabase 장애"}},
+          description="MetricRecord 1~1000개를 하나의 트랜잭션으로 저장합니다. 중복은 전체 거부하며 upsert하지 않습니다.")
+def ingest(records: Annotated[list[MetricRecord], Body(min_length=1, max_length=MAX_BATCH_SIZE)],
+           token: Annotated[str, Depends(require_edge_token)],
+           store: Annotated[SupabaseMetricStore, Depends(get_metric_store)]) -> IngestReceipt:
+    inserted = store.insert(records, token)
+    return IngestReceipt(received_count=len(records), inserted_count=inserted)
 
 
 @app.get("/cages/{id}/status", response_model=CageStatus, tags=["cages"],

@@ -57,6 +57,9 @@ Python 3.11 이상에서 `python -m pip install -r requirements-api-dev.txt` 후
 `python -m unittest discover -s tests -v`로 API·공통 모델 테스트를 실행합니다.
 기본 프론트 CORS 주소는 localhost:5173과 127.0.0.1:5173이며 `API_CORS_ORIGINS`로 변경합니다.
 
+`POST /ingest/metrics`의 실제 인증·저장 설정, DB migration, 시뮬레이터 JSONL 업로드 방법은
+[지표 수집 계약](docs/ingestion-contract.md)을 확인하세요. 그 외 API는 아직 목업입니다.
+
 ## 협업 규칙
 
 브랜치·PR·이슈 규칙은 [CONTRIBUTING.md](CONTRIBUTING.md)를 봅니다.
