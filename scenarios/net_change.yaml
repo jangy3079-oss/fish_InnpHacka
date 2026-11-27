@@ -1,0 +1,22 @@
+# 작업 스트레스 (R6, #174·#45): 망갈이 기록 직후 지수 상승, 24시간 뒤에도 회복되지 않음.
+# 가정: 34h(2일차 10시)에 망갈이. 30분 안에 스트레스 최대, 60시간에 걸쳐 선형 회복.
+#       놀라서 바닥 쪽으로 몰리고 덜 움직이며, 정지 개체가 늘고 급이 반응이 준다.
+# 근거 범위: 회복 시간(60h)과 행동 변화 크기는 시뮬레이터 가정값이다. 작업 기록은 실서비스에서 어민 입력(#45)으로 받는다.
+name: net_change
+description: 작업 스트레스 — 망갈이 직후 위축, 하루 넘게 회복 지연
+cage_id: cage-003
+start: "2026-08-05T00:00:00+09:00"
+duration_days: 4
+seed: 61
+baseline: normal_14d
+cage: {depth_m: 9.0, n_fish: 300}
+sampling: {ping_interval_s: 60, cycle_minutes: 5}
+env:
+  advisory_active: false # 합성 시나리오의 명시적 특보 없음 (#26), 실서비스 기본값 아님
+  temp_surface: [[0, 21.8], [96, 22.0]]
+  temp_mid:     [[0, 19.1], [96, 19.3]]
+  do:           [[0, 7.0], [96, 7.0]]
+  diurnal_amp:  {temp_surface: 0.3}
+camera: {enabled: true, day_quality: 0.85, night_quality: 0.35}
+events:
+  - {type: work, at_h: 34, kind: net_change, intensity: 1.0, recovery_h: 60}

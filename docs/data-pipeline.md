@@ -48,7 +48,7 @@ python -m pipeline --no-generate            # 이미 만든 metrics.jsonl을 재
    원인 엔진에는 시나리오 YAML의 `advisory_active`(특보 여부)를 넘깁니다.
 
 기본 시나리오는 `heatwave_typhoon`, `turbidity_event`, `disease_suspect`, `parasite_suspect`, `feeding_drop`입니다.
-`hypoxia`(R3 회귀 확인용)는 기본 목록에 없어서 `python -m pipeline hypoxia`로 따로 돌립니다.
+`hypoxia`(R3), `red_tide`(R4 적조), `net_change`(R6 작업 스트레스)는 기본 목록에 없어서 `python -m pipeline red_tide`처럼 이름을 주고 따로 돌립니다.
 
 마지막에 시나리오마다 한 줄씩 요약이 나옵니다.
 

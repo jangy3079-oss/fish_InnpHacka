@@ -27,7 +27,7 @@ probability:
   method: normalize_sum_to_one
   min_display: 0.05            # [가정] 이보다 낮은 후보는 화면에서 생략
   scoring: binary_all_required # [가정, #25] 모든 필수 조건 충족=1, 그 외=0. 정규화 값은 통계적 진단 확률이 아님
-  tie_break_order: [R2, R3, R8, R1, R5, R7] # [가정, #152] R7은 다른 원인 조건이 없을 때만. 확률은 바꾸지 않음
+  tie_break_order: [R2, R3, R4, R8, R6, R1, R5, R7] # [가정, #152·#174] 기존 순위 보존, R7은 다른 원인 조건이 없을 때만
 
 rules:
   R1:
@@ -69,11 +69,11 @@ rules:
 
   R4:
     name: 적조
-    phase: recommended
+    phase: recommended               # 엔진 판정 구현 (#174). 실제 특보 수집은 #45
     behavior:
-      activity_change_abs_min: 0.50  # 급격한 활동 변화 [확인] 기준값 미정, 임시값
+      activity_change_abs_min: 0.50  # 급격한 활동 변화 [확인] 기준값 미정, 임시값. 기준선 대비 ±50% 이상
     env:
-      red_tide_advisory: true    # 적조 특보 발령 해역 (수과원 자료, 이슈 #43)
+      red_tide_advisory: true    # 적조 특보 발령 해역 (수과원 자료, 이슈 #43). 외부 입력 CauseContext.red_tide_advisory
     first_action: [stop_feeding, red_tide_guideline]
 
   R5:
@@ -90,12 +90,16 @@ rules:
 
   R6:
     name: 작업 스트레스
-    phase: recommended
+    phase: recommended              # 엔진 판정 구현 (#174). 작업 기록 입력 API는 #45
     behavior:
       score_rise_after_work: true   # 작업 기록 직후 지수 상승
-      not_recovered_hours: 24       # 24시간 내 회복 안 됨 [가정]
+      pre_work_hours: 6             # [가정, #174] 작업 전 평균 지수를 잴 구간
+      rise_window_hours: 6          # [가정, #174] 작업 후 '직후' 구간
+      min_score_rise: 20            # [가정, #174] 작업 전 평균 대비 직후 최고 지수 상승폭(점)
+      not_recovered_hours: 24       # 24시간 내 회복 안 됨 [가정]. 작업 24시간 뒤에도 지수 ≥ cause_min_stress
+      max_hours_after_work: 72      # [가정, #174] 작업 기록을 원인 후보로 보는 기간
     env:
-      work_log: [net_change, sorting]  # 망갈이·선별 기록
+      work_log: [net_change, sorting]  # 망갈이·선별 기록. 외부 입력 CauseContext.work_log_at/work_log_type
     first_action: [recovery_monitoring, feeding_adjust]
 
   R7:
