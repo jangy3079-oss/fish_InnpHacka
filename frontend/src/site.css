@@ -350,3 +350,8 @@ button.primary { background: var(--ink); font-size: 20px; padding: 16px; }
 .hero .btn-ghost { border: 0; padding: 12px 4px; text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; }
 .hero .btn-ghost:hover { filter: none; text-decoration-thickness: 2px; }
 input, progress { accent-color: var(--accent); }
+
+.sim-banner { margin: 0; padding: 7px 20px; background: var(--ink); color: #fff; font-size: 14px; text-align: center; }
+.aid-steps { padding-left: 22px; margin: 8px 0; }
+.aid-steps li { padding: 4px 0; }
+.toast { top: 112px; }
