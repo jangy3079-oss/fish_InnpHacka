@@ -9,6 +9,8 @@ import { SiteFooter, SiteHeader } from './components/SiteChrome.jsx';
 import { DemoProvider } from './demo/DemoContext.jsx';
 import LevelToast from './components/LevelToast.jsx';
 import { api } from './api/client.js';
+import LoginPage from './pages/LoginPage.jsx';
+import { AuthProvider, RequireRole, useAuth } from './auth/AuthContext.jsx';
 
 // 어민 현황·대시보드·알림은 시연 데이터를 보여 주므로 실제 값으로 오해하지 않게 알린다.
 // 어민 현황은 실제 모드에서도 시연 응답(합성)을 쓴다. 대시보드·알림은 실제 모드에서 실제 값이므로 목업일 때만 표시한다.
@@ -16,7 +18,16 @@ const isSimulated = (pathname) =>
   pathname === '/farmer' || (api.isMock && (pathname === '/dashboard' || pathname === '/notifications'));
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AppBody />
+    </AuthProvider>
+  );
+}
+
+function AppBody() {
   const { pathname } = useLocation();
+  const { user } = useAuth();
   const isHome = pathname === '/';
   return (
     <DemoProvider>
@@ -26,16 +37,17 @@ export default function App() {
       <main id="main" tabIndex={-1} className={isHome ? 'home' : 'container'}>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/farmer" element={<FarmerPage />} />
-          <Route path="/stock" element={<StockPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/farmer" element={<RequireRole role="farmer"><FarmerPage /></RequireRole>} />
+          <Route path="/stock" element={<RequireRole role="farmer"><StockPage /></RequireRole>} />
+          <Route path="/notifications" element={<RequireRole role="farmer"><NotificationsPage /></RequireRole>} />
+          <Route path="/dashboard" element={<RequireRole role="official"><DashboardPage /></RequireRole>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
       <SiteFooter />
-      {!isHome && <DemoBar />}
-      <LevelToast cageId={3} />
+      {!isHome && pathname !== '/login' && user && <DemoBar />}
+      {user?.role === 'farmer' && <LevelToast cageId={3} />}
     </DemoProvider>
   );
 }

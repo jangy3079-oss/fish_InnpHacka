@@ -1,5 +1,6 @@
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { SITE_NAME } from '../constants.js';
+import { useAuth } from '../auth/AuthContext.jsx';
 
 const FARMER_PATHS = ['/farmer', '/stock', '/notifications'];
 
@@ -16,6 +17,8 @@ function Logo() {
 export function SiteHeader() {
   const { pathname } = useLocation();
   const farmerActive = FARMER_PATHS.includes(pathname);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   return (
     <header className="site-header">
       <div className="site-header-inner">
@@ -25,9 +28,19 @@ export function SiteHeader() {
         </Link>
         <nav aria-label="주 메뉴">
           <NavLink to="/" end>서비스 소개</NavLink>
-          <NavLink to="/farmer" className={farmerActive ? 'active' : undefined}>어민 화면</NavLink>
-          <NavLink to="/dashboard">지자체 대시보드</NavLink>
+          {user?.role === 'farmer' && <NavLink to="/farmer" className={farmerActive ? 'active' : undefined}>어민 화면</NavLink>}
+          {user?.role === 'official' && <NavLink to="/dashboard">지자체 대시보드</NavLink>}
         </nav>
+        <div className="account">
+          {user ? (
+            <>
+              <span><strong>{user.name}</strong> {user.roleLabel}</span>
+              <button type="button" onClick={() => { logout(); navigate('/'); }}>로그아웃</button>
+            </>
+          ) : (
+            <Link to="/login">로그인</Link>
+          )}
+        </div>
       </div>
     </header>
   );
