@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import { useDemo } from '../demo/DemoContext.jsx';
 import { ErrorNotice, LoadingBlock, Skeleton } from './States.jsx';
+import { echogramFor } from '../mocks/echograms.js';
+import { frameTime } from '../mocks/demo.js';
+import { formatTime } from '../constants.js';
 
 // 작은 그래프 여러 개를 나란히 놓기 위한 기준 크기. 휴대폰 폭에서도 글자가 거의 원래 크기로 보인다.
 const W = 340;
@@ -315,8 +318,42 @@ export default function EvidenceCharts({ cageId, alertAt }) {
   );
 }
 
+// 시연(파일) 모드: 시나리오의 실제 합성 에코그램 전체를 보여 주고, 지금 시각 이후는 흐리게 가린다.
+function FileEchogram({ demo }) {
+  const eg = echogramFor(demo.scenario, frameTime(demo));
+  if (!eg) return null;
+  const pct = `${(eg.frac * 100).toFixed(2)}%`;
+  const depthMid = Number((eg.depth_max / 2).toFixed(1));
+  return (
+    <figure className="chart">
+      <figcaption>소나 에코그램</figcaption>
+      <div className="eg-wrap">
+        <span className="eg-depth top">0 m</span>
+        <span className="eg-depth mid">{depthMid} m</span>
+        <span className="eg-depth bot">{eg.depth_max} m</span>
+        <div className="eg-plot">
+          <img className="echogram" src={eg.url} alt="시간에 따른 물고기 깊이 분포 에코그램(시연용 합성 데이터)" />
+          <div className="eg-future" style={{ left: pct }} />
+          <div className="eg-now" style={{ left: pct }} title="지금 시각" />
+        </div>
+        <div className="eg-times">
+          <span>{formatTime(new Date(eg.start_ms).toISOString())}</span>
+          <span>지금 {formatTime(frameTime(demo))}</span>
+          <span>{formatTime(new Date(eg.end_ms).toISOString())}</span>
+        </div>
+      </div>
+      <p className="hint">밝을수록 그 깊이에 물고기가 많습니다. 시연용 합성 소나 데이터입니다.</p>
+    </figure>
+  );
+}
+
 function Echogram({ cageId }) {
   const { demo } = useDemo();
+  if (api.files(demo)) return <FileEchogram demo={demo} />;
+  return <ServerEchogram cageId={cageId} demo={demo} />;
+}
+
+function ServerEchogram({ cageId, demo }) {
   const [failed, setFailed] = useState(false);
   const ref = useRef(null);
   const [url, setUrl] = useState(null);
