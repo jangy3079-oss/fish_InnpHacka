@@ -7,6 +7,9 @@ from typing import Annotated, Literal
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Path as PathParam, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import AwareDatetime
 from common import MetricRecord
@@ -15,10 +18,12 @@ from .ingestion import MAX_BATCH_SIZE, SupabaseMetricStore, get_metric_store
 
 from .farmer_data import FarmerDataStore, get_farmer_store
 from .echogram import EchogramRenderer, get_echogram_renderer
+from .diagnosis import create_request, get_diagnosis_loader
+from common.config_loader import ConfigLoader
 
 from .schemas import (
     CageStatus, ChoiceRequest, ConfigFile, ConfigRequest, DemoResult,
-    DiagnosisRequest, Metric, MockReceipt, Recommendation, ReleaseDemand,
+    DiagnosisRequest, DiagnosisReceipt, Metric, MockReceipt, Recommendation, ReleaseDemand,
     Scenario, StockRequest, StressMap, Timeseries, StockReceipt, IngestReceipt,
 )
 
@@ -42,9 +47,9 @@ def time_window(
 
 
 app = FastAPI(
-    title="Rockfish Guard API", version="0.4.0",
-    description="지표 수집·재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 검사하는 실제 데이터 경로입니다. "
-                "나머지 API는 목업입니다. docs/ingestion-contract.md 및 docs/farmer-data-api.md 참조.",
+    title="Rockfish Guard API", version="0.5.0",
+    description="지표 수집·재고 PUT·시계열·에코그램·진단 접수는 사용자 인증과 가두리 권한을 검사하는 실제 데이터 경로입니다. "
+                "나머지 API는 목업입니다. docs/diagnosis-api.md 등 API 계약 문서 참조.",
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
@@ -56,7 +61,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=Fals
 async def mock_header(request, call_next):
     response = await call_next(request)
     path = request.url.path.rstrip("/")
-    real = path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"timeseries", "stock", "echogram"})
+    real = path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"timeseries", "stock", "echogram", "diagnosis-request"})
     response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
     if real:
         response.headers["Cache-Control"] = "private, no-store"
@@ -143,9 +148,19 @@ def release_demand(id: Id):
     return {"area_id": id, "ts": status_fixture()["ts"], "estimated_fish_count": 0, "cage_count": 0}
 
 
-@app.post("/cages/{id}/diagnosis-request", response_model=MockReceipt, tags=["cages"])
-def diagnosis(id: Id, body: DiagnosisRequest):
-    return MockReceipt(action="request_diagnosis", resource_id=id)
+@app.exception_handler(RequestValidationError)
+async def validation_error(request, exc):
+    if request.url.path.rstrip("/").endswith("/diagnosis-request"):
+        return JSONResponse(status_code=422, content={"detail": {"code": "invalid_diagnosis_request", "message": "Invalid diagnosis request"}})
+    return await request_validation_exception_handler(request, exc)
+
+
+@app.post("/cages/{id}/diagnosis-request", response_model=DiagnosisReceipt, status_code=201, tags=["cages"],
+          description="소유자의 현재 R5/R8 근거·행동 지표를 저장하고 확인된 공통 조치를 반환합니다. 외부 전달은 대기 상태입니다.")
+def diagnosis(id: Id, body: DiagnosisRequest,
+              store: Annotated[FarmerDataStore, Depends(get_farmer_store)],
+              loader: Annotated[ConfigLoader, Depends(get_diagnosis_loader)]):
+    return create_request(store, id, body, loader)
 
 
 @app.post("/demo/scenario/{name}", response_model=DemoResult, tags=["demo"],

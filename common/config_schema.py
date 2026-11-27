@@ -266,6 +266,13 @@ class FirstAidAction(ConfigModel):
     name: Text
     text: Text
     source: Text
+    source_status: Literal["official", "partial", "secondary", "pending"] = "pending"
+
+
+class DiagnosisPolicy(ConfigModel):
+    lookback_hours: Annotated[float, Field(gt=0, le=168)]
+    max_points: Annotated[int, Field(gt=0, le=1000)]
+    max_cause_age_minutes: Annotated[float, Field(gt=0, le=1440)]
 
 
 class Diagnosis(ConfigModel):
@@ -293,6 +300,7 @@ class FirstAid(ConfigModel):
     common_first_aid: Annotated[list[FirstAidAction], Field(min_length=1)]
     diagnosis_request: Diagnosis
     blocked_terms: BlockedTerms
+    diagnosis_policy: DiagnosisPolicy
 
     @model_validator(mode="after")
     def unique_actions(self) -> Self:
