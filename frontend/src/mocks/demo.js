@@ -71,3 +71,11 @@ export function notificationsAt(cageId, demo) {
   });
   return { cage_id: Number(cageId), items: items.reverse() };
 }
+
+// 해역별 방류 예상 마릿수. 단계가 높을수록 가두리당 방류 마릿수가 커진다고 가정한 목업이다.
+const PER_CAGE = { 정상: 0, 주의: 500, 경고: 2000, 위험: 10000 };
+export function releaseDemandAt(areaId, demo) {
+  const map = stressMapAt(demo);
+  const a = map.areas.find((x) => x.area_id === Number(areaId)) ?? map.areas[0];
+  return { area_id: a.area_id, ts: map.ts, estimated_fish_count: PER_CAGE[a.level] * a.cage_count, cage_count: a.cage_count };
+}

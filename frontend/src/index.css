@@ -119,3 +119,12 @@ table.areas tr.selected { background: #f1f7ff; }
 .stock legend { float: left; width: 100%; margin-bottom: 4px; }
 .stock legend + * { clear: both; }
 .demotime { white-space: nowrap; }
+
+/* 방류 수요 패널 */
+.demand { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.demand-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.demand .over { color: #b3261e; font-weight: 700; }
+.demand-track { position: relative; height: 22px; background: #eef1f4; border-radius: 6px; }
+.demand-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #2f6fdc; border-radius: 6px; min-width: 2px; }
+.demand-fill.over { background: #b3261e; }
+.demand-base { position: absolute; top: -4px; bottom: -4px; border-left: 2px dashed #13243b; }
