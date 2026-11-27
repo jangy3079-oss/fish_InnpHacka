@@ -3,16 +3,19 @@
 import json
 import os
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Path as PathParam, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import AwareDatetime
 
+from .farmer_data import FarmerDataStore, get_farmer_store
+from .echogram import EchogramRenderer, get_echogram_renderer
+
 from .schemas import (
     CageStatus, ChoiceRequest, ConfigFile, ConfigRequest, DemoResult,
     DiagnosisRequest, Metric, MockReceipt, Recommendation, ReleaseDemand,
-    Scenario, StockRequest, StressMap, Timeseries,
+    Scenario, StockRequest, StressMap, Timeseries, StockReceipt,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures/status.json"
@@ -35,9 +38,9 @@ def time_window(
 
 
 app = FastAPI(
-    title="Rockfish Guard Mock API", version="0.1.0",
-    description="SDD 8장 목업 API. 합성 fixture만 반환하며 인증·DB·계산·저장·발송은 수행하지 않습니다. "
-                "변경 요청도 persisted=false입니다. 실제 서비스 연결 전 docs/api-contract.md 합의가 필요합니다.",
+    title="Rockfish Guard API", version="0.3.0",
+    description="재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 검사하는 실제 데이터 경로입니다. "
+                "나머지 API는 목업입니다. docs/farmer-data-api.md 참조.",
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
@@ -48,13 +51,18 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=Fals
 @app.middleware("http")
 async def mock_header(request, call_next):
     response = await call_next(request)
-    response.headers["X-Data-Mode"] = "mock"
+    path = request.url.path.rstrip("/")
+    real = path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"timeseries", "stock", "echogram"}
+    response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
+    if real:
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["Vary"] = ", ".join(filter(None, [response.headers.get("Vary"), "Authorization"]))
     return response
 
 
 @app.get("/health", tags=["health"])
 def health() -> dict[str, str]:
-    return {"status": "ok", "mode": "mock"}
+    return {"status": "ok", "mode": "mixed"}
 
 
 @app.post("/ingest/metrics", response_model=MockReceipt, tags=["ingest"],
@@ -72,21 +80,22 @@ def status(id: Id):
 
 
 @app.get("/cages/{id}/timeseries", response_model=Timeseries, tags=["cages"])
-def timeseries(id: Id, metric: Metric, window: Annotated[tuple, Depends(time_window)]):
+def timeseries(id: Id, metric: Metric, window: Annotated[tuple, Depends(time_window)],
+               store: Annotated[FarmerDataStore, Depends(get_farmer_store)],
+               source: Literal["sonar", "camera", "env"] | None = None,
+               limit: Annotated[int, Query(ge=1, le=1000)] = 1000,
+               before: AwareDatetime | None = None):
     start, end = window
-    values = {"vertical_dist": [0.15, 0.5, 0.35], "activity": 0.65, "cohesion": 0.8,
-              "feeding": 0.7, "still_ratio": 0.1, "rubbing_rate": 0.02, "quality": 0.9,
-              "temp_surface": 26.4, "temp_mid": 22.1, "do": 6.5}
-    status = CageStatus.model_validate(status_fixture(id))
-    points = [] if (start and status.ts < start) or (end and status.ts > end) else [{"ts": status.ts, "value": values[metric]}]
-    return {"cage_id": id, "metric": metric, "points": points}
+    return store.timeseries(id, metric, start, end, source, limit, before)
 
 
 @app.get("/cages/{id}/echogram", tags=["cages"], response_class=Response,
-         responses={200: {"content": {"image/svg+xml": {"schema": {"type": "string"}}}, "description": "합성 미리보기 SVG"}})
-def echogram(id: Id, window: Annotated[tuple, Depends(time_window)]):
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="180" viewBox="0 0 400 180"><rect width="400" height="180" fill="#13243b"/><path d="M40 20V150H380" fill="none" stroke="white"/><rect x="50" y="65" width="320" height="35" fill="#35bfc0"/><text x="50" y="40" fill="white">MOCK echogram</text><text x="200" y="175" fill="white">Time</text><text x="5" y="15" fill="white">Depth</text></svg>'
-    return Response(content=svg, media_type="image/svg+xml")
+         responses={200: {"content": {"image/png": {"schema": {"type": "string", "format": "binary"}}}, "description": "권한 확인한 NPZ 에코그램의 PNG 미리보기"}})
+def echogram(id: Id, window: Annotated[tuple, Depends(time_window)],
+             store: Annotated[FarmerDataStore, Depends(get_farmer_store)],
+             renderer: Annotated[EchogramRenderer, Depends(get_echogram_renderer)]):
+    store.require_cage(id)
+    return Response(content=renderer.render(id, *window), media_type="image/png")
 
 
 @app.get("/cages/{id}/recommendation", response_model=Recommendation, tags=["cages"])
@@ -101,9 +110,10 @@ def choice(id: Id, body: ChoiceRequest):
     return MockReceipt(action="record_choice", resource_id=id)
 
 
-@app.put("/cages/{id}/stock", response_model=MockReceipt, tags=["cages"])
-def stock(id: Id, body: StockRequest):
-    return MockReceipt(action="update_stock", resource_id=id, received_count=len(body.stock))
+@app.put("/cages/{id}/stock", response_model=StockReceipt, tags=["cages"],
+         description="소유자만 재고 전체를 원자적으로 대체합니다. 요청에서 생략한 크기 그룹은 제거됩니다.")
+def stock(id: Id, body: StockRequest, store: Annotated[FarmerDataStore, Depends(get_farmer_store)]):
+    return store.replace_stock(id, body)
 
 
 @app.get("/areas/stress-map", response_model=StressMap, tags=["areas"])
