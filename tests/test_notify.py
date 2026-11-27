@@ -164,7 +164,8 @@ class NotificationTests(unittest.TestCase):
 
     def test_context_rejects_nonfinite_false_numeric_and_incoherent_state(self):
         for changes in ({"stress_score": float("nan")}, {"stress_score": True}, {"cage_id": True},
-                        {"ts": TS.replace(tzinfo=None)}, {"evidence": {"activity_change": float("inf")}},
+                        {"ts": TS.replace(tzinfo=None)}, {"ts": "1795776973"},
+                        {"evidence": {"activity_change": float("inf")}},
                         {"baseline_status": "warming_up"}):
             with self.assertRaises(ValueError):
                 context(**changes)

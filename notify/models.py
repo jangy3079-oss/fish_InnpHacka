@@ -35,7 +35,7 @@ class NotificationContext(Contract):
     def timestamp(cls, value):
         if not isinstance(value, (str, datetime)):
             raise ValueError("ISO timestamp or aware datetime required")
-        return value
+        return datetime.fromisoformat(value) if isinstance(value, str) else value
 
     @field_validator("ts")
     @classmethod
