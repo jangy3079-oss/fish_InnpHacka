@@ -1,0 +1,965 @@
+{
+  "baseline_commit": "5e414098af0933555800312870915a0e26fdd316",
+  "seeds": 10,
+  "scope": "synthetic only; labels used for evaluation, never cause inputs",
+  "summary": {
+    "before": {
+      "vc01_camera_std": {
+        "mean": 0.28,
+        "min": 0.237,
+        "max": 0.306
+      },
+      "vc01_fused_std": {
+        "mean": 0.09,
+        "min": 0.082,
+        "max": 0.099
+      },
+      "vc01_pass_all": true,
+      "vc04_lead_h": {
+        "mean": 92.659,
+        "min": 89.33,
+        "max": 106.25
+      },
+      "vc04_lead_27c_h": {
+        "mean": 53.992,
+        "min": 50.67,
+        "max": 67.58
+      },
+      "vc04_pass_all": true,
+      "vc05_turbidity_alarms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "vc05_feeding_drop_alarms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "vc05_normal_alarms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "vc05_pass_all": true,
+      "vc02_recall_heatwave_typhoon": {
+        "mean": 0.982,
+        "min": 0.965,
+        "max": 1.0
+      },
+      "vc02_recall_disease_suspect": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "vc02_recall_parasite_suspect": {
+        "mean": 0.967,
+        "min": 0.96,
+        "max": 0.978
+      },
+      "vc02_recall_mean": 0.983,
+      "vc02_pass_all": true,
+      "vc03_pass_by_scenario": {
+        "heatwave_typhoon": 10,
+        "turbidity_event": 10,
+        "disease_suspect": 10,
+        "parasite_suspect": 9
+      },
+      "vc03_pass_all": false,
+      "vc02_recall_red_tide": {
+        "mean": 0.925,
+        "min": 0.91,
+        "max": 0.975
+      },
+      "vc02_recall_net_change": {
+        "mean": 0.913,
+        "min": 0.801,
+        "max": 0.952
+      },
+      "vc03_ext_pass_by_scenario": {
+        "red_tide": 10,
+        "net_change": 10
+      },
+      "vc03_r7_pass": 5,
+      "vc03_r7_main_pass": 10,
+      "vc03_r7_other_cause_cycles": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "vc03_r7_accuracy": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "vc03_r7_coverage": {
+        "mean": 0.46,
+        "min": 0.37,
+        "max": 0.637
+      }
+    },
+    "after": {
+      "vc01_camera_std": {
+        "mean": 0.28,
+        "min": 0.237,
+        "max": 0.306
+      },
+      "vc01_fused_std": {
+        "mean": 0.09,
+        "min": 0.082,
+        "max": 0.099
+      },
+      "vc01_pass_all": true,
+      "vc04_lead_h": {
+        "mean": 92.659,
+        "min": 89.33,
+        "max": 106.25
+      },
+      "vc04_lead_27c_h": {
+        "mean": 53.992,
+        "min": 50.67,
+        "max": 67.58
+      },
+      "vc04_pass_all": true,
+      "vc05_turbidity_alarms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "vc05_feeding_drop_alarms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "vc05_normal_alarms": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "vc05_pass_all": true,
+      "vc02_recall_heatwave_typhoon": {
+        "mean": 0.982,
+        "min": 0.965,
+        "max": 1.0
+      },
+      "vc02_recall_disease_suspect": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "vc02_recall_parasite_suspect": {
+        "mean": 0.967,
+        "min": 0.96,
+        "max": 0.978
+      },
+      "vc02_recall_mean": 0.983,
+      "vc02_pass_all": true,
+      "vc03_pass_by_scenario": {
+        "heatwave_typhoon": 10,
+        "turbidity_event": 10,
+        "disease_suspect": 10,
+        "parasite_suspect": 9
+      },
+      "vc03_pass_all": false,
+      "vc02_recall_red_tide": {
+        "mean": 0.925,
+        "min": 0.91,
+        "max": 0.975
+      },
+      "vc02_recall_net_change": {
+        "mean": 0.913,
+        "min": 0.801,
+        "max": 0.952
+      },
+      "vc03_ext_pass_by_scenario": {
+        "red_tide": 10,
+        "net_change": 10
+      },
+      "vc03_r7_pass": 5,
+      "vc03_r7_main_pass": 10,
+      "vc03_r7_other_cause_cycles": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "vc03_r7_accuracy": {
+        "mean": 1.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "vc03_r7_coverage": {
+        "mean": 0.46,
+        "min": 0.37,
+        "max": 0.637
+      }
+    }
+  },
+  "config_revision": {
+    "before": "ee4e1842b4652e55b94732bc44edc80cb7f5c3d06c024354337413caed3be1dd",
+    "after": "16241d793c95c4230d7639bca7a9c76f68b2675d331ca8fb1be2e501434d15a5"
+  },
+  "coverage": {
+    "before": {
+      "disease_suspect": 0.6644,
+      "parasite_suspect": 0.1528
+    },
+    "after": {
+      "disease_suspect": 0.6644,
+      "parasite_suspect": 0.1528
+    }
+  },
+  "runs": [
+    {
+      "seed": 0,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.743,
+                "counts": {
+                  "R5": 695
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.743,
+                "counts": {
+                  "R5": 695
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.099,
+                "counts": {
+                  "R8": 77
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.099,
+                "counts": {
+                  "R8": 77
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 1,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.741,
+                "counts": {
+                  "R5": 694
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.741,
+                "counts": {
+                  "R5": 694
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.164,
+                "counts": {
+                  "R8": 128
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.164,
+                "counts": {
+                  "R8": 128
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 2,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.779,
+                "counts": {
+                  "R5": 729
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.779,
+                "counts": {
+                  "R5": 729
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.062,
+                "counts": {
+                  "R8": 48
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.062,
+                "counts": {
+                  "R8": 48
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 3,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.72,
+                "counts": {
+                  "R5": 674
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.72,
+                "counts": {
+                  "R5": 674
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 0.745,
+                "coverage": 0.191,
+                "counts": {
+                  "R8": 111,
+                  "R5": 38
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 0.745,
+                "coverage": 0.191,
+                "counts": {
+                  "R8": 111,
+                  "R5": 38
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 4,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.632,
+                "counts": {
+                  "R5": 592
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.632,
+                "counts": {
+                  "R5": 592
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 0.988,
+                "coverage": 0.213,
+                "counts": {
+                  "R8": 164,
+                  "R5": 2
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 0.988,
+                "coverage": 0.213,
+                "counts": {
+                  "R8": 164,
+                  "R5": 2
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 5,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.645,
+                "counts": {
+                  "R5": 604
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.645,
+                "counts": {
+                  "R5": 604
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.1,
+                "counts": {
+                  "R8": 78
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.1,
+                "counts": {
+                  "R8": 78
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 6,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.794,
+                "counts": {
+                  "R5": 743
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.794,
+                "counts": {
+                  "R5": 743
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": false,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R5",
+                "top1_accuracy": 0.013,
+                "coverage": 0.199,
+                "counts": {
+                  "R5": 153,
+                  "R8": 2
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": false,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R5",
+                "top1_accuracy": 0.013,
+                "coverage": 0.199,
+                "counts": {
+                  "R5": 153,
+                  "R8": 2
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 7,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.532,
+                "counts": {
+                  "R5": 498
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.532,
+                "counts": {
+                  "R5": 498
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.117,
+                "counts": {
+                  "R8": 91
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.117,
+                "counts": {
+                  "R8": 91
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 8,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.373,
+                "counts": {
+                  "R5": 349
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.373,
+                "counts": {
+                  "R5": 349
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.259,
+                "counts": {
+                  "R8": 202
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.259,
+                "counts": {
+                  "R8": 202
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed": 9,
+      "scenarios": {
+        "disease_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.685,
+                "counts": {
+                  "R5": 641
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "disease_suspect": {
+                "expected": "R5",
+                "mode_top1": "R5",
+                "top1_accuracy": 1.0,
+                "coverage": 0.685,
+                "counts": {
+                  "R5": 641
+                }
+              }
+            }
+          }
+        },
+        "parasite_suspect": {
+          "before": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.124,
+                "counts": {
+                  "R8": 97
+                }
+              }
+            }
+          },
+          "after": {
+            "no_alert_scenario": false,
+            "pass": true,
+            "by_interval": {
+              "parasite_suspect": {
+                "expected": "R8",
+                "mode_top1": "R8",
+                "top1_accuracy": 1.0,
+                "coverage": 0.124,
+                "counts": {
+                  "R8": 97
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
