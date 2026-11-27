@@ -210,12 +210,14 @@ function CauseList({ causes, status }) {
 }
 
 function Recommendation({ rec }) {
-  const [done, setDone] = useState(null);
+  const chosen = rec.options.find((o) => o.id === rec.chosen_option);
+  const [done, setDone] = useState(chosen ? chosen.label : null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
 
   const main = rec.options.find((o) => o.id === rec.recommended_option);
   if (!main) return null;
+  const blocked = rec.selectable === false;
 
   const choose = async (option) => {
     setSending(true);
@@ -223,8 +225,14 @@ function Recommendation({ rec }) {
     try {
       await api.chooseOption(rec.id, option.id);
       setDone(option.label);
-    } catch {
-      setError('기록하지 못했습니다. 다시 눌러 주세요.');
+    } catch (e) {
+      setError(
+        e.status === 409
+          ? '그 사이 분석이 바뀌었습니다. 화면을 새로 불러온 뒤 추천을 다시 확인해 주세요.'
+          : e.status === 422
+            ? '이 조치는 지금 선택할 수 없습니다.'
+            : '기록하지 못했습니다. 다시 눌러 주세요.',
+      );
     } finally {
       setSending(false);
     }
@@ -239,7 +247,7 @@ function Recommendation({ rec }) {
       {done ? (
         <p className="done" role="status">✔ “{done}” 선택을 기록했습니다.</p>
       ) : (
-        <button className="primary" disabled={sending || !main.available} onClick={() => choose(main)}>
+        <button className="primary" disabled={sending || blocked || !main.available} onClick={() => choose(main)}>
           {sending ? '기록 중…' : `${main.label} 하기`}
         </button>
       )}
