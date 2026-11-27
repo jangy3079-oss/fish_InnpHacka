@@ -24,3 +24,6 @@ export function formatTime(iso) {
 }
 
 export const LEVEL_RANK = { 정상: 0, 주의: 1, 경고: 2, 위험: 3 };
+
+// 기준선 학습에 필요한 윈도우 수 (7일 × 24시간)
+export const BASELINE_WINDOWS = 168;

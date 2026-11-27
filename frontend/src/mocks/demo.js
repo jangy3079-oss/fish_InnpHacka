@@ -11,7 +11,12 @@ export const DEFAULT_DEMO = { scenario: 'heatwave_typhoon', t: 23 };
 
 const clampT = (t) => Math.max(0, Math.min(MAX_T, Math.round(t)));
 const scenarioOf = (demo) => scenarios[demo?.scenario] ?? scenarios[DEFAULT_DEMO.scenario];
-const frameAt = (demo) => scenarioOf(demo).frames[clampT(demo?.t ?? DEFAULT_DEMO.t)];
+const WARMUP_FRAMES = 2; // 시작 직후에는 기준선을 학습 중이라고 가정한 목업
+function frameAt(demo) {
+  const f = scenarioOf(demo).frames[clampT(demo?.t ?? DEFAULT_DEMO.t)];
+  if (f.t >= WARMUP_FRAMES) return f;
+  return { ...f, baseline_status: 'warming_up', baseline_windows: 120 + 24 * f.t, stress_score: null, level: '정상', cause: [] };
+}
 
 export function statusAt(cageId, demo) {
   const { t, ...status } = structuredClone(frameAt(demo)); // t는 API 응답에 없는 목업 전용 값
@@ -53,7 +58,7 @@ export function stressMapAt(demo) {
   const f = frameAt(demo);
   const map = structuredClone(baseStressMap);
   map.ts = f.ts;
-  Object.assign(map.areas[0], { level: f.level, stress_score: f.stress_score });
+  Object.assign(map.areas[0], { level: f.level, stress_score: f.stress_score ?? 0 });
   return map;
 }
 
