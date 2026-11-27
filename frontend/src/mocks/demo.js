@@ -65,7 +65,21 @@ export function timeseriesAt(cageId, metric, demo) {
 export function recommendationAt(cageId, demo) {
   const f = frameAt(demo);
   const base = { id: 1, cage_id: Number(cageId), ts: f.ts };
-  if (!f.level || f.level === '정상') return { ...base, kind: 'none', recommended_option: null, options: [] };
+  if (!f.level) return { ...base, kind: 'none', recommended_option: null, options: [] };
+  if (f.level === '정상') {
+    // R7(섭식 저하)은 정상 단계에서도 사료 관리 권고를 낸다. 손해 최솟값(keep)과 권고(reduce_feed)가 다르다. 금액은 목업 가정값이다.
+    if (f.cause?.[0]?.rule_id !== 'R7') return { ...base, kind: 'none', recommended_option: null, options: [] };
+    return {
+      ...base,
+      kind: 'profit',
+      recommended_option: 'reduce_feed',
+      details: { lowest_loss_option: 'keep', recommendation_basis: 'R7_feeding_management' },
+      options: [
+        { id: 'keep', label: '그대로 유지', available: true, estimated_loss_krw: 80000, reason: '먹이 반응이 낮은 상태가 이어질 때의 손해를 가정한 값입니다' },
+        { id: 'reduce_feed', label: '사료 줄이기', available: true, estimated_loss_krw: 150000, reason: '사료 투입량을 줄이고 먹는 상태를 살핍니다' },
+      ],
+    };
+  }
 
   const top = f.cause?.[0]?.rule_id;
   if (top === 'R5' || top === 'R8') {

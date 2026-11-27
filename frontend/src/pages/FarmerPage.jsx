@@ -210,9 +210,12 @@ function CauseList({ causes, status }) {
   const top = Math.max(...shown.map((c) => c.probability ?? 0));
   const tied = shown.filter((c) => (c.probability ?? 0) === top).length > 1;
   const temporary = status.cause_source === 'scenario_label' || shown.some((c) => c.cause_source === 'scenario_label');
+  // 경보 단계가 아닌데 나온 원인(예: 섭식 저하)은 의심이 아니라 살펴볼 점으로 보여 준다.
+  const watch = status.level === '정상';
+  const held = status.r7_held_due_to_missing && status.feeding_last_observed_at;
   return (
     <section className="card flat">
-      <h2>의심되는 원인</h2>
+      <h2>{watch ? '살펴볼 점' : '의심되는 원인'}</h2>
       <ul className="causes">
         {shown.map((c) => {
           const p = c.probability ?? 0;
@@ -221,14 +224,19 @@ function CauseList({ causes, status }) {
             <li key={c.rule_id}>
               <div className="cause-head">
                 <span>{c.name}</span>
-                <em>{isTop ? (tied ? '함께 의심됨' : '가장 의심됨') : '그다음으로 의심됨'}</em>
+                {!watch && <em>{isTop ? (tied ? '함께 의심됨' : '가장 의심됨') : '그다음으로 의심됨'}</em>}
               </div>
-              <div className="cause-bar" aria-hidden="true"><i style={{ width: `${top > 0 ? Math.max(8, Math.round((p / top) * 100)) : 8}%` }} /></div>
+              {!watch && <div className="cause-bar" aria-hidden="true"><i style={{ width: `${top > 0 ? Math.max(8, Math.round((p / top) * 100)) : 8}%` }} /></div>}
             </li>
           );
         })}
       </ul>
-      <p className="hint">여러 원인이 함께 의심될 수 있습니다. 막대는 서로 비교하기 위한 것이며 맞을 확률이 아닙니다.</p>
+      {watch ? (
+        <p className="hint">아직 경보 단계는 아닙니다. 지켜볼 항목입니다.</p>
+      ) : (
+        <p className="hint">여러 원인이 함께 의심될 수 있습니다. 막대는 서로 비교하기 위한 것이며 맞을 확률이 아닙니다.</p>
+      )}
+      {held && <p className="hint">먹이 반응은 영상이 잘 보이지 않아 {formatTime(status.feeding_last_observed_at)}에 확인한 값을 기준으로 유지하고 있습니다.</p>}
       {temporary && <p className="hint">시연용 임시 원인입니다(엔진 판단이 아닙니다).</p>}
     </section>
   );
@@ -244,6 +252,8 @@ function Recommendation({ rec }) {
   if (!main) return null;
   const simulated = rec.simulated || rec.id === 0; // 시연 추천은 표시 전용이라 저장하지 않는다
   const blocked = rec.selectable === false && !simulated;
+  // 급이 관리 권고(R7)는 손해 비교가 아니라 먹이 반응 저하가 근거다. 손해 최솟값과 다를 수 있다.
+  const management = rec.details?.recommendation_basis === 'R7_feeding_management';
 
   const choose = async (option) => {
     setSending(true);
@@ -266,17 +276,23 @@ function Recommendation({ rec }) {
 
   return (
     <section className="card key">
-      <h2>지금 추천하는 조치</h2>
+      <h2>{management ? '사료 관리 권고' : '지금 추천하는 조치'}</h2>
       <p className="rec-title">{main.label}</p>
-      {main.reason && <p>{main.reason}</p>}
-      <p className="rec-loss">예상 손해 <strong>{formatKrw(main.estimated_loss_krw)}</strong></p>
+      {management ? (
+        <p>먹이 반응이 줄어 사료 투입량을 줄이기를 권합니다. 아래 손해 비교는 참고용입니다.</p>
+      ) : (
+        <>
+          {main.reason && <p>{main.reason}</p>}
+          <p className="rec-loss">예상 손해 <strong>{formatKrw(main.estimated_loss_krw)}</strong></p>
+        </>
+      )}
       {done ? (
         <p className="done" role="status">
           {simulated ? `✔ “${done}”을(를) 선택해 보았습니다. 시연이라 저장하지 않습니다.` : `✔ “${done}” 선택을 기록했습니다.`}
         </p>
       ) : (
         <button className="primary" disabled={sending || blocked || !main.available} onClick={() => choose(main)}>
-          {sending ? '기록 중…' : simulated ? '시연: 선택해 보기' : `${main.label} 하기`}
+          {sending ? '기록 중…' : simulated ? '시연: 선택해 보기' : management ? `${main.label} 선택하기` : `${main.label} 하기`}
         </button>
       )}
       {error && <p className="error">{error}</p>}

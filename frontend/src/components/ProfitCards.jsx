@@ -28,7 +28,7 @@ export function ProfitCompare({ rec }) {
       </div>
       <ul className="loss-list">
         {usable.map((o) => (
-          <OptionRow key={o.id} option={o} recommended={o.id === rec.recommended_option} maxLoss={maxLoss} />
+          <OptionRow key={o.id} option={o} recommended={o.id === rec.recommended_option} lowest={o.id === rec.details?.lowest_loss_option && o.id !== rec.recommended_option} management={rec.details?.recommendation_basis === 'R7_feeding_management'} maxLoss={maxLoss} />
         ))}
         {blocked.map((o) => (
           <OptionRow key={o.id} option={o} recommended={false} maxLoss={maxLoss} />
@@ -38,7 +38,7 @@ export function ProfitCompare({ rec }) {
   );
 }
 
-function OptionRow({ option, recommended, maxLoss }) {
+function OptionRow({ option, recommended, lowest, management, maxLoss }) {
   const [open, setOpen] = useState(false);
   const loss = option.estimated_loss_krw;
   const width = loss != null && option.available ? `${Math.max(loss > 0 ? 2 : 0, (loss / maxLoss) * 100)}%` : '0%';
@@ -47,7 +47,8 @@ function OptionRow({ option, recommended, maxLoss }) {
     <li className={cls}>
       <div className="loss-name">
         <strong>{option.label}</strong>
-        {recommended && <span className="badge">추천</span>}
+        {recommended && <span className="badge">{management ? '권고' : '추천'}</span>}
+        {lowest && <span className="badge badge-plain">손해 최소</span>}
         {/* 추천 조치의 이유는 위의 추천 카드에 이미 있어 반복하지 않는다 */}
         {!recommended && option.reason && <span className={option.available ? 'loss-reason' : 'loss-reason why-not'}>{option.reason}</span>}
       </div>

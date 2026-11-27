@@ -6,6 +6,11 @@ const ITEMS = [
     label: '움직임',
     fmt: (v) => (v < 0 ? `평소보다 ${Math.round(-v * 100)}% 줄었음` : v > 0 ? `평소보다 ${Math.round(v * 100)}% 늘었음` : '평소와 같음'),
   },
+  {
+    key: 'feeding_change',
+    label: '먹이 반응',
+    fmt: (v) => (v < 0 ? `평소보다 ${Math.round(-v * 100)}% 줄었음` : v > 0 ? `평소보다 ${Math.round(v * 100)}% 늘었음` : '평소와 같음'),
+  },
   { key: 'temp_surface', label: '표층 수온', fmt: (v) => `${v.toFixed(1)}℃` },
   { key: 'temp_mid', label: '중층 수온', fmt: (v) => `${v.toFixed(1)}℃` },
 ];

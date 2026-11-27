@@ -266,7 +266,13 @@
     "stress_score": 26,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.983,
      "surface_ratio_x": 1.331,
@@ -280,9 +286,10 @@
     "camera_weight": 0.033,
     "missing_sources": [],
     "scenario_t_h": 43.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 11,
@@ -290,7 +297,13 @@
     "stress_score": 10,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.96,
      "surface_ratio_x": 1.103,
@@ -304,9 +317,10 @@
     "camera_weight": 0.014,
     "missing_sources": [],
     "scenario_t_h": 47.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 12,
@@ -314,7 +328,13 @@
     "stress_score": 11,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.013,
      "surface_ratio_x": 0.888,
@@ -328,9 +348,10 @@
     "camera_weight": 0.072,
     "missing_sources": [],
     "scenario_t_h": 51.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 13,
@@ -338,7 +359,13 @@
     "stress_score": 46,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.086,
      "surface_ratio_x": 0.89,
@@ -357,7 +384,8 @@
     "scenario_t_h": 55.8333,
     "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 14,
@@ -365,7 +393,13 @@
     "stress_score": 38,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.02,
      "surface_ratio_x": 0.994,
@@ -382,9 +416,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 59.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 15,
@@ -392,7 +427,13 @@
     "stress_score": 38,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.984,
      "surface_ratio_x": 1.004,
@@ -409,9 +450,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 63.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 16,
@@ -419,7 +461,13 @@
     "stress_score": 33,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.993,
      "surface_ratio_x": 1.263,
@@ -433,9 +481,10 @@
     "camera_weight": 0.008,
     "missing_sources": [],
     "scenario_t_h": 67.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 17,
@@ -443,7 +492,13 @@
     "stress_score": 39,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.9,
      "surface_ratio_x": 1.103,
@@ -457,9 +512,10 @@
     "camera_weight": 0.093,
     "missing_sources": [],
     "scenario_t_h": 71.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 18,
@@ -467,7 +523,13 @@
     "stress_score": 38,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.07,
      "surface_ratio_x": 0.813,
@@ -481,9 +543,10 @@
     "camera_weight": 0.044,
     "missing_sources": [],
     "scenario_t_h": 75.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 19,
@@ -491,7 +554,13 @@
     "stress_score": 47,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.089,
      "surface_ratio_x": 0.755,
@@ -510,7 +579,8 @@
     "scenario_t_h": 79.8333,
     "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 20,
@@ -11304,7 +11374,13 @@
     "stress_score": 36,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.035,
      "surface_ratio_x": 1.287,
@@ -11318,9 +11394,10 @@
     "camera_weight": 0.003,
     "missing_sources": [],
     "scenario_t_h": 19.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 13,
@@ -11328,7 +11405,13 @@
     "stress_score": 20,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.044,
      "surface_ratio_x": 1.128,
@@ -11342,9 +11425,10 @@
     "camera_weight": 0.046,
     "missing_sources": [],
     "scenario_t_h": 20.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 14,
@@ -11523,7 +11607,13 @@
     "stress_score": 39,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.993,
      "surface_ratio_x": 0.997,
@@ -11540,9 +11630,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 32.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 22,
@@ -11631,7 +11722,13 @@
     "stress_score": 38,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.034,
      "surface_ratio_x": 0.959,
@@ -11648,9 +11745,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 38.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 26,
@@ -11658,7 +11756,13 @@
     "stress_score": 38,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.038,
      "surface_ratio_x": 0.977,
@@ -11675,9 +11779,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 40.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 27,
@@ -11685,7 +11790,13 @@
     "stress_score": 44,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.025,
      "surface_ratio_x": 0.992,
@@ -11704,7 +11815,8 @@
     "scenario_t_h": 41.8333,
     "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 28,
@@ -11712,7 +11824,13 @@
     "stress_score": 35,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.932,
      "surface_ratio_x": 1.472,
@@ -11726,9 +11844,10 @@
     "camera_weight": 0.043,
     "missing_sources": [],
     "scenario_t_h": 43.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 29,
@@ -11736,7 +11855,13 @@
     "stress_score": 18,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.04,
      "surface_ratio_x": 1.104,
@@ -11750,9 +11875,10 @@
     "camera_weight": 0.064,
     "missing_sources": [],
     "scenario_t_h": 44.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 30,
@@ -11760,7 +11886,13 @@
     "stress_score": 12,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.012,
      "surface_ratio_x": 1.126,
@@ -11774,9 +11906,10 @@
     "camera_weight": 0.08,
     "missing_sources": [],
     "scenario_t_h": 46.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 31,
@@ -11784,7 +11917,13 @@
     "stress_score": 20,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.034,
      "surface_ratio_x": 1.099,
@@ -11798,9 +11937,10 @@
     "camera_weight": 0.054,
     "missing_sources": [],
     "scenario_t_h": 47.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 32,
@@ -11808,7 +11948,13 @@
     "stress_score": 25,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.991,
      "surface_ratio_x": 1.011,
@@ -11822,9 +11968,10 @@
     "camera_weight": 0.094,
     "missing_sources": [],
     "scenario_t_h": 49.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 33,
@@ -11832,7 +11979,13 @@
     "stress_score": 14,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.038,
      "surface_ratio_x": 0.874,
@@ -11846,9 +11999,10 @@
     "camera_weight": 0.079,
     "missing_sources": [],
     "scenario_t_h": 50.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 34,
@@ -11856,7 +12010,13 @@
     "stress_score": 39,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.904,
      "surface_ratio_x": 0.926,
@@ -11870,9 +12030,10 @@
     "camera_weight": 0.076,
     "missing_sources": [],
     "scenario_t_h": 52.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 35,
@@ -11880,7 +12041,13 @@
     "stress_score": 12,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.991,
      "surface_ratio_x": 0.901,
@@ -11894,9 +12061,10 @@
     "camera_weight": 0.13,
     "missing_sources": [],
     "scenario_t_h": 53.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 36,
@@ -11904,7 +12072,13 @@
     "stress_score": 38,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.044,
      "surface_ratio_x": 0.867,
@@ -11921,9 +12095,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 55.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 37,
@@ -11931,7 +12106,13 @@
     "stress_score": 39,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.942,
      "surface_ratio_x": 1.058,
@@ -11948,9 +12129,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 56.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 38,
@@ -11958,7 +12140,13 @@
     "stress_score": 39,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.021,
      "surface_ratio_x": 0.997,
@@ -11975,9 +12163,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 58.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 39,
@@ -11985,7 +12174,13 @@
     "stress_score": 40,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.003,
      "surface_ratio_x": 1.011,
@@ -12004,7 +12199,8 @@
     "scenario_t_h": 59.8333,
     "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 40,
@@ -12012,7 +12208,13 @@
     "stress_score": 39,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.925,
      "surface_ratio_x": 1.136,
@@ -12029,9 +12231,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 61.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 41,
@@ -12039,7 +12242,13 @@
     "stress_score": 37,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.05,
      "surface_ratio_x": 0.955,
@@ -12056,9 +12265,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 62.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 42,
@@ -12066,7 +12276,13 @@
     "stress_score": 38,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.932,
      "surface_ratio_x": 1.059,
@@ -12083,9 +12299,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 64.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 43,
@@ -12093,7 +12310,13 @@
     "stress_score": 38,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.968,
      "surface_ratio_x": 1.026,
@@ -12110,9 +12333,10 @@
     "camera_weight": 0.5,
     "missing_sources": [],
     "scenario_t_h": 65.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 44,
@@ -12120,7 +12344,13 @@
     "stress_score": 36,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.973,
      "surface_ratio_x": 1.359,
@@ -12134,9 +12364,10 @@
     "camera_weight": 0.085,
     "missing_sources": [],
     "scenario_t_h": 67.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 45,
@@ -12144,7 +12375,13 @@
     "stress_score": 27,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 0.967,
      "surface_ratio_x": 1.15,
@@ -12158,9 +12395,10 @@
     "camera_weight": 0.025,
     "missing_sources": [],
     "scenario_t_h": 68.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 46,
@@ -12168,7 +12406,13 @@
     "stress_score": 28,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.054,
      "surface_ratio_x": 0.979,
@@ -12182,9 +12426,10 @@
     "camera_weight": 0.084,
     "missing_sources": [],
     "scenario_t_h": 70.3333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    },
    {
     "t": 47,
@@ -12192,7 +12437,13 @@
     "stress_score": 3,
     "level": "정상",
     "baseline_status": "ready",
-    "cause": [],
+    "cause": [
+     {
+      "name": "섭식 저하",
+      "rule_id": "R7",
+      "probability": 1.0
+     }
+    ],
     "evidence": {
      "mid_layer_ratio_x": 1.006,
      "surface_ratio_x": 1.035,
@@ -12206,9 +12457,10 @@
     "camera_weight": 0.0,
     "missing_sources": [],
     "scenario_t_h": 71.8333,
-    "cause_suppression": "low_stress",
+    "cause_suppression": null,
     "r2_triggered": false,
-    "cage_id": "cage-003"
+    "cage_id": "cage-003",
+    "cause_source": "cause_engine"
    }
   ],
   "series": {
