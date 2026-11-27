@@ -1,5 +1,8 @@
 # API 계약 초안 — #4
 
+> #29 1차 브랜치에서 stock PUT·timeseries GET·echogram GET은 인증된 실제 데이터 경로로 바뀐다.
+> 아래 목업 설명 대신 [어민 데이터 API 계약](farmer-data-api.md)을 따른다. 나머지는 기존 목업이다.
+
 근거: 제공된 SDD 8장. `/cages/3/status`의 필드·값은 문서 예시 그대로다.
 다른 가두리의 status는 같은 fixture에서 cage_id만 바꾼다. 가두리 존재 여부는 조회하지 않는다.
 그 외 본문 구조는 프론트와 검토할 제안이며 실제 비즈니스 기능은 후속 이슈에서 구현한다.

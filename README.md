@@ -10,8 +10,9 @@
 
 ### API 로컬 실행
 
-현재 API는 프론트 연동을 위한 **목업**입니다. DB·인증·분석·저장·발송은 연결하지 않습니다.
-모든 응답에 `X-Data-Mode: mock`을 표시하며 변경 요청도 `persisted: false`입니다.
+재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 확인하는 실제 데이터 경로입니다.
+나머지는 기존 목업입니다. 실제 데이터 경로의 설정·RPC migration·Bearer/이미지 연계는
+[어민 데이터 API 1차 안내](docs/farmer-data-api.md)를 확인하세요.
 Python 3.11 이상, 저장소 루트에서 실행합니다.
 
 ```sh
@@ -31,7 +32,7 @@ source .venv/bin/activate
 ```
 
 ```sh
-python -m pip install -r requirements-api-dev.txt
+python -m pip install -r requirements.txt -r requirements-api-dev.txt
 python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
