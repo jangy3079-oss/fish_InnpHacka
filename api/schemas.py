@@ -3,7 +3,8 @@
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator, field_validator
+from decision.actions import canonical_action
 
 Metric = Literal[
     "vertical_dist", "activity", "cohesion", "feeding", "still_ratio",
@@ -31,6 +32,12 @@ class Evidence(Contract):
     temp_mid: float
 
 
+class MetricReliability(Contract):
+    grade: Literal['good','limited','low','unavailable']
+    confidence: Ratio | None
+    sources: list[Literal['sonar','camera','env']]
+
+
 class CageStatus(Contract):
     cage_id: int
     ts: AwareDatetime
@@ -38,9 +45,20 @@ class CageStatus(Contract):
     level: Literal["정상", "주의", "경고", "위험"] | None
     baseline_status: Literal["ready", "warming_up"]
     cause: list[Cause]
-    evidence: Evidence
+    evidence: dict[str, float | None]
     camera_weight: Annotated[float, Field(ge=0, le=0.5)]
     missing_sources: list[Literal["sonar", "camera", "env"]]
+    data_status: Literal['ready','warming_up','insufficient_data'] = 'ready'
+    metric_reliability: dict[Metric,MetricReliability] = Field(default_factory=dict)
+    model_version: str | None = None
+    baseline_windows: int = 0
+    level_held_due_to_missing: bool = False
+    last_observation_at: AwareDatetime | None = None
+    analysis_id: int | None = None
+    config_revision: str | None = None
+    valid_until: AwareDatetime | None = None
+    stale: bool = False
+    config_changed: bool = False
 
 
 class Point(Contract):
@@ -62,20 +80,61 @@ class Option(Contract):
     id: str
     label: str
     available: bool
-    estimated_loss_krw: float | None
+    estimated_loss_krw: int | float | None
     reason: str | None
+    config_action_id: str | None = None
+    reasons: list[dict[str,Any]] = Field(default_factory=list)
+    calculation: dict[str,Any] | None = None
+    source: str | None = None
+    text: str | None = None
 
 
 class Recommendation(Contract):
     id: int
     cage_id: int
     ts: AwareDatetime
-    recommended_option: str
+    recommended_option: str | None
     options: list[Option]
+    mode: Literal['loss_comparison','first_aid_required'] = 'loss_comparison'
+    details: dict[str,Any] = Field(default_factory=dict)
+    first_aid: dict[str,Any] | None = None
+    diagnosis_request_required: bool = False
+    analysis_id: int | None = None
+    config_revision: str | None = None
+    valid_until: AwareDatetime | None = None
+    stock_changed: bool = False
+    chosen_option: str | None = None
+    stale: bool = False
+    config_changed: bool = False
+    selectable: bool = False
+
+    @model_validator(mode='after')
+    def coherent_mode(self):
+        if self.mode=='first_aid_required' and (not self.first_aid or not self.first_aid.get('actions')
+                or self.recommended_option is not None or any(o.estimated_loss_krw is not None for o in self.options)):
+            raise ValueError('Disease-family recommendations require non-economic reviewed actions')
+        if self.recommended_option is not None and not any(o.id==self.recommended_option and o.available for o in self.options):
+            raise ValueError('Recommended option must be available')
+        return self
 
 
 class ChoiceRequest(Contract):
     option_id: Annotated[str, Field(min_length=1)]
+    request_key: UUID
+
+    @field_validator('option_id')
+    @classmethod
+    def supported_action(cls,value):
+        return value if value in ('dead_fish_removal','tool_separation') else canonical_action(value)
+
+
+class ChoiceReceipt(Contract):
+    persisted: Literal[True]
+    resource_id: int
+    option_id: str
+    request_key: UUID
+    chosen_at: AwareDatetime
+    execution_status: Literal['not_executed']
 
 
 class StockItem(Contract):

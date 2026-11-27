@@ -59,6 +59,18 @@ class Fusion(ConfigModel):
         return self
 
 
+class AnalysisPolicy(ConfigModel):
+    max_age_minutes: Annotated[float, Field(gt=0, le=1440)]
+    confidence_good_min: Ratio
+    confidence_limited_min: Ratio
+
+    @model_validator(mode="after")
+    def ordered_confidence(self) -> Self:
+        if self.confidence_limited_min >= self.confidence_good_min:
+            raise ValueError("confidence thresholds must be ordered")
+        return self
+
+
 class Thresholds(ConfigModel):
     cycle_minutes: Positive
     levels: dict[Level, Score]
@@ -71,6 +83,7 @@ class Thresholds(ConfigModel):
     baseline: Baseline
     quality: Quality
     fusion: Fusion
+    analysis: AnalysisPolicy
 
     @model_validator(mode="after")
     def level_order(self) -> Self:
