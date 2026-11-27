@@ -301,7 +301,7 @@ class DeadlinePolicy(ConfigModel):
         count = int(self.at is not None)+int(self.hours_from_assessment is not None)
         if (self.source_status=='pending' and count!=0) or (self.source_status!='pending' and count!=1):
             raise ValueError('Pending deadlines have no time; other policies require exactly one time basis')
-        if self.source_status=='confirmed' and not self.source:
+        if self.source_status=='confirmed' and (not self.source or not self.source.strip()):
             raise ValueError('Confirmed deadlines require a source')
         return self
 

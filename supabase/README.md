@@ -47,3 +47,7 @@ RLS는 소유자/다른 어가/공무원/익명/service_role로 `SET ROLE`하여
 `seed.sql`은 인증 수단 없는 로컬 전용 Auth 소유자 UUID를 만든다.
 실제 사용자 로그인 계정은 생성하지 않는다. 시연 앱을 로그인으로 연결하려면
 실제 Auth 사용자와 farm.owner_user_id를 관리자가 연결해야 한다.
+# 추천 기한 (#44)
+
+`20261127000800_recommendation_deadlines.sql`은 기존 recommendation.deadline과 게시 snapshot을 함께 검증·저장합니다.
+기존 회차는 수정하지 않으며 정책·표시 계약은 [추천 기한 문서](../docs/recommendation-deadlines.md)를 따릅니다.

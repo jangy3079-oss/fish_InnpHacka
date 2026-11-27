@@ -82,6 +82,7 @@ class DeadlineTests(unittest.TestCase):
 
     def test_policy_invalid_types_and_missing_confirmation_fail_closed(self):
         policies=[{'source_status':'confirmed','hours_from_assessment':1,'at':None,'source':None},
+            {'source_status':'confirmed','hours_from_assessment':1,'at':None,'source':'   '},
             {'source_status':'assumed','hours_from_assessment':0,'at':None,'source':None},
             {'source_status':'assumed','hours_from_assessment':True,'at':None,'source':None},
             {'source_status':'assumed','hours_from_assessment':1,'at':'2026-01-01T00:00:00Z','source':None},

@@ -106,10 +106,12 @@ class DeadlineEntry(Contract):
     def coherent_time(self):
         if (self.at is None)!=(self.source_status=='pending') or (self.at is None)!=(self.basis=='unconfirmed'):
             raise ValueError('Deadline time and source state must agree')
-        if self.source_status=='confirmed' and not self.source:
+        if self.source_status=='confirmed' and (not self.source or not self.source.strip()):
             raise ValueError('Confirmed deadlines require a source')
         if (self.kind=='next_assessment')!=(self.action_id is None):
             raise ValueError('Deadline action scope mismatch')
+        if self.kind=='next_assessment' and not self.applicable:
+            raise ValueError('Next assessment must apply to this recommendation')
         if self.action_id is not None and self.action_id!={'release_application':'release','harvest':'harvest'}[self.kind]:
             raise ValueError('Deadline action scope mismatch')
         return self

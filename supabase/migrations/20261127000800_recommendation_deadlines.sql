@@ -35,7 +35,7 @@ begin
     end if;
     if (e->'at'='null'::jsonb) is distinct from (e->>'source_status'='pending')
       or (e->'at'='null'::jsonb) is distinct from (e->>'basis'='unconfirmed')
-      or (e->>'source_status'='confirmed' and (jsonb_typeof(e->'source') is distinct from 'string' or length(e->>'source')=0)) then
+      or (e->>'source_status'='confirmed' and (jsonb_typeof(e->'source') is distinct from 'string' or length(btrim(e->>'source'))=0)) then
       raise exception 'Invalid deadline source state' using errcode='22023';
     end if;
     if e->'at'<>'null'::jsonb then

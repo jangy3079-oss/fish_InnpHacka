@@ -17,7 +17,7 @@ def with_deadlines(recommendation,assessed_at,level,snapshot):
     minutes = snapshot['costs']['reassessment_minutes_by_level'][level]
     entries = [{'kind':'next_assessment','label':'다음 판단 시점','action_id':None,'applicable':True,
         'at':(stamp+timedelta(minutes=minutes)).isoformat(),'source_status':'assumed',
-        'basis':'relative','source':'config/costs.yaml:reassessment_minutes_by_level','expired':False}]
+        'basis':'relative','source':'단계별 재확인 주기(가정)','expired':False}]
     for action,kind,label,policy in (
         ('release','release_application','방류 신청 마감',snapshot['release_rules']['application_deadline']),
         ('harvest','harvest','출하 가능 기한',snapshot['costs']['harvest_deadline'])):
