@@ -8,51 +8,78 @@ export function formatKrw(v) {
   return `${v.toLocaleString('ko-KR')}원`;
 }
 
-// 선택지별 예상 손해 비교. 손해가 적은 순으로 보여주고, 불가한 항목은 이유와 함께 맨 아래에 둔다.
+// 조치별 예상 손해 비교. 손해가 적은 순으로 두고 막대로 크기를 견줄 수 있게 한다. 불가한 조치는 이유와 함께 맨 아래에 둔다.
 export function ProfitCompare({ rec }) {
   const usable = rec.options
     .filter((o) => o.available)
     .sort((a, b) => (a.estimated_loss_krw ?? Infinity) - (b.estimated_loss_krw ?? Infinity));
   const blocked = rec.options.filter((o) => !o.available);
+  const maxLoss = Math.max(1, ...usable.map((o) => o.estimated_loss_krw ?? 0));
 
   return (
-    <section className="card">
-      <h2>선택지별 예상 손해</h2>
+    <section className="card flat">
+      <h2>조치별 예상 손해</h2>
       <p className="hint">손해가 적은 순서입니다. 추정값이며 실제와 다를 수 있습니다.</p>
-      <ul className="options">
-        {[...usable, ...blocked].map((o) => (
-          <OptionRow key={o.id} option={o} recommended={o.id === rec.recommended_option} />
+      <div className="loss-head" aria-hidden="true">
+        <span>조치</span>
+        <span>예상 손해</span>
+      </div>
+      <ul className="loss-list">
+        {usable.map((o) => (
+          <OptionRow key={o.id} option={o} recommended={o.id === rec.recommended_option} maxLoss={maxLoss} />
+        ))}
+        {blocked.map((o) => (
+          <OptionRow key={o.id} option={o} recommended={false} maxLoss={maxLoss} />
         ))}
       </ul>
     </section>
   );
 }
 
-function OptionRow({ option, recommended }) {
-  const cls = ['option', recommended && 'recommended', !option.available && 'blocked'].filter(Boolean).join(' ');
+function OptionRow({ option, recommended, maxLoss }) {
+  const [open, setOpen] = useState(false);
+  const loss = option.estimated_loss_krw;
+  const width = loss != null && option.available ? `${Math.max(loss > 0 ? 2 : 0, (loss / maxLoss) * 100)}%` : '0%';
+  const cls = ['loss-row', recommended && 'recommended', !option.available && 'blocked'].filter(Boolean).join(' ');
   return (
     <li className={cls}>
-      <div className="option-head">
-        <strong>
-          {option.label}
-          {recommended && <span className="badge">추천</span>}
-        </strong>
-        <span className="loss">{option.available ? formatKrw(option.estimated_loss_krw) : '불가'}</span>
+      <div className="loss-name">
+        <strong>{option.label}</strong>
+        {recommended && <span className="badge">추천</span>}
+        {/* 추천 조치의 이유는 위의 추천 카드에 이미 있어 반복하지 않는다 */}
+        {!recommended && option.reason && <span className={option.available ? 'loss-reason' : 'loss-reason why-not'}>{option.reason}</span>}
       </div>
-      {option.reason && <p className={option.available ? 'reason' : 'reason why-not'}>{option.reason}</p>}
+      <div className="loss-value">
+        {option.available ? (
+          <>
+            <span className="loss-bar" aria-hidden="true">
+              <span className="loss-fill" style={{ width }} />
+            </span>
+            <strong>{formatKrw(loss)}</strong>
+          </>
+        ) : (
+          <strong className="loss-blocked">불가</strong>
+        )}
+      </div>
       {option.calc && (
-        <details>
-          <summary>계산 보기</summary>
-          <p className="formula">{option.calc.formula}</p>
-          <dl className="inputs">
-            {Object.entries(option.calc.inputs).map(([k, v]) => (
-              <div key={k}>
-                <dt>{k}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
-        </details>
+        <div className="loss-calc">
+          <button type="button" className="link-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+            {open ? '계산 접기' : '계산 보기'}
+          </button>
+          {open && (
+            <div className="calc">
+              <p className="formula">{option.calc.formula}</p>
+              <dl className="inputs">
+                {Object.entries(option.calc.inputs).map(([k, v]) => (
+                  <div key={k}>
+                    <dt>{k}</dt>
+                    <dd>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+        </div>
       )}
     </li>
   );
@@ -71,7 +98,7 @@ export function FirstAidCard({ rec }) {
     }
   };
   return (
-    <section className="card recommend">
+    <section className="card key">
       <h2>질병이 의심됩니다</h2>
       <p>원인을 확정하지 못했습니다. 먼저 아래 조치를 해 주세요.</p>
       <ol className="steps">

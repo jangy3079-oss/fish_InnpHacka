@@ -5,7 +5,8 @@ import { ErrorNotice, LoadingBlock, Skeleton } from '../components/States.jsx';
 import { api } from '../api/client.js';
 import { FarmerTabs } from '../components/SiteChrome.jsx';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
-import { FirstAidCard, ProfitCompare } from '../components/ProfitCards.jsx';
+import EvidenceSummary from '../components/EvidenceSummary.jsx';
+import { FirstAidCard, ProfitCompare, formatKrw } from '../components/ProfitCards.jsx';
 import { BASELINE_WINDOWS, LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
 
 const CAGE_ID = 3;
@@ -76,12 +77,13 @@ export default function FarmerPage() {
         <div className="farmer">
           <LevelCard status={status} />
           <SourceNotice status={status} />
-          <CauseList causes={status.cause} />
           {rec.kind === 'none' && (
-            <section className="card"><h2>지금 추천하는 조치</h2><p>지금은 따로 할 조치가 없습니다.</p></section>
+            <section className="card key"><h2>지금 추천하는 조치</h2><p>지금은 따로 할 조치가 없습니다.</p></section>
           )}
           {rec.kind === 'first_aid' && <FirstAidCard key={rec.ts} rec={rec} />}
           {isProfit && <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />}
+          <CauseList causes={status.cause} />
+          <EvidenceSummary evidence={status.evidence} />
         </div>
         <div className="farmer">
           {isProfit && <ProfitCompare rec={rec} />}
@@ -157,7 +159,7 @@ function SourceNotice({ status }) {
 function CauseList({ causes }) {
   if (!causes.length) return null;
   return (
-    <section className="card">
+    <section className="card flat">
       <h2>의심되는 원인</h2>
       <ul className="causes">
         {causes.map((c) => (
@@ -194,10 +196,11 @@ function Recommendation({ rec }) {
   };
 
   return (
-    <section className="card recommend">
+    <section className="card key">
       <h2>지금 추천하는 조치</h2>
       <p className="rec-title">{main.label}</p>
       {main.reason && <p>{main.reason}</p>}
+      <p className="rec-loss">예상 손해 <strong>{formatKrw(main.estimated_loss_krw)}</strong></p>
       {done ? (
         <p className="done" role="status">✔ “{done}” 선택을 기록했습니다.</p>
       ) : (
