@@ -1,0 +1,86 @@
+{
+  "status": "complete",
+  "created_at_utc": "2026-11-27T15:49:09.574973+00:00",
+  "check_script_sha256": "244c64379343b468a10ced1dd4da7d6810382843dc283134120625d929a8f799",
+  "config_revision": "272fc69ee4735b6b063b75ce038165c696373b3371b5a90ff9c8c62091673792",
+  "passed": true,
+  "counting_unit": "guide string fields plus complete notification messages and nonempty scan lines",
+  "guide_results": [
+    {
+      "rule_id": "R5",
+      "strings_checked": 24,
+      "hits": 0,
+      "actions": 3,
+      "withheld": 2,
+      "diagnosis_request": true,
+      "guard_passed": true
+    },
+    {
+      "rule_id": "R8",
+      "strings_checked": 24,
+      "hits": 0,
+      "actions": 3,
+      "withheld": 2,
+      "diagnosis_request": true,
+      "guard_passed": true
+    }
+  ],
+  "total_texts": 84,
+  "total_hits": 0,
+  "scope": "synthetic offline generation; no live LLM, dispatch, human study or field validation",
+  "execution_base_commit": "1641e61",
+  "command": "python -m scripts.check_vc08 --notifications --report data/out/vc08-notifications.json",
+  "full_local_report_sha256": "c68c0856c932a0065bbbe2e80d77f2a52e683ca17e7ddb8b60a6d452fac825c0",
+  "notification_count": 36,
+  "notification_hits": 0,
+  "routes_per_rule_and_level": [
+    "candidate_0",
+    "candidate_1",
+    "candidate_2",
+    "invalid_reply",
+    "provider_error",
+    "template"
+  ],
+  "levels": [
+    "경고",
+    "위험",
+    "주의"
+  ],
+  "by_rule": {
+    "R5": 18,
+    "R8": 18
+  },
+  "modes": {
+    "template": 18,
+    "llm": 18
+  },
+  "fallback_reasons": {
+    "llm_disabled": 6,
+    "llm_error": 6,
+    "invalid_response": 6
+  },
+  "dispatch_statuses": [
+    "not_dispatched"
+  ],
+  "generation_config_sha256": [
+    "c537baba1ab2268657d6d9e98737a001f84659234a0740990677870187a35d12"
+  ],
+  "reviewed_sources": {
+    "feed_reduction": {
+      "source": "notify/docs/nifs_disease_rearing_management.md",
+      "source_sha256": "a41633e8d7b46bac7415e6f43da73cd4eb4fb06c23a9b731b5d2b33252f0cc6d"
+    },
+    "density_control": {
+      "source": "notify/docs/nifs_disease_rearing_management.md",
+      "source_sha256": "a41633e8d7b46bac7415e6f43da73cd4eb4fb06c23a9b731b5d2b33252f0cc6d"
+    },
+    "dead_fish_removal": {
+      "source": "notify/docs/nifs_disease_rearing_management.md",
+      "source_sha256": "a41633e8d7b46bac7415e6f43da73cd4eb4fb06c23a9b731b5d2b33252f0cc6d"
+    }
+  },
+  "regression_tests": {
+    "command": "python -m unittest tests.test_check_vc08 tests.test_notify -q",
+    "passed": 32
+  }
+}
