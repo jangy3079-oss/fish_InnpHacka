@@ -156,8 +156,10 @@ function SourceNotice({ status }) {
   );
 }
 
+// 원인 확률은 후보끼리 나눈 상대값이라 맞을 확률로 읽히면 안 된다. 숫자 대신 순위와 상대 막대로 보여준다.
 function CauseList({ causes, status }) {
-  if (!causes.length) {
+  const shown = causes.filter((c) => c.display !== false);
+  if (!shown.length) {
     // 정상이거나 기준선 학습 중이면 원인이 없는 게 당연하므로 숨긴다. 주의 이상인데 비었다면 이유를 모른다고 알린다.
     const alerting = (LEVEL_RANK[status.level] ?? 0) >= LEVEL_RANK['주의'] && status.baseline_status !== 'warming_up';
     if (!alerting) return null;
@@ -168,18 +170,29 @@ function CauseList({ causes, status }) {
       </section>
     );
   }
+  const top = Math.max(...shown.map((c) => c.probability ?? 0));
+  const tied = shown.filter((c) => (c.probability ?? 0) === top).length > 1;
+  const temporary = status.cause_source === 'scenario_label' || shown.some((c) => c.cause_source === 'scenario_label');
   return (
     <section className="card flat">
       <h2>의심되는 원인</h2>
       <ul className="causes">
-        {causes.map((c) => (
-          <li key={c.rule_id}>
-            <span>{c.name} <em>의심</em></span>
-            <strong>{Math.round(c.probability * 100)}%</strong>
-          </li>
-        ))}
+        {shown.map((c) => {
+          const p = c.probability ?? 0;
+          const isTop = p === top;
+          return (
+            <li key={c.rule_id}>
+              <div className="cause-head">
+                <span>{c.name}</span>
+                <em>{isTop ? (tied ? '함께 의심됨' : '가장 의심됨') : '그다음으로 의심됨'}</em>
+              </div>
+              <div className="cause-bar" aria-hidden="true"><i style={{ width: `${top > 0 ? Math.max(8, Math.round((p / top) * 100)) : 8}%` }} /></div>
+            </li>
+          );
+        })}
       </ul>
-      <p className="hint">확정이 아니라 추정입니다.</p>
+      <p className="hint">여러 원인이 함께 의심될 수 있습니다. 막대는 서로 비교하기 위한 것이며 맞을 확률이 아닙니다.</p>
+      {temporary && <p className="hint">시연용 임시 원인입니다(엔진 판단이 아닙니다).</p>}
     </section>
   );
 }
