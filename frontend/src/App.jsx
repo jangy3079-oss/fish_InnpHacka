@@ -2,11 +2,13 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import FarmerPage from './pages/FarmerPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
+import DemoBar from './components/DemoBar.jsx';
+import { DemoProvider } from './demo/DemoContext.jsx';
 import LevelToast from './components/LevelToast.jsx';
 
 export default function App() {
   return (
-    <>
+    <DemoProvider>
       <header className="topbar">
         <strong>조피볼락 스트레스 조기경보</strong>
         <nav>
@@ -15,6 +17,7 @@ export default function App() {
           <NavLink to="/dashboard">지자체 대시보드</NavLink>
         </nav>
       </header>
+      <DemoBar />
       <main>
         <Routes>
           <Route path="/" element={<Navigate to="/farmer" replace />} />
@@ -25,6 +28,6 @@ export default function App() {
         </Routes>
       </main>
       <LevelToast cageId={3} />
-    </>
+    </DemoProvider>
   );
 }

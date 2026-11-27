@@ -51,6 +51,12 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 시연 시각이 바뀌면 해역 색을 갱신한다.
+  useEffect(() => {
+    map.current?.getSource('areas')?.setData(data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areas]);
+
   useEffect(() => {
     const m = map.current;
     if (m?.getLayer('line')) m.setPaintProperty('line', 'line-width', ['case', ['==', ['get', 'area_id'], selectedId ?? -1], 4, 1.5]);

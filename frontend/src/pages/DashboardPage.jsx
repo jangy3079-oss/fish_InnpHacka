@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useDemo } from '../demo/DemoContext.jsx';
 import { api } from '../api/client.js';
 import AreaMap from '../components/AreaMap.jsx';
 import { LEVELS, formatTime } from '../constants.js';
@@ -10,14 +11,21 @@ export default function DashboardPage() {
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
 
+  const { demo } = useDemo();
+
   useEffect(() => {
-    Promise.all([api.getStressMap(), api.getAreaShapes()])
+    let alive = true;
+    Promise.all([api.getStressMap(demo), api.getAreaShapes()])
       .then(([m, s]) => {
+        if (!alive) return;
         setMap(m);
         setShapes(s);
       })
-      .catch((e) => setError(e.message));
-  }, []);
+      .catch((e) => alive && setError(e.message));
+    return () => {
+      alive = false;
+    };
+  }, [demo]);
 
   if (error) return <p className="error big">불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>;
   if (!map || !shapes) return <p className="big">불러오는 중…</p>;
