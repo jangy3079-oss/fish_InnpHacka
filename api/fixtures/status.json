@@ -1,0 +1,14 @@
+{
+  "cage_id": 3,
+  "ts": "2026-08-12T05:00:00Z",
+  "stress_score": 64,
+  "level": "경고",
+  "baseline_status": "ready",
+  "cause": [
+    {"name": "고수온(피신 중)", "probability": 0.72, "rule_id": "R1"},
+    {"name": "저산소", "probability": 0.18, "rule_id": "R3"}
+  ],
+  "evidence": {"mid_layer_ratio_x": 1.8, "activity_change": -0.35, "temp_surface": 26.4, "temp_mid": 22.1},
+  "camera_weight": 0.2,
+  "missing_sources": []
+}

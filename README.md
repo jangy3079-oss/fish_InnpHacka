@@ -47,6 +47,18 @@
 
 ## 협업 규칙
 
+## API 로컬 실행
+
+Python 3.11 이상에서 `python -m pip install -r requirements-api-dev.txt` 후
+`python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000`으로 실행합니다.
+
+- [Swagger UI](http://127.0.0.1:8000/docs)
+- [OpenAPI JSON](http://127.0.0.1:8000/openapi.json)
+- [API 계약](docs/api-contract.md)
+
+`python -m unittest discover -s tests -v`로 API·공통 모델 테스트를 실행합니다.
+기본 프론트 CORS 주소는 localhost:5173과 127.0.0.1:5173이며 `API_CORS_ORIGINS`로 변경합니다.
+
 브랜치·PR·이슈 규칙은 [CONTRIBUTING.md](CONTRIBUTING.md)를 봅니다.
 
 ## 한계
