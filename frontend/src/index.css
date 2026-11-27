@@ -104,3 +104,27 @@ table.areas tr.selected { background: #f1f7ff; }
 .demobar button { width: 36px; height: 32px; border: 0; border-radius: 6px; background: #fff; color: #13243b; font-size: 14px; cursor: pointer; }
 .demobar input[type=range] { flex: 1 1 160px; min-width: 120px; }
 .demotime { min-width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 재고 입력 폼 */
+.stock fieldset { border: 0; margin: 0; }
+.stock legend { font-weight: 700; font-size: 20px; padding: 0; }
+.stock label { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; }
+.input-unit { display: flex; align-items: center; gap: 6px; }
+.stock input[inputmode] { width: 120px; padding: 12px; font-size: 20px; border: 2px solid #c9d3de; border-radius: 10px; text-align: right; }
+.stock input[aria-invalid=true] { border-color: #b3261e; }
+.choices { display: flex; flex-direction: column; }
+.choices label { justify-content: flex-start; font-size: 20px; padding: 12px 0; }
+.choices input { width: 22px; height: 22px; }
+.stock .primary { margin-top: 4px; }
+.stock legend { float: left; width: 100%; margin-bottom: 4px; }
+.stock legend + * { clear: both; }
+.demotime { white-space: nowrap; }
+
+/* 방류 수요 패널 */
+.demand { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.demand-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.demand .over { color: #b3261e; font-weight: 700; }
+.demand-track { position: relative; height: 22px; background: #eef1f4; border-radius: 6px; }
+.demand-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #2f6fdc; border-radius: 6px; min-width: 2px; }
+.demand-fill.over { background: #b3261e; }
+.demand-base { position: absolute; top: -4px; bottom: -4px; border-left: 2px dashed #13243b; }

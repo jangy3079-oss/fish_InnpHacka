@@ -1,8 +1,7 @@
 // 모든 API 호출은 이 파일에서만 한다.
 // VITE_USE_MOCK=false 로 바꾸면 목업 대신 실제 API(VITE_API_BASE)를 호출한다.
-import { notificationsAt, recommendationAt, statusAt, stressMapAt, timeseriesAt } from '../mocks/demo.js';
+import { notificationsAt, recommendationAt, releaseDemandAt, statusAt, stressMapAt, timeseriesAt } from '../mocks/demo.js';
 import areasGeo from '../mocks/areas.geojson?raw';
-import releaseDemand from '../mocks/release-demand.json';
 import echogramMock from '../mocks/echogram.svg';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
@@ -64,13 +63,17 @@ export const api = {
   getNotifications: (cageId, demo) =>
     USE_MOCK ? delay(notificationsAt(cageId, demo)) : http(`/cages/${cageId}/notifications`),
 
+  // body: {stock: [{size_group: 'fry'|'mid'|'market', count, avg_weight_kg}], insured}
+  putStock: (cageId, body) =>
+    USE_MOCK
+      ? delay({ mock: true, persisted: false })
+      : http(`/cages/${cageId}/stock`, { method: 'PUT', body: JSON.stringify(body) }),
+
   getStressMap: (demo) => (USE_MOCK ? delay(stressMapAt(demo)) : http('/areas/stress-map')),
 
   // 해역 경계(GeoJSON). 계약상 지도 응답 형식이 미정이라 프론트는 area_id로 stress-map과 이어 붙인다.
   getAreaShapes: () => (USE_MOCK ? delay(JSON.parse(areasGeo)) : http('/areas/shapes')),
 
-  getReleaseDemand: (areaId) =>
-    USE_MOCK
-      ? delay({ ...releaseDemand, area_id: Number(areaId) })
-      : http(`/areas/${areaId}/release-demand`),
+  getReleaseDemand: (areaId, demo) =>
+    USE_MOCK ? delay(releaseDemandAt(areaId, demo)) : http(`/areas/${areaId}/release-demand`),
 };

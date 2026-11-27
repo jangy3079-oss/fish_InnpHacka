@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDemo } from '../demo/DemoContext.jsx';
 import { api } from '../api/client.js';
 import AreaMap from '../components/AreaMap.jsx';
+import ReleaseDemandPanel from '../components/ReleaseDemandPanel.jsx';
 import { LEVELS, formatTime } from '../constants.js';
 
 // 지자체 대시보드: 해역 단위 집계만 보여준다. 개별 어가의 손익·재고는 표시하지 않는다.
@@ -73,6 +74,7 @@ export default function DashboardPage() {
         </section>
       </div>
 
+      <ReleaseDemandPanel areas={map.areas} />
       <CauseChart items={map.cause_distribution} />
     </div>
   );
