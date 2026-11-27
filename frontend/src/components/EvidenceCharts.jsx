@@ -215,9 +215,10 @@ export function VerticalDistChart({ points, alertAt, raw = false }) {
 function useTimeseries(cageId, metric) {
   const { demo } = useDemo();
   const [data, setData] = useState(null);
+  // 가두리나 지표가 바뀔 때만 비운다. 재생으로 시각만 바뀔 때는 새 값이 올 때까지 이전 그래프를 둬서 깜빡이지 않게 한다.
+  useEffect(() => { setData(null); }, [cageId, metric]);
   useEffect(() => {
     let alive = true;
-    setData(null);
     api
       .getTimeseries(cageId, metric, { demo })
       .then((d) => alive && setData(d))
@@ -319,14 +320,17 @@ function Echogram({ cageId }) {
   const [failed, setFailed] = useState(false);
   const ref = useRef(null);
   const [url, setUrl] = useState(null);
+  const assetRef = useRef(null);
+  // 가두리가 바뀔 때만 비운다. 시각이 바뀔 때는 새 이미지가 올 때까지 이전 이미지를 둔다.
+  useEffect(() => { setUrl(null); setFailed(false); }, [cageId]);
+  useEffect(() => () => assetRef.current?.revoke(), []);
   useEffect(() => {
-    let active = true, asset;
-    setUrl(null); setFailed(false);
+    let active = true;
     api.getEchogram(cageId, { demo }).then((r) => {
       if (!active) { r.revoke(); return; }
-      asset = r; setUrl(r.url);
+      assetRef.current?.revoke(); assetRef.current = r; setUrl(r.url); setFailed(false);
     }).catch((e) => { if (active) setFailed(e.code === 'echogram_range_empty' ? '선택한 기간의 관측이 없습니다.' : e.code === 'echogram_not_found' ? '이 가두리의 에코그램 자산이 없습니다.' : '이미지를 불러오지 못했습니다.'); });
-    return () => { active = false; asset?.revoke(); };
+    return () => { active = false; };
   }, [cageId, demo]);
   return (
     <figure className="chart" ref={ref}>
