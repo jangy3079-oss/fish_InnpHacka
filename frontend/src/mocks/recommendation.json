@@ -1,0 +1,11 @@
+{
+  "id": 1,
+  "cage_id": 3,
+  "ts": "2026-08-12T05:00:00Z",
+  "recommended_option": "reduce_feed",
+  "options": [
+    { "id": "reduce_feed", "label": "사료 감량", "available": true, "estimated_loss_krw": 0, "reason": "급이 반응 저하, 비용 없는 1차 조치" },
+    { "id": "early_harvest", "label": "조기 출하", "available": true, "estimated_loss_krw": 1200000, "reason": "중간 크기 출하 시 단가 손실" },
+    { "id": "emergency_release", "label": "긴급 방류", "available": false, "estimated_loss_krw": null, "reason": "긴급방류 요건 미충족" }
+  ]
+}
