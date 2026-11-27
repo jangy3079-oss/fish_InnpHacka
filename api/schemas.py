@@ -10,7 +10,7 @@ Metric = Literal[
     "vertical_dist", "activity", "cohesion", "feeding", "still_ratio",
     "rubbing_rate", "quality", "temp_surface", "temp_mid", "do",
 ]
-Scenario = Literal["heatwave_typhoon", "turbidity_event", "disease_suspect", "parasite_suspect"]
+Scenario = Literal["heatwave_typhoon", "turbidity_event", "disease_suspect", "parasite_suspect", "feeding_drop"]
 ConfigFile = Literal["thresholds", "cause_rules", "release_rules", "costs", "first_aid"]
 Ratio = Annotated[float, Field(ge=0, le=1, allow_inf_nan=False)]
 
@@ -53,6 +53,8 @@ class CageStatus(Contract):
     model_version: str | None = None
     baseline_windows: int = 0
     level_held_due_to_missing: bool = False
+    r7_held_due_to_missing: bool = False
+    feeding_last_observed_at: AwareDatetime | None = None
     last_observation_at: AwareDatetime | None = None
     analysis_id: int | None = None
     config_revision: str | None = None

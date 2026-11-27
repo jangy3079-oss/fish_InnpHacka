@@ -1,4 +1,4 @@
-"""Config-driven R1/R2/R3/R4/R5/R6/R8 rules. One CauseEngine per ordered stream.
+"""Config-driven R1 through R8 rules. One CauseEngine per ordered stream.
 
 No raw sensor contract is introduced: observations remain MetricRecord; this stage
 consumes the existing derived StressScore/FusedFeatures pair, matched by cage/time.
@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from common.config_loader import ConfigLoader
+from .feeding import FeedingRule
 from .temporal import CauseContext, TemporalRules, WorkRules
 
 
@@ -76,6 +77,7 @@ class CauseEngine:
         self._history = defaultdict(deque)
         self._last_ts = {}
         self._temporal = TemporalRules()
+        self._feeding = FeedingRule()
         self._work = WorkRules()
 
     def evaluate(self, score, fused, *, context: CauseContext | None = None) -> CauseResult:
@@ -116,7 +118,7 @@ class CauseEngine:
                 raise ValueError("Stress score must be within 0..100")
             f = indexed.pop(key)
             # Validate all consumed values before any stream state is changed.
-            for name in ("lower_layers_ratio_x", "activity_change", "cohesion_change", "surface_ratio_x", "rubbing_rate_x"):
+            for name in ("lower_layers_ratio_x", "activity_change", "cohesion_change", "surface_ratio_x", "rubbing_rate_x", "feeding_change"):
                 _number(s.evidence.get(name))
             for name in ("temp_surface", "temp_mid", "do"):
                 _number(f.env.get(name))
@@ -130,6 +132,7 @@ class CauseEngine:
         if snapshot.revision != self._revision:
             self._history.clear()  # Never mix history from different config revisions.
             self._temporal = TemporalRules()
+            self._feeding = FeedingRule()
             self._work = WorkRules()
             self._revision = snapshot.revision
         rule_details = snapshot.to_dict()["cause_rules"]["rules"]
@@ -197,10 +200,24 @@ class CauseEngine:
                    "advisory_clear": context.advisory_active is False},
         }
         triggered = ready and all(checks["R2"].values())
+        r7 = rules['R7']
+        feeding = _number(ev.get('feeding_change'))
+        r7_checks = {'normal_environment':normal,
+            'surface':surface is not None and surface>=r7['env']['temp_surface_min_c'],
+            'activity':act is not None and abs(act)<r7['behavior']['activity_change_abs_max'],
+            'lower_layers':ratio is not None and ratio<r7['behavior']['lower_layers_ratio_x_max'],
+            'other_causes_absent':not any(all(c.values()) for c in checks.values()),
+            'ready_score':ready and s.score is not None}
+        r7_match, feeding_details = self._feeding.evaluate(s.cage_id,ts,all(r7_checks.values()),feeding,
+            f.quality,r7['behavior'],thresholds)
+        observations.update({'feeding_change':feeding,**feeding_details})
+        checks['R7'] = {**r7_checks,'feeding_observed_or_held':r7_match}
         suppression = "warming_up" if not ready else "missing_score" if s.score is None else "low_stress" if s.score < thresholds["cause_min_stress"] else None
         matched = [rid for rid in cfg["probability"]["tie_break_order"] if ready and s.score is not None
                    and (suppression is None or rid in thresholds["cause_min_stress_exceptions"])
                    and all(checks[rid].values())]
+        if matched:
+            suppression = None  # A configured low-score exception is an actual published cause.
         estimates = []
         for rid in matched:
             rule = rules[rid]

@@ -8,7 +8,7 @@
       meta.json              시작·끝, t 단위, 주요 시점, 정답 구간, 단계 변화
 
 t = 시나리오 시작 후 경과 시간(시간 단위, #62). status의 ts = 점수를 낸 1시간 윈도우의 끝.
-cause는 R1/R2/R3/R5/R8 엔진의 결과로 채운다. R4/R6/R7은 후속 구현이다.
+cause는 R1/R2/R3/R5/R7/R8 엔진의 결과로 채운다. R4/R6는 별도 담당 구현이다.
 """
 
 from __future__ import annotations
@@ -70,6 +70,8 @@ def status_rows(scores: Sequence, fused: Sequence, start: datetime, causes: Opti
             "missing_sources": list(f.missing_sources),
             "components": dict(s.components or {}),
             "model_version": s.model_version,
+            "r7_held_due_to_missing": any(c.rule_id=='R7' and c.evidence['feeding_held_due_to_missing'] for c in causes[i].estimates) if causes is not None else False,
+            "feeding_last_observed_at": next((c.evidence['feeding_last_observed_at'] for c in causes[i].estimates if c.rule_id=='R7'),None) if causes is not None else None,
         })
     return rows
 

@@ -28,7 +28,7 @@ from stress import model as model_settings
 from stress.levels import apply_levels
 from stress.model import StressModel
 
-SCENARIOS = ('heatwave_typhoon', 'turbidity_event', 'disease_suspect', 'parasite_suspect')
+SCENARIOS = ('heatwave_typhoon', 'turbidity_event', 'disease_suspect', 'parasite_suspect', 'feeding_drop')
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -152,6 +152,9 @@ class ReplayEngine:
             if rec is not None:
                 rec = {**rec,'id':0,'cage_id':settings.cage_id,'ts':cutoff.isoformat(),
                        'config_revision':snapshot.revision,'selectable':False}
+            r7_evidence = next((c.evidence for c in causes[-1].estimates if c.rule_id=='R7'),{}) if causes else {}
+            status.update(r7_held_due_to_missing=r7_evidence.get('feeding_held_due_to_missing',False),
+                          feeding_last_observed_at=r7_evidence.get('feeding_last_observed_at'))
             status['config_revision'] = snapshot.revision
             # Hourly aggregation uses the visible prefix only; no partial hour can read future observations.
             series = hourly_timeseries(fused,scores)

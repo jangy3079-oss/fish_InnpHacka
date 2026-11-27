@@ -209,7 +209,7 @@ class CauseScenarioTest(unittest.TestCase):
         results = CauseEngine().evaluate_series(ss, fused)
         self.assertEqual([r.r2_triggered for r in results], refuge_loss_signal(ss, fused))
         ids = {c.rule_id for r in results for c in r.estimates}
-        self.assertEqual(ids, {"R1", "R2"})
+        self.assertEqual(ids, {"R1", "R2", "R7"})
         copy_scores = copy.deepcopy(ss)
         changes = apply_levels(copy_scores, [r.immediate_danger for r in results])
         first_r2 = next(r for r in results if r.immediate_danger)
@@ -226,4 +226,6 @@ class CauseScenarioTest(unittest.TestCase):
         for name in ("normal_14d", "turbidity_event", "feeding_drop"):
             _, _, fused, _ = scenario(name)
             results = CauseEngine().evaluate_series(scores(name), fused)
-            self.assertFalse(any(r.estimates or r.immediate_danger for r in results), name)
+            self.assertFalse(any(any(c.rule_id!='R7' for c in r.estimates) or r.immediate_danger for r in results), name)
+            if name!='feeding_drop':
+                self.assertFalse(any(r.estimates for r in results),name)
