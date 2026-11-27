@@ -1,5 +1,9 @@
 # 지표 수집·저장 계약 — #10
 
+> **현재 #198 계약은 [멱등 수집 계약](idempotent-ingestion.md)을 따른다.** 동일 값은 중복 성공이며
+> 응답에 duplicate_count가 추가된다. 아래는 #10 당시 기록으로, 중복 전체409·bulk INSERT·구 영수증/업로더 설명은
+> 새 migration/API/업로더 전환 전 동작이다. status·추천·선택은 현재 #104에서 실제 DB 경로로 구현되었다.
+
 ## 브랜치와 선행 변경
 
 최신 main에서 `feat/10-ingest-metrics`를 만들었다. 실행 가능한 기능을 검증하기 위해

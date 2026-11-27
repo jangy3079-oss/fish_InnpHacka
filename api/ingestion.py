@@ -12,6 +12,7 @@ import httpx
 from fastapi import HTTPException
 
 from common import MetricRecord
+from .schemas import IngestReceipt
 
 MAX_BATCH_SIZE = 1000
 MAX_CAGE_ID = 9223372036854775807
@@ -83,7 +84,7 @@ class SupabaseMetricStore:
         except (ValueError, TypeError, KeyError, AttributeError):
             raise failure(403, "ingest_forbidden", "A dedicated edge account with assigned cages is required") from None
 
-    def insert(self, records: list[MetricRecord], token: str) -> int:
+    def insert(self, records: list[MetricRecord], token: str) -> IngestReceipt:
         allowed = self._authorized_cages(token)
         rows, identities = [], set()
         for record in records:
@@ -101,22 +102,28 @@ class SupabaseMetricStore:
                 raise failure(422, "duplicate_in_batch", "Duplicate metric identity within the batch")
             identities.add(identity)
             rows.append({**record.model_dump(mode="json"), "cage_id": cage_id})
-        # One PostgREST INSERT = one DB transaction. No per-record inserts or upsert.
-        response = self._request("POST", "/rest/v1/metric", token,
-            json=rows, headers={"Prefer": "return=minimal"})
-        if response.status_code == 201:
-            return len(rows)
+        # One narrowly authorized RPC transaction, never a read-before-write API race.
+        response = self._request("POST", "/rest/v1/rpc/ingest_metrics", token,
+            json={"p_records": rows})
+        if response.status_code == 200:
+            try:
+                payload = response.json()
+                if payload.get('persisted') is not True or payload.get('received_count') != len(rows):
+                    raise ValueError
+                return IngestReceipt.model_validate(payload)
+            except (ValueError, AttributeError, TypeError):
+                raise failure(503, "storage_unavailable", "Invalid storage acknowledgement; retry only the original batch") from None
         try:
             code = response.json().get("code")
         except (ValueError, AttributeError):
             code = None
         if code == "23505":
-            raise failure(409, "metric_conflict", "Metric identity already exists; the entire batch was rejected")
+            raise failure(409, "metric_conflict", "Metric identity has different content; the entire batch was rejected")
         if response.status_code == 401:
             raise failure(401, "invalid_token", "The access token is invalid or expired")
         if response.status_code == 403 or code == "42501":
             raise failure(403, "storage_forbidden", "Database RLS denied this batch; refresh the token and check cage grants")
-        if code in ("23503", "23514", "23502", "22P02", "22003"):
+        if code in ("23503", "23514", "23502", "22P02", "22003", "22023", "22007", "22008"):
             raise failure(422, "storage_validation_failed", "The entire batch failed database validation")
         raise failure(503, "storage_unavailable", "Supabase storage is unavailable; check persistence before retrying")
 

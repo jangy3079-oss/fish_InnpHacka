@@ -13,6 +13,7 @@ try {
   await db.exec(await read('./schema_rls.sql'));
   await db.exec(await read('./farmer_data.sql'));
   await db.exec(await read('./ingestion_rls.sql'));
+  await db.exec(await read('./idempotent_ingestion.sql'));
   await db.exec(await read('./diagnosis.sql'));
   await db.exec(await read('./analysis.sql'));
   await db.exec(await read('./areas.sql'));
