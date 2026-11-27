@@ -221,7 +221,20 @@ class ReleaseDemand(Contract):
 
 
 class DemoResult(Contract):
-    mock: Literal[True] = True
+    mock: Literal[False] = False
+    simulated: Literal[True] = True
+    persisted: Literal[False] = False
     scenario: Scenario
     t: float
+    t_unit: Literal['hours']
+    effective_t: float
+    duration_h: float
     status: CageStatus
+    recommendation: Recommendation | None
+    recommendation_reason: str | None
+    timeseries: dict[str,list[Point]]
+    config_revision: str
+    scenario_revision: str
+    producer_id: str
+    cause_source: Literal['cause_engine']
+    stock_source: Literal['synthetic_demo_config']

@@ -2,14 +2,14 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from api.main import app
+from api.main import app, status_fixture
 
 
 class ApiContractTests(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
 
-    def test_status_matches_sdd_example_exactly(self):
+    def test_remaining_mock_fixture_matches_sdd_example_exactly(self):
         expected = {
             "cage_id": 3, "ts": "2026-08-12T05:00:00Z", "stress_score": 64,
             "level": "경고", "baseline_status": "ready",
@@ -18,11 +18,8 @@ class ApiContractTests(unittest.TestCase):
             "evidence": {"mid_layer_ratio_x": 1.8, "activity_change": -0.35, "temp_surface": 26.4, "temp_mid": 22.1},
             "camera_weight": 0.2, "missing_sources": [],
         }
-        response = self.client.post("/demo/scenario/heatwave_typhoon")
-        self.assertEqual(response.status_code, 200)
-        status = response.json()['status']
+        status = status_fixture()
         self.assertEqual({k:status[k] for k in expected}, expected)
-        self.assertEqual(response.headers["x-data-mode"], "mock")
 
     def test_openapi_exposes_all_sdd_operations_and_docs(self):
         response = self.client.get("/openapi.json")
@@ -85,13 +82,16 @@ class ApiContractTests(unittest.TestCase):
             self.assertEqual(self.client.get(path).status_code, 401)
         self.assertEqual(self.client.put("/cages/3/stock", json={"stock": [], "insured": False}).status_code, 401)
 
-    def test_demo_scenarios_are_explicit_mock(self):
+    def test_demo_scenarios_are_explicit_simulations(self):
         for scenario in ["heatwave_typhoon", "turbidity_event", "disease_suspect", "parasite_suspect"]:
             result = self.client.post(f"/demo/scenario/{scenario}?t=5")
             self.assertEqual(result.status_code, 200)
             self.assertEqual(result.json()["scenario"], scenario)
             self.assertEqual(result.json()["t"], 5)
-            self.assertTrue(result.json()["mock"])
+            self.assertFalse(result.json()["mock"])
+            self.assertTrue(result.json()['simulated'])
+            self.assertFalse(result.json()['persisted'])
+            self.assertEqual(result.headers['x-data-mode'],'simulation')
 
     def test_cors_supports_frontend_dev_server(self):
         result = self.client.options("/cages/3/stock", headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "PUT", "Access-Control-Request-Headers": "content-type"})
