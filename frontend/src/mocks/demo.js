@@ -62,8 +62,33 @@ export function timeseriesAt(cageId, metric, demo) {
   return { cage_id: Number(cageId), metric, points: points.slice(0, clampIn(sc, demo?.t ?? DEFAULT_DEMO.t) + 1) };
 }
 
+// 다음 판단까지의 간격(분). 단계별 가정값이다(costs.reassessment_minutes_by_level).
+const REASSESS_MIN = { 정상: 60, 주의: 30, 경고: 15, 위험: 5 };
+
+// 추천에 기한 목록을 붙인다(docs/recommendation-deadlines.md). 다음 판단은 모든 추천에 있고,
+// 방류 신청·출하 기한은 해당 선택지가 있을 때만 넣는다. 확인된 시각이 없으므로 pending, at=null이다(시각을 만들지 않는다).
+function withDeadlines(rec, level) {
+  const next = new Date(new Date(rec.ts).getTime() + (REASSESS_MIN[level] ?? 60) * 60000).toISOString();
+  const deadlines = [
+    { kind: 'next_assessment', label: '다음 판단', action_id: null, applicable: true, at: next, source_status: 'assumed', basis: 'relative', source: '시연용 가정', expired: false },
+  ];
+  const pending = (kind, label, action_id) => {
+    const o = rec.options.find((x) => x.id === action_id);
+    if (o) deadlines.push({ kind, label, action_id, applicable: !!o.available, at: null, source_status: 'pending', basis: 'unconfirmed', source: null, expired: false });
+  };
+  pending('release_application', '방류 신청 마감', 'release');
+  pending('harvest', '출하 기한', 'harvest');
+  const times = deadlines.filter((d) => d.applicable && d.at).map((d) => d.at).sort();
+  return { ...rec, deadline: times[0] ?? null, deadline_expired: false, deadlines };
+}
+
 export function recommendationAt(cageId, demo) {
   const f = frameAt(demo);
+  const rec = buildRecommendation(cageId, f);
+  return rec.kind === 'none' ? rec : withDeadlines(rec, f.level);
+}
+
+function buildRecommendation(cageId, f) {
   const base = { id: 1, cage_id: Number(cageId), ts: f.ts };
   if (!f.level) return { ...base, kind: 'none', recommended_option: null, options: [] };
   if (f.level === '정상') {
