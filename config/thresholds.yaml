@@ -53,6 +53,11 @@ quality:
 #   gate_low <= q < full_at → w = max_camera_weight * (q - gate_low) / (full_at - gate_low)
 #   q >= full_at            → w = max_camera_weight
 # 소나가 없으면 f = c. 단 q < gate_low 이면 지표를 비운다 (거짓 경보 방지).
+analysis: # [가정, #104] 분석 결과 유효기간·관측 신뢰도 표시 기준. 현장 검증 전
+  max_age_minutes: 60
+  confidence_good_min: 0.7
+  confidence_limited_min: 0.3
+
 fusion:
   gate_low: 0.3
   full_at: 0.7

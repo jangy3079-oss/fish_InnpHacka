@@ -19,10 +19,11 @@ from .ingestion import MAX_BATCH_SIZE, SupabaseMetricStore, get_metric_store
 from .farmer_data import FarmerDataStore, get_farmer_store
 from .echogram import EchogramRenderer, get_echogram_renderer
 from .diagnosis import create_request, get_diagnosis_loader
+from .analysis import read_status,read_recommendation,choose,get_analysis_loader
 from common.config_loader import ConfigLoader
 
 from .schemas import (
-    CageStatus, ChoiceRequest, ConfigFile, ConfigRequest, DemoResult,
+    CageStatus, ChoiceRequest, ChoiceReceipt, ConfigFile, ConfigRequest, DemoResult,
     DiagnosisRequest, DiagnosisReceipt, Metric, MockReceipt, Recommendation, ReleaseDemand,
     Scenario, StockRequest, StressMap, Timeseries, StockReceipt, IngestReceipt,
 )
@@ -47,9 +48,9 @@ def time_window(
 
 
 app = FastAPI(
-    title="Rockfish Guard API", version="0.5.0",
-    description="지표 수집·재고 PUT·시계열·에코그램·진단 접수는 사용자 인증과 가두리 권한을 검사하는 실제 데이터 경로입니다. "
-                "나머지 API는 목업입니다. docs/diagnosis-api.md 등 API 계약 문서 참조.",
+    title="Rockfish Guard API", version="0.6.0",
+    description="어민 상태·추천·선택과 지표 수집·재고·시계열·에코그램·진단 접수는 인증된 실제 데이터 경로입니다. "
+                "시나리오 재생·지자체·관리자 경로는 목업입니다. docs/analysis-api.md 등 API 계약 문서 참조.",
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
@@ -61,7 +62,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=Fals
 async def mock_header(request, call_next):
     response = await call_next(request)
     path = request.url.path.rstrip("/")
-    real = path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"timeseries", "stock", "echogram", "diagnosis-request"})
+    real = path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
     response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
     if real:
         response.headers["Cache-Control"] = "private, no-store"
@@ -95,10 +96,10 @@ def ingest(records: Annotated[list[MetricRecord], Body(min_length=1, max_length=
     return IngestReceipt(received_count=len(records), inserted_count=inserted)
 
 
-@app.get("/cages/{id}/status", response_model=CageStatus, tags=["cages"],
-         responses={200: {"content": {"application/json": {"example": status_fixture()}}}})
-def status(id: Id):
-    return status_fixture(id)
+@app.get("/cages/{id}/status", response_model=CageStatus, tags=["cages"])
+def status(id: Id,store: Annotated[FarmerDataStore,Depends(get_farmer_store)],
+           loader: Annotated[ConfigLoader,Depends(get_analysis_loader)]):
+    return read_status(store,id,loader)
 
 
 @app.get("/cages/{id}/timeseries", response_model=Timeseries, tags=["cages"])
@@ -121,15 +122,15 @@ def echogram(id: Id, window: Annotated[tuple, Depends(time_window)],
 
 
 @app.get("/cages/{id}/recommendation", response_model=Recommendation, tags=["cages"])
-def recommendation(id: Id):
-    return {"id": 1, "cage_id": id, "ts": status_fixture()["ts"], "recommended_option": "reduce_feed",
-            "options": [{"id": "reduce_feed", "label": "사료 감량 (목업)", "available": True,
-                         "estimated_loss_krw": None, "reason": "손익 계산은 #27에서 구현"}]}
+def recommendation(id: Id,store: Annotated[FarmerDataStore,Depends(get_farmer_store)],
+                   loader: Annotated[ConfigLoader,Depends(get_analysis_loader)]):
+    return read_recommendation(store,id,loader)
 
 
-@app.post("/recommendations/{id}/choice", response_model=MockReceipt, tags=["recommendations"])
-def choice(id: Id, body: ChoiceRequest):
-    return MockReceipt(action="record_choice", resource_id=id)
+@app.post("/recommendations/{id}/choice", response_model=ChoiceReceipt, tags=["recommendations"])
+def choice(id: Id, body: ChoiceRequest,store: Annotated[FarmerDataStore,Depends(get_farmer_store)],
+           loader: Annotated[ConfigLoader,Depends(get_analysis_loader)]):
+    return choose(store,id,body,loader)
 
 
 @app.put("/cages/{id}/stock", response_model=StockReceipt, tags=["cages"],
@@ -150,8 +151,9 @@ def release_demand(id: Id):
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(request, exc):
-    if request.url.path.rstrip("/").endswith("/diagnosis-request"):
-        return JSONResponse(status_code=422, content={"detail": {"code": "invalid_diagnosis_request", "message": "Invalid diagnosis request"}})
+    if request.url.path.rstrip("/").endswith(("/diagnosis-request",'/choice')):
+        code = 'invalid_choice_request' if request.url.path.rstrip('/').endswith('/choice') else 'invalid_diagnosis_request'
+        return JSONResponse(status_code=422, content={"detail": {"code": code, "message": "Invalid request"}})
     return await request_validation_exception_handler(request, exc)
 
 

@@ -51,8 +51,8 @@ ALL_SOURCES = ("sonar", "camera", "env")
 Value = Union[float, List[float], None]
 
 
-def camera_weight(q: Optional[float]) -> float:
-    p = params()
+def camera_weight(q: Optional[float], configuration=None) -> float:
+    p = params() if configuration is None else configuration
     if q is None or q < p["q_min"]:
         return 0.0
     if q >= p["q_full"]:
@@ -103,7 +103,7 @@ def _blend(s: Value, c: Value, w: float) -> Value:
 
 
 def fuse_cycle(cage_id: str, ts: datetime, records: Iterable[MetricRecord],
-               expected_sources: Sequence[str] = ALL_SOURCES) -> FusedFeatures:
+               expected_sources: Sequence[str] = ALL_SOURCES, configuration=None) -> FusedFeatures:
     vals: Dict[tuple, list] = defaultdict(list)
     confs: Dict[str, list] = defaultdict(list)
     present = set()
@@ -113,11 +113,11 @@ def fuse_cycle(cage_id: str, ts: datetime, records: Iterable[MetricRecord],
         vals[(src, r.metric)].append(r.value)
         confs[src].append(r.confidence)
 
-    prm = params()
+    prm = params() if configuration is None else configuration
     q = _mean(vals.get(("camera", MetricName.QUALITY), []))
     if q is None and confs.get("camera"):
         q = min(confs["camera"])          # quality 레코드가 없으면 카메라 confidence로 대신
-    w = camera_weight(q) if "camera" in present else 0.0
+    w = camera_weight(q, prm) if "camera" in present else 0.0
 
     feats: Dict[str, Value] = {}
     weights: Dict[str, float] = {}
@@ -148,12 +148,12 @@ def fuse_cycle(cage_id: str, ts: datetime, records: Iterable[MetricRecord],
 
 
 def fuse(records: Iterable[MetricRecord], cycle_minutes: int = 5,
-         expected_sources: Sequence[str] = ALL_SOURCES) -> List[FusedFeatures]:
+         expected_sources: Sequence[str] = ALL_SOURCES, configuration=None) -> List[FusedFeatures]:
     """MetricRecord 묶음 → (가두리, 주기)별 FusedFeatures, 시간 순."""
     groups: Dict[tuple, list] = defaultdict(list)
     for r in records:
         groups[(r.cage_id, _bucket(r.ts, cycle_minutes))].append(r)
-    return [fuse_cycle(cid, ts, groups[(cid, ts)], expected_sources)
+    return [fuse_cycle(cid, ts, groups[(cid, ts)], expected_sources, configuration)
             for cid, ts in sorted(groups, key=lambda k: (k[0], k[1]))]
 
 

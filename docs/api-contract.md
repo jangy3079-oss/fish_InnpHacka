@@ -1,5 +1,8 @@
 # API 계약 초안 — #4
 
+> #104 상태·추천 조회·선택 저장은 인증된 실제 게시 데이터 경로다. 선택에는 request_key UUID가 필요하다.
+> [분석 저장·어민 API 계약](analysis-api.md)을 따른다. 아래 #4 목업 설명은 당시 기록이다.
+
 > #28 진단 POST는 소유자 인증·DB 저장 경로이며201/pending이다. note 대신 request_key UUID를 보낸다.
 > [진단 API 계약](diagnosis-api.md)을 따른다.
 

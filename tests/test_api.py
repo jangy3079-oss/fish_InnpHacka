@@ -18,9 +18,10 @@ class ApiContractTests(unittest.TestCase):
             "evidence": {"mid_layer_ratio_x": 1.8, "activity_change": -0.35, "temp_surface": 26.4, "temp_mid": 22.1},
             "camera_weight": 0.2, "missing_sources": [],
         }
-        response = self.client.get("/cages/3/status")
+        response = self.client.post("/demo/scenario/heatwave_typhoon")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), expected)
+        status = response.json()['status']
+        self.assertEqual({k:status[k] for k in expected}, expected)
         self.assertEqual(response.headers["x-data-mode"], "mock")
 
     def test_openapi_exposes_all_sdd_operations_and_docs(self):
@@ -46,18 +47,15 @@ class ApiContractTests(unittest.TestCase):
         self.assertTrue({"from", "to", "metric"}.issubset({p["name"] for p in params}))
 
     def test_all_read_routes_and_image(self):
-        for path in ["/health", "/cages/7/status",
-                     "/cages/3/recommendation", "/areas/stress-map", "/areas/1/release-demand"]:
+        for path in ["/health", "/areas/stress-map", "/areas/1/release-demand"]:
             with self.subTest(path=path):
                 result = self.client.get(path)
                 self.assertEqual(result.status_code, 200, result.text)
                 self.assertEqual(result.headers["x-data-mode"], "mock")
-        self.assertEqual(self.client.get("/cages/7/status").json()["cage_id"], 7)
 
     def test_mock_writes_never_claim_persistence_or_change_status(self):
-        before = self.client.get("/cages/3/status").json()
+        before = self.client.post('/demo/scenario/heatwave_typhoon').json()['status']
         requests = [
-            ("post", "/recommendations/1/choice", {"option_id": "reduce_feed"}),
             ("put", "/admin/config/thresholds", {"values": {"warning": 60}}),
         ]
         for method, path, payload in requests:
@@ -66,12 +64,11 @@ class ApiContractTests(unittest.TestCase):
                 self.assertEqual(result.status_code, 200, result.text)
                 self.assertTrue(result.json()["mock"])
                 self.assertFalse(result.json()["persisted"])
-        self.assertEqual(self.client.get("/cages/3/status").json(), before)
+        self.assertEqual(self.client.post('/demo/scenario/heatwave_typhoon').json()['status'], before)
 
     def test_invalid_paths_bodies_and_parameters(self):
         requests = [
-            ("get", "/cages/0/status", None), ("get", "/cages/abc/status", None),
-            ("post", "/recommendations/1/choice", {}),
+            ("get", "/areas/0/release-demand", None), ("get", "/areas/abc/release-demand", None),
             ("put", "/admin/config/unknown", {"values": {"x": 1}}),
             ("put", "/admin/config/thresholds", {"values": {}}),
             ("post", "/demo/scenario/unknown", None),
@@ -84,7 +81,7 @@ class ApiContractTests(unittest.TestCase):
 
     def test_real_data_routes_require_authentication(self):
         self.assertEqual(self.client.post("/ingest/metrics", json=[]).status_code, 401)
-        for path in ["/cages/3/timeseries?metric=activity", "/cages/3/echogram"]:
+        for path in ["/cages/3/timeseries?metric=activity", "/cages/3/echogram",'/cages/3/status','/cages/3/recommendation']:
             self.assertEqual(self.client.get(path).status_code, 401)
         self.assertEqual(self.client.put("/cages/3/stock", json={"stock": [], "insured": False}).status_code, 401)
 

@@ -1,6 +1,7 @@
 # Supabase 스키마 — #3
 
 SDD 7장 테이블 10개, RLS, 로컬 시연용 seed를 제공한다.
+#104는 `20261127000500_analysis_api.sql`과 전용 분석 사용자 metadata가 필요하다. [운영/API 계약](../docs/analysis-api.md)을 확인한다.
 설계·권한·합의 사항은 [DB 계약](../docs/database-contract.md)을 확인한다.
 이 PR은 SQL 파일만 제공하며 원격 Supabase에 자동 적용하지 않는다.
 
