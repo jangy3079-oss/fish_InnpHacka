@@ -85,6 +85,28 @@ class Thresholds(ConfigModel):
 class Probability(ConfigModel):
     method: Literal["normalize_sum_to_one"]
     min_display: Ratio
+    scoring: Literal["binary_all_required"]
+
+
+class R1Behavior(ConfigModel):
+    mid_low_ratio_x_min: Annotated[float, Field(ge=1)]
+    activity_change_max: Annotated[float, Field(ge=-1, le=0)]
+
+
+class R1Environment(ConfigModel):
+    temp_surface_min_c: float
+    temp_diff_min_c: Positive
+
+
+class R2Behavior(ConfigModel):
+    activity_change_max: Annotated[float, Field(ge=-1, le=0)]
+    cohesion_drop: Positive
+    lookback_h: Positive
+
+
+class R2Environment(ConfigModel):
+    temp_surface_min_c: float
+    temp_diff_max_c: Positive
 
 
 class Rule(ConfigModel):
@@ -107,6 +129,13 @@ class CauseRules(ConfigModel):
     def all_rules(self) -> Self:
         if set(self.rules) != {f"R{i}" for i in range(1, 9)}:
             raise ValueError("rules must contain R1 through R8")
+        for rid, behavior, environment in (("R1", R1Behavior, R1Environment), ("R2", R2Behavior, R2Environment)):
+            behavior.model_validate(self.rules[rid].behavior)
+            environment.model_validate(self.rules[rid].env)
+        if type(self.rules["R2"].model_extra.get("immediate_danger")) is not bool:
+            raise ValueError("R2.immediate_danger must be a boolean")
+        if self.rules["R1"].env["temp_diff_min_c"] < self.rules["R2"].env["temp_diff_max_c"]:
+            raise ValueError("R1/R2 temperature difference ranges must not overlap")
         return self
 
 

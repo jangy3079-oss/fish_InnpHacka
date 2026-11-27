@@ -11,7 +11,10 @@ import json
 from pathlib import Path
 
 from fusion.fuse import fuse, load_jsonl
-from stress.levels import apply_levels, refuge_loss_signal
+from cause import CauseEngine
+from cause.store import save_jsonl as save_causes
+from common.config_loader import ConfigLoader
+from stress.levels import apply_levels
 from stress.model import StressModel
 from stress.store import save_jsonl, upsert_supabase
 
@@ -38,9 +41,12 @@ if a.cmd == "train":
 else:
     m = StressModel.load(a.model)
     scores = m.score_series(fused)
-    changes = apply_levels(scores, refuge_loss_signal(scores, fused))
+    loader = ConfigLoader()
+    causes = CauseEngine(loader).evaluate_series(scores, fused)
+    changes = apply_levels(scores, [r.immediate_danger for r in causes], cfg=loader.last_good.to_dict()["thresholds"])
     out = Path(a.out) if a.out else Path(a.metrics).with_name("stress.jsonl")
     save_jsonl(scores, out.with_name("stress_score.jsonl"))
+    save_causes(causes, out.with_name("cause_estimate.jsonl"))
     out.with_name("level_changes.json").write_text(json.dumps(
         [{"ts": c.ts.strftime("%Y-%m-%dT%H:%M:%SZ"), "from": c.from_level, "to": c.to_level, "reason": c.reason}
          for c in changes], ensure_ascii=False, indent=2), encoding="utf-8")

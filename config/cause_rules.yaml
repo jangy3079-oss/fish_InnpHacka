@@ -26,6 +26,7 @@ env_constants:
 probability:
   method: normalize_sum_to_one
   min_display: 0.05            # [가정] 이보다 낮은 후보는 화면에서 생략
+  scoring: binary_all_required # [가정, #25] 모든 필수 조건 충족=1, 그 외=0. 정규화 값은 통계적 진단 확률이 아님
 
 rules:
   R1:

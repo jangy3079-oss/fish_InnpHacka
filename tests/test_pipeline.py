@@ -19,6 +19,7 @@ class PipelineExportTest(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
         out = Path(cls.tmp.name)
+        cls.out = out
         cls.results = {r["scenario"]: r for r in run(["heatwave_typhoon", "turbidity_event"], out,
                                                       out / "m.pkl")}
         cls.hw = Timeline(out / "heatwave_typhoon" / "api")
@@ -31,7 +32,10 @@ class PipelineExportTest(unittest.TestCase):
     def test_status_has_api_keys(self):
         row = self.hw.status_at(125)
         self.assertTrue(STATUS_KEYS <= set(row), STATUS_KEYS - set(row))
-        self.assertEqual(row["cause"], [])
+        self.assertIsInstance(row["cause"], list)
+        cause_row = next(r for r in self.hw.status if r["cause"] and r["cause"][0]["rule_id"] == "R1")
+        self.assertEqual(cause_row["cause"][0]["probability"], 1.0)
+        self.assertEqual(len(row["cause_config_revision"]), 64)
         self.assertIn("temp_surface", row["evidence"])
 
     def test_timeseries_has_front_metrics(self):
@@ -43,6 +47,17 @@ class PipelineExportTest(unittest.TestCase):
         self.assertEqual(len(vd), 3)
         self.assertAlmostEqual(sum(vd), 1.0, places=6)
         self.assertIn("stress_score", self.hw.series)
+
+    def test_cause_evidence_is_saved_and_matches_status(self):
+        path = self.out / "heatwave_typhoon/cause_estimate.jsonl"
+        rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+        self.assertEqual({r["rule_id"] for r in rows}, {"R1", "R2"})
+        by_ts = {row["ts"]: row for row in self.hw.status}
+        for row in rows:
+            ts = row["ts"].replace("+00:00", "Z")
+            self.assertEqual(row["evidence"]["config_revision"], by_ts[ts]["cause_config_revision"])
+            self.assertEqual(row["rule_id"], by_ts[ts]["cause"][0]["rule_id"])
+        self.assertEqual((self.out / "turbidity_event/cause_estimate.jsonl").read_text(), "")
 
     def test_t_axis(self):
         ts = [r["t"] for r in self.hw.status]

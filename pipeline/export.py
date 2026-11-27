@@ -8,7 +8,7 @@
       meta.json              시작·끝, t 단위, 주요 시점, 정답 구간, 단계 변화
 
 t = 시나리오 시작 후 경과 시간(시간 단위, #62). status의 ts = 점수를 낸 1시간 윈도우의 끝.
-cause는 비워 둔다 (원인 규칙 엔진 #25가 채움).
+cause는 R1/R2 엔진의 결과로 채운다. R3~R8은 후속 구현이다.
 """
 
 from __future__ import annotations
@@ -38,12 +38,15 @@ def _hours(t: datetime, start: datetime) -> float:
     return round((t - start).total_seconds() / 3600, 4)
 
 
-def status_rows(scores: Sequence, fused: Sequence, start: datetime) -> List[dict]:
+def status_rows(scores: Sequence, fused: Sequence, start: datetime, causes: Optional[Sequence] = None) -> List[dict]:
     """StressScore + FusedFeatures(같은 순서·같은 주기) → status 응답 모양 목록."""
     if len(scores) != len(fused):
         raise ValueError("scores와 fused는 같은 주기 목록이어야 함")
+    if causes is not None and (len(causes) != len(scores) or any(
+            (c.cage_id, c.ts) != (s.cage_id, s.ts) for c, s in zip(causes, scores))):
+        raise ValueError("cause 결과는 점수와 동일한 가두리·시각이어야 함")
     rows = []
-    for s, f in zip(scores, fused):
+    for i, (s, f) in enumerate(zip(scores, fused)):
         warm = s.baseline_status == "warming_up"
         evidence = dict(s.evidence or {})
         for k in STATUS_ENV_KEYS:
@@ -58,7 +61,10 @@ def status_rows(scores: Sequence, fused: Sequence, start: datetime) -> List[dict
             "level": None if warm else s.level,
             "baseline_status": s.baseline_status,
             "baseline_windows": s.baseline_windows,
-            "cause": [],
+            "cause": [] if causes is None else causes[i].status_causes(),
+            "cause_config_revision": None if causes is None else causes[i].config_revision,
+            "cause_suppression": None if causes is None else causes[i].suppression,
+            "r2_triggered": False if causes is None else causes[i].r2_triggered,
             "evidence": evidence,
             "camera_weight": round(float(f.camera_weight), 3),
             "missing_sources": list(f.missing_sources),

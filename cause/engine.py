@@ -1,0 +1,177 @@
+"""Config-driven R1/R2 rules (#25/#60). A CauseEngine belongs to one ordered stream.
+
+No raw sensor contract is introduced: observations remain MetricRecord; this stage
+consumes the existing derived StressScore/FusedFeatures pair, matched by cage/time.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+from collections import defaultdict, deque
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+
+from common.config_loader import ConfigLoader
+
+
+def _utc(ts):
+    if not isinstance(ts, datetime) or ts.tzinfo is None or ts.utcoffset() is None:
+        raise ValueError("An aware datetime is required")
+    return ts.astimezone(timezone.utc)
+
+
+def _number(value):
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise ValueError("Evidence must contain finite numeric values or null")
+    return float(value)
+
+
+@dataclass(frozen=True)
+class CauseEstimate:
+    cage_id: str
+    ts: datetime
+    cause: str
+    rule_id: str
+    score: float
+    probability: float
+    evidence: dict
+    display: bool
+
+    def to_dict(self):
+        return {"cage_id": self.cage_id, "ts": self.ts.isoformat(), "cause": self.cause,
+                "rule_id": self.rule_id, "score": self.score, "probability": self.probability,
+                "evidence": self.evidence, "display": self.display}
+
+    def to_row(self, db_cage_id: int):
+        """Explicit producer-to-DB mapping, no guessed IDs or remote writes."""
+        if type(db_cage_id) is not int or not 0 < db_cage_id <= 9223372036854775807:
+            raise ValueError("A positive bigint DB cage ID is required")
+        return {"cage_id": db_cage_id, "ts": self.ts.isoformat(), "cause": self.cause,
+                "probability": self.probability, "rule_id": self.rule_id, "evidence": self.evidence}
+
+
+@dataclass(frozen=True)
+class CauseResult:
+    cage_id: str
+    ts: datetime
+    estimates: tuple[CauseEstimate, ...]
+    r2_triggered: bool
+    immediate_danger: bool
+    suppression: str | None
+    config_revision: str
+
+    def status_causes(self):
+        return [{"name": c.cause, "rule_id": c.rule_id, "probability": c.probability}
+                for c in self.estimates if c.display]
+
+
+class CauseEngine:
+    def __init__(self, loader: ConfigLoader | None = None):
+        self.loader = loader or ConfigLoader()
+        self._revision = None
+        self._history = defaultdict(deque)
+        self._last_ts = {}
+
+    def evaluate(self, score, fused) -> CauseResult:
+        return self.evaluate_series([score], [fused])[0]
+
+    def evaluate_series(self, scores, fused) -> list[CauseResult]:
+        """One validated config snapshot per batch; exact cage and previous cycle match.
+
+        Batch validation is atomic: bad alignment/order/value cannot advance history.
+        Input order may interleave cages, but must increase strictly for each cage.
+        """
+        snapshot = self.loader.snapshot()  # ConfigError propagates; no stale fallback.
+        threshold = snapshot["thresholds"]
+        cycle = timedelta(minutes=threshold["cycle_minutes"])
+        indexed = {}
+        for f in fused:
+            key = (f.cage_id, _utc(f.ts))
+            if key in indexed:
+                raise ValueError("Duplicate fused cage/timestamp")
+            indexed[key] = f
+        last = dict(self._last_ts)
+        pairs = []
+        for s in scores:
+            ts = _utc(s.ts)
+            if not isinstance(s.cage_id, str) or not s.cage_id.strip():
+                raise ValueError("A producer cage ID is required")
+            key = (s.cage_id, ts - cycle)
+            if key not in indexed or (s.cage_id in last and ts <= last[s.cage_id]):
+                raise ValueError("Unmatched or out-of-order score/fused pair")
+            if s.baseline_status not in ("ready", "warming_up"):
+                raise ValueError("Unknown baseline status")
+            number = _number(s.score)
+            if number is not None and not 0 <= number <= 100:
+                raise ValueError("Stress score must be within 0..100")
+            f = indexed.pop(key)
+            # Validate all consumed values before any stream state is changed.
+            for name in ("lower_layers_ratio_x", "activity_change", "cohesion_change"):
+                _number(s.evidence.get(name))
+            for name in ("temp_surface", "temp_mid"):
+                _number(f.env.get(name))
+            pairs.append((s, f, ts))
+            last[s.cage_id] = ts
+        if indexed:
+            raise ValueError("Extra unmatched fused observations")
+        if snapshot.revision != self._revision:
+            self._history.clear()  # Never mix history from different config revisions.
+            self._revision = snapshot.revision
+        results = [self._evaluate(s, f, ts, snapshot) for s, f, ts in pairs]
+        self._last_ts = last
+        return results
+
+    def _evaluate(self, s, f, ts, snapshot):
+        cfg, thresholds = snapshot["cause_rules"], snapshot["thresholds"]
+        rules = cfg["rules"]
+        r1, r2 = rules["R1"], rules["R2"]
+        history = self._history[s.cage_id]
+        cutoff = ts - timedelta(hours=r2["behavior"]["lookback_h"])
+        while history and history[0][0] < cutoff:
+            history.popleft()
+        peak = max((value for _, value in history), default=None)
+        ready = s.baseline_status == "ready"
+        # Warming-up cannot supply baseline-relative history or danger signals.
+        ev = s.evidence if ready else {}
+        ratio = _number(ev.get("lower_layers_ratio_x"))
+        act, coh = _number(ev.get("activity_change")), _number(ev.get("cohesion_change"))
+        surface, mid = _number(f.env.get("temp_surface")), _number(f.env.get("temp_mid"))
+        diff = None if surface is None or mid is None else surface - mid
+        drop = None if peak is None or coh is None else peak - coh
+        observations = {"lower_layers_ratio_x": ratio, "activity_change": act,
+                        "cohesion_change": coh, "cohesion_prior_peak": peak,
+                        "cohesion_drop_observed": drop, "temp_surface": surface,
+                        "temp_mid": mid, "temp_diff": diff}
+        checks = {
+            "R1": {"lower_layers": ratio is not None and ratio >= r1["behavior"]["mid_low_ratio_x_min"],
+                   "activity": act is not None and act <= r1["behavior"]["activity_change_max"],
+                   "surface": surface is not None and surface >= r1["env"]["temp_surface_min_c"],
+                   "difference": diff is not None and diff >= r1["env"]["temp_diff_min_c"]},
+            "R2": {"activity_or_cohesion": (act is not None and act <= r2["behavior"]["activity_change_max"])
+                       or (drop is not None and drop >= r2["behavior"]["cohesion_drop"]),
+                   "surface": surface is not None and surface >= r2["env"]["temp_surface_min_c"],
+                   "difference": diff is not None and diff < r2["env"]["temp_diff_max_c"]},
+        }
+        triggered = ready and all(checks["R2"].values())
+        suppression = "warming_up" if not ready else "missing_score" if s.score is None else "low_stress" if s.score < thresholds["cause_min_stress"] else None
+        matched = [rid for rid in ("R1", "R2") if ready and s.score is not None
+                   and (suppression is None or rid in thresholds["cause_min_stress_exceptions"])
+                   and all(checks[rid].values())]
+        estimates = []
+        for rid in matched:
+            rule = rules[rid]
+            probability = 1.0 / len(matched)  # YAML binary_all_required: each matched score is 1.
+            evidence = {**observations, "stress_score": s.score, "conditions": checks[rid],
+                        "thresholds": json.loads(json.dumps(snapshot.to_dict()["cause_rules"]["rules"][rid])),
+                        "config_revision": snapshot.revision, "model_version": s.model_version,
+                        "fused_ts": _utc(f.ts).isoformat(), "scoring": cfg["probability"]["scoring"],
+                        "raw_score": 1.0, "cause_min_stress": thresholds["cause_min_stress"]}
+            estimates.append(CauseEstimate(s.cage_id, ts, rule["name"], rid, 1.0, probability, evidence,
+                                           probability >= cfg["probability"]["min_display"]))
+        if coh is not None:
+            history.append((ts, coh))  # Only previous points participate in the current peak.
+        immediate = bool(triggered and r2["immediate_danger"] and "R2" in thresholds["immediate_danger_rules"])
+        return CauseResult(s.cage_id, ts, tuple(estimates), triggered, immediate, suppression, snapshot.revision)
