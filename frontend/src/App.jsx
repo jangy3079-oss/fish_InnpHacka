@@ -9,6 +9,9 @@ import { SiteFooter, SiteHeader } from './components/SiteChrome.jsx';
 import { DemoProvider } from './demo/DemoContext.jsx';
 import LevelToast from './components/LevelToast.jsx';
 
+// 어민 현황·대시보드·알림은 시연 데이터를 보여 주므로 실제 값으로 오해하지 않게 알린다.
+const SIM_PATHS = ['/farmer', '/dashboard', '/notifications'];
+
 export default function App() {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
@@ -16,6 +19,7 @@ export default function App() {
     <DemoProvider>
       <a className="skip-link" href="#main">본문 바로가기</a>
       <SiteHeader />
+      {SIM_PATHS.includes(pathname) && <p className="sim-banner" role="note">합성 시연 데이터입니다. 실제 가두리 값이 아닙니다.</p>}
       <main id="main" tabIndex={-1} className={isHome ? 'home' : 'container'}>
         <Routes>
           <Route path="/" element={<HomePage />} />
