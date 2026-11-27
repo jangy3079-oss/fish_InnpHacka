@@ -19,6 +19,7 @@ async function http(path, options) {
     // 화면에서 상태 코드로 안내 문구를 가를 수 있게 담아 둔다.
     const err = new Error(`API ${res.status}: ${path}`);
     err.status = res.status;
+    err.code = (await res.json().catch(() => null))?.detail?.code;
     throw err;
   }
   return res.json();
@@ -160,7 +161,7 @@ export const api = {
   // 본문은 request_key뿐이다(자유 문구 note는 지원하지 않는다). 키는 성공이나 확정 오류가 나올 때까지 같은 값으로 다시 보낸다.
   getDiagnosisRequest: (cageId) => USE_MOCK ? delay(null)
     : http(`/cages/${cageId}/diagnosis-request`).catch((e) => {
-        if (e.status === 404) return null;
+        if (e.status === 404 && e.code === 'diagnosis_request_not_found') return null;
         throw e;
       }),
 
