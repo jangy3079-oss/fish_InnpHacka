@@ -200,24 +200,63 @@ class IngestReceipt(Contract):
     inserted_count: int
 
 
+AreaCount = Annotated[int, Field(strict=True, ge=0, le=9_007_199_254_740_991)]
+AreaId = Annotated[int, Field(strict=True, gt=0, le=9_007_199_254_740_991)]
+AreaDataStatus = Literal["complete", "partial", "unavailable"]
+
+
 class AreaSummary(Contract):
-    area_id: int
+    area_id: AreaId
     name: str
-    level: Literal["정상", "주의", "경고", "위험"]
-    stress_score: float
-    cage_count: int
+    level: Literal["정상", "주의", "경고", "위험"] | None
+    stress_score: Annotated[float, Field(ge=0, le=100)] | None
+    cage_count: AreaCount
+    assessed_cage_count: AreaCount
+    held_cage_count: AreaCount
+    unavailable_cage_count: AreaCount
+    data_status: AreaDataStatus
+    latest_analysis_at: AwareDatetime | None
+
+    @model_validator(mode="after")
+    def counts_agree(self):
+        known = self.assessed_cage_count + self.held_cage_count
+        expected = "complete" if self.cage_count > 0 and self.assessed_cage_count == self.cage_count else "partial" if known else "unavailable"
+        if known + self.unavailable_cage_count != self.cage_count or self.data_status != expected:
+            raise ValueError("Invalid area coverage")
+        if (self.level is None) != (known == 0) or (self.stress_score is None) != (self.assessed_cage_count == 0):
+            raise ValueError("Invalid area assessment")
+        return self
 
 
 class StressMap(Contract):
     ts: AwareDatetime
+    config_revision: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    aggregation_method: Literal["max_current_level_and_score"]
     areas: list[AreaSummary]
 
 
 class ReleaseDemand(Contract):
-    area_id: int
+    area_id: AreaId
     ts: AwareDatetime
-    estimated_fish_count: int
-    cage_count: int
+    config_revision: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    basis: Literal["recommended_not_chosen"]
+    estimated_fish_count: AreaCount | None
+    cage_count: AreaCount
+    recommended_cage_count: AreaCount
+    assessed_cage_count: AreaCount
+    unavailable_cage_count: AreaCount
+    data_status: AreaDataStatus
+
+    @model_validator(mode="after")
+    def counts_agree(self):
+        expected = "complete" if self.unavailable_cage_count == 0 else "partial" if self.assessed_cage_count else "unavailable"
+        if (self.assessed_cage_count + self.unavailable_cage_count != self.cage_count
+                or self.recommended_cage_count > self.assessed_cage_count or self.data_status != expected
+                or (self.estimated_fish_count is None) != (expected == "unavailable")):
+            raise ValueError("Invalid demand coverage")
+        if self.estimated_fish_count is not None and (self.estimated_fish_count > 0) != (self.recommended_cage_count > 0):
+            raise ValueError("Invalid recommended count")
+        return self
 
 
 class DemoResult(Contract):

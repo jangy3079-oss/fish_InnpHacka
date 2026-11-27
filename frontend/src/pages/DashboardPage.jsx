@@ -51,7 +51,7 @@ export default function DashboardPage() {
   return (
     <div className="dash">
       <h1>해역 스트레스 현황</h1>
-      <p className="hint">{formatTime(map.ts)} 기준 · 해역 단위 집계입니다.</p>
+      <p className="hint">{formatTime(map.ts)} 기준 · 해역 단위 집계입니다. 단계·지수는 유효한 최신 회차의 최댓값이며 자료 부족으로 유지된 단계는 별도 표시합니다.</p>
 
       <ul className="summary">
         {counts.map(({ lv, n }) => (
@@ -59,6 +59,7 @@ export default function DashboardPage() {
             <span aria-hidden="true">{LEVELS[lv].icon}</span> {lv} <strong>{n}</strong>
           </li>
         ))}
+        <li>미집계 <strong>{map.areas.filter((a) => a.level == null).length}</strong></li>
       </ul>
 
       <div className="dash-grid">
@@ -97,11 +98,13 @@ export default function DashboardPage() {
                       {a.name}
                     </button>
                   </td>
-                  <td style={{ color: LEVELS[a.level].color, fontWeight: 700 }}>
-                    {LEVELS[a.level].icon} {a.level}
+                  <td style={{ color: LEVELS[a.level]?.color ?? '#64748b', fontWeight: 700 }}>
+                    {LEVELS[a.level]?.icon} {a.level ?? '미집계'}
                   </td>
-                  <td>{Math.round(a.stress_score)}</td>
-                  <td>{a.cage_count}</td>
+                  <td>{a.stress_score == null ? '미집계' : Math.round(a.stress_score)}</td>
+                  <td>{a.cage_count}
+                    {a.data_status && <small className="hint"> · 집계 {a.assessed_cage_count} / 단계 유지 {a.held_cage_count} / 미집계 {a.unavailable_cage_count}</small>}
+                  </td>
                 </tr>
               ))}
             </tbody>

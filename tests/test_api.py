@@ -43,8 +43,8 @@ class ApiContractTests(unittest.TestCase):
         params = schema["paths"]["/cages/{id}/timeseries"]["get"]["parameters"]
         self.assertTrue({"from", "to", "metric"}.issubset({p["name"] for p in params}))
 
-    def test_all_read_routes_and_image(self):
-        for path in ["/health", "/areas/stress-map", "/areas/1/release-demand"]:
+    def test_health_remains_available_without_auth(self):
+        for path in ["/health"]:
             with self.subTest(path=path):
                 result = self.client.get(path)
                 self.assertEqual(result.status_code, 200, result.text)
@@ -65,7 +65,6 @@ class ApiContractTests(unittest.TestCase):
 
     def test_invalid_paths_bodies_and_parameters(self):
         requests = [
-            ("get", "/areas/0/release-demand", None), ("get", "/areas/abc/release-demand", None),
             ("put", "/admin/config/unknown", {"values": {"x": 1}}),
             ("put", "/admin/config/thresholds", {"values": {}}),
             ("post", "/demo/scenario/unknown", None),
@@ -78,7 +77,7 @@ class ApiContractTests(unittest.TestCase):
 
     def test_real_data_routes_require_authentication(self):
         self.assertEqual(self.client.post("/ingest/metrics", json=[]).status_code, 401)
-        for path in ["/cages/3/timeseries?metric=activity", "/cages/3/echogram",'/cages/3/status','/cages/3/recommendation']:
+        for path in ["/cages/3/timeseries?metric=activity", "/cages/3/echogram",'/cages/3/status','/cages/3/recommendation', '/areas/stress-map', '/areas/1/release-demand']:
             self.assertEqual(self.client.get(path).status_code, 401)
         self.assertEqual(self.client.put("/cages/3/stock", json={"stock": [], "insured": False}).status_code, 401)
 
@@ -99,8 +98,10 @@ class ApiContractTests(unittest.TestCase):
         self.assertEqual(result.headers["access-control-allow-origin"], "http://localhost:5173")
 
     def test_area_summary_excludes_individual_finances(self):
-        item = self.client.get("/areas/stress-map").json()["areas"][0]
-        self.assertEqual(set(item), {"area_id", "name", "level", "stress_score", "cage_count"})
+        item = self.client.get("/openapi.json").json()["components"]["schemas"]["AreaSummary"]
+        self.assertTrue({"area_id", "level", "unavailable_cage_count"}.issubset(item["properties"]))
+        self.assertFalse({"cage_id", "stock", "options", "estimated_loss_krw"} & set(item["properties"]))
+        self.assertFalse(item["additionalProperties"])
 
 
 if __name__ == "__main__":
