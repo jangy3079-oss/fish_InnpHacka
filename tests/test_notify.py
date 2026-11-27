@@ -42,10 +42,30 @@ class NotificationTests(unittest.TestCase):
     def test_real_calculator_result_is_rendered_without_new_api_schema(self):
         comparison = self.comparison()
         result = NotificationGenerator().generate(context(), recommendation=comparison)
-        self.assertIn("최소 손실 선택지", result.message)
-        self.assertIn("예상 손실", result.message)
+        self.assertIn("손해가 가장 적은 방법", result.message)
+        self.assertIn("예상 손해", result.message)
+        for jargon in ("최소 손실", "가정값을 포함한", "기준선"):     # #232 쉬운 표현
+            self.assertNotIn(jargon, result.message)
         self.assertEqual(len(sentences(result.message)), 3)
         self.assertNotIn("확정 손실", result.message)
+
+    def test_r7_follows_feeding_management_not_lowest_loss(self):
+        """#232: R7 알림은 손해 최소('유지')가 아니라 분석 추천과 같은 사료 감량을 권한다."""
+        comparison = self.comparison(level="normal", primary_rule_id="R7")
+        self.assertEqual(comparison["lowest_loss_option"], "keep")
+        r7 = context(level="정상", stress_score=38.0, rule_id="R7",
+                     evidence={"temp_surface": 23.4, "activity_change": 0.02, "feeding_change": -0.18})
+        result = NotificationGenerator().generate(r7, recommendation=comparison)
+        self.assertIn("사료 양을 줄이세요", result.message)
+        self.assertIn("먹이 반응 평소보다 18% 감소", result.message)
+        self.assertNotIn("손해가 가장 적은", result.message)
+        self.assertNotIn("20%", result.message)                    # 감량률 수치는 알림에 쓰지 않음
+        self.assertLessEqual(len(sentences(result.message)), 3)
+        for option in comparison["options"]:
+            if option["id"] == "reduce_feed":
+                option["available"] = False
+        result = NotificationGenerator().generate(r7, recommendation=comparison)
+        self.assertIn("권할 수 있는 사료 관리 방법이 계산되지 않았습니다", result.message)
 
     def test_wrong_cage_revision_level_or_unavailable_recommendation_rejected(self):
         import copy
@@ -69,11 +89,11 @@ class NotificationTests(unittest.TestCase):
     def test_template_has_three_sentences_and_original_numbers(self):
         result = NotificationGenerator().generate(context())
         self.assertEqual(len(sentences(result.message)), 3)
-        for phrase in ("64점", "26.4℃", "28% 감소", "2018년"):
+        for phrase in ("64점", "26.4℃", "28% 감소", "조피볼락 양식 매뉴얼"):
             self.assertIn(phrase, result.message)
         self.assertEqual(result.mode, "template")
         self.assertEqual(result.dispatch_status, "not_dispatched")
-        self.assertEqual(result.citations[0].id, "high_temp_monitoring")
+        self.assertEqual(result.citations[0].id, "rockfish_high_temp_feed_stop")   # #232 원인별 문구
         self.assertEqual(len(result.citations[0].source_sha256), 64)
         ensure_safe(result.message, ConfigLoader().snapshot())
 
@@ -92,15 +112,49 @@ class NotificationTests(unittest.TestCase):
             self.assertIn("의심", result.message)
 
     def test_source_text_really_contains_every_selected_quote(self):
-        for rule in ("R1", "R2", "R4", "R5", "R7", "R8"):
-            result = NotificationGenerator().generate(context(rule_id=rule))
+        september = datetime(2026, 9, 20, tzinfo=timezone.utc)
+        for rule in ("R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"):
+          for ts in (TS, september):
+            result = NotificationGenerator().generate(context(rule_id=rule, ts=ts))
+            self.assertTrue(result.citations, rule)
             for citation in result.citations:
                 from notify.sources import flattened
                 document = (ROOT / citation.source).read_text()
                 self.assertIn(flattened(citation.quote), flattened(document))
 
+    def test_cause_specific_action_phrases(self):
+        """#232: 원인마다 다른 조치 구절. 수치 지시·약품·병명 단정 없음."""
+        expected = {"R1": "rockfish_high_temp_feed_stop", "R2": "rockfish_oxygen_supply", "R3": "rockfish_oxygen_supply",
+                    "R4": "red_tide_oxygen", "R6": "stress_recovery_oxygen", "R7": "rockfish_feeding_watch",
+                    "R5": "feed_reduction", "R8": "feed_reduction"}
+        snapshot = ConfigLoader().snapshot()
+        for rule, cid in expected.items():
+            result = NotificationGenerator().generate(context(rule_id=rule))
+            self.assertEqual(result.citations[0].id, cid, rule)
+            self.assertLessEqual(len(sentences(result.message)), 3)
+            ensure_safe(result.message, snapshot)
+            for banned in ("20%", "포식량", "황토", "mg/L", "흡충", "연쇄구균"):
+                self.assertNotIn(banned, result.message, rule)
+        self.assertNotIn("2018년", NotificationGenerator().generate(context(rule_id="R7")).message)
+
+    def test_r8_net_cleaning_only_in_september_october_kst(self):
+        def r8(ts):
+            return NotificationGenerator().generate(context(rule_id="R8", ts=ts))
+        for ts, seasonal in ((datetime(2026, 9, 20, tzinfo=timezone.utc), True),
+                             (datetime(2026, 10, 31, 14, 59, tzinfo=timezone.utc), True),
+                             (datetime(2026, 8, 31, 15, tzinfo=timezone.utc), True),    # KST 9월 1일 0시
+                             (datetime(2026, 8, 31, 14, 59, tzinfo=timezone.utc), False),
+                             (datetime(2026, 10, 31, 15, tzinfo=timezone.utc), False),  # KST 11월
+                             (TS, False)):
+            result = r8(ts)
+            self.assertEqual(result.citations[0].id == "rockfish_gill_fluke_net", seasonal, ts)
+            self.assertEqual("가두리망을 청소" in result.message, seasonal, ts)
+            self.assertIn("의심", result.message)
+        self.assertNotIn("가두리망", NotificationGenerator().generate(
+            context(rule_id="R5", ts=datetime(2026, 9, 20, tzinfo=timezone.utc))).message)   # R5에는 안 나감
+
     def test_missing_reviewed_rule_guidance_omits_advice(self):
-        for rule in (None, "R3", "R6"):
+        for rule in (None,):
             result = NotificationGenerator().generate(context(rule_id=rule))
             self.assertEqual(result.citations, ())
             self.assertEqual(len(sentences(result.message)), 2)
@@ -109,7 +163,7 @@ class NotificationTests(unittest.TestCase):
     def test_warming_up_never_invents_score_or_cause(self):
         result = NotificationGenerator().generate(context(baseline_status="warming_up", stress_score=None,
                                                          level=None, rule_id=None))
-        self.assertIn("학습 중", result.message)
+        self.assertIn("익히는 중", result.message)
         self.assertNotIn("0점", result.message)
         self.assertEqual(len(sentences(result.message)), 2)
 
@@ -126,7 +180,7 @@ class NotificationTests(unittest.TestCase):
         self.assertIsNone(result.fallback_reason)
 
     def test_activity_increase_decrease_and_observed_zero_are_distinct(self):
-        for value, phrase in ((-.4, "40% 감소"), (.2, "20% 증가"), (0., "변화 없음")):
+        for value, phrase in ((-.4, "40% 감소"), (.2, "20% 증가"), (0., "평소와 같음")):
             result = NotificationGenerator().generate(context(evidence={"activity_change": value}))
             self.assertIn(phrase, result.message)
 

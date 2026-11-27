@@ -8,7 +8,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from common.config_loader import ConfigError, ConfigLoader
-from decision.actions import ACTIONS
+from decision.actions import ACTIONS, canonical_action
 from decision.first_aid import UnsafeFirstAid, ensure_safe
 from .models import Contract, NotificationContext, NotificationResult
 from .sources import ROOT, load_policy, retrieve
@@ -37,8 +37,8 @@ def sentences(message):
 
 def facts(context, recommendation_summary=None):
     if context.baseline_status == "warming_up":
-        return [f"가두리 {context.cage_id}번은 기준선을 학습 중입니다",
-                "아직 스트레스 지수와 의심 원인을 판단할 수 없습니다"]
+        return [f"가두리 {context.cage_id}번은 아직 평소 상태를 익히는 중입니다",
+                "그래서 지금은 스트레스 정도와 의심 원인을 알려 드릴 수 없습니다"]
     first = f"가두리 {context.cage_id}번은 '{context.level}' 단계입니다"
     if context.rule_id:
         first = f"가두리 {context.cage_id}번은 '{context.level}' 단계이며 의심 원인은 {CAUSE_NAMES[context.rule_id]}입니다"
@@ -46,24 +46,27 @@ def facts(context, recommendation_summary=None):
     values = context.evidence
     if values.temp_surface is not None:
         evidence.append(f"표층 수온 {number(values.temp_surface)}℃")
-    if values.activity_change is not None:
+    if context.rule_id == "R7" and values.feeding_change is not None:
+        evidence.append(change_fact("먹이 반응", values.feeding_change))   # R7의 핵심 근거 (#232)
+    elif values.activity_change is not None:
         evidence.append(change_fact("활동량", values.activity_change))
     elif values.lower_layers_ratio_x is not None:
-        evidence.append(f"중·저층 비율 기준선의 {number(values.lower_layers_ratio_x)}배")
+        evidence.append(f"아래쪽(중·저층)에 모인 물고기 평소의 {number(values.lower_layers_ratio_x)}배")
     elif values.feeding_change is not None:
-        evidence.append(change_fact("섭식량", values.feeding_change))
-    second = "현재 근거는 " + ", ".join(evidence) + "입니다"
+        evidence.append(change_fact("먹이 반응", values.feeding_change))
+    second = "근거는 " + ", ".join(evidence) + "입니다"
     if recommendation_summary:
         second += "; " + recommendation_summary
     return [first, second]
 
 
 def change_fact(label, value):
+    # #232: '기준선 대비' 대신 '평소보다'. 숫자는 계산값 그대로.
     if value == 0:
-        return f"{label} 기준선 대비 변화 없음"
+        return f"{label} 평소와 같음"
     percent = abs(Decimal(str(value))) * 100
     direction = "감소" if value < 0 else "증가"
-    return f"{label} 기준선 대비 {number(percent)}% {direction}"
+    return f"{label} 평소보다 {number(percent)}% {direction}"
 
 
 def recommendation_fact(context, recommendation, revision):
@@ -82,21 +85,28 @@ def recommendation_fact(context, recommendation, revision):
         return None  # No economic ranking or diagnosis-dispatch claim for disease-related results.
     if recommendation.get("mode") != "loss_comparison" or context.rule_id in ("R5", "R8"):
         raise ValueError("unsupported recommendation mode")
-    option_id = recommendation.get("lowest_loss_option")
     options = recommendation.get("options")
     if not isinstance(options, list) or any(not isinstance(o, dict) for o in options):
         raise ValueError("recommendation options must be an array")
+    if context.rule_id == "R7" or recommendation.get("recommendation_basis") == "R7_feeding_management":
+        # #232: R7은 손해 최소가 아니라 급이 관리 권고다 (pipeline/analysis.py와 같은 규칙). 감량률 수치는 쓰지 않는다.
+        managed = canonical_action(ConfigLoader().snapshot()["cause_rules"]["rules"]["R7"]["first_action"][0])
+        if any(o.get("id") == managed and o.get("available") is True for o in options):
+            # 문서 담당 제안(#152): 23℃대는 '중단'이 아니라 '줄이세요'
+            return "평소 관리로 사료 양을 줄이세요" if managed == "reduce_feed" else f"평소 관리로 {ACTIONS[managed][1]}을 권합니다"
+        return "지금 바로 권할 수 있는 사료 관리 방법이 계산되지 않았습니다"
+    option_id = recommendation.get("lowest_loss_option")
     if option_id is None:
         if any(option.get("available") is True for option in options):
             raise ValueError("available options require a selected lowest-loss option")
-        return "현재 계산에서 실행 가능한 손익 비교 선택지가 없습니다"
+        return "지금 바로 할 수 있는 대응 방법이 계산되지 않았습니다"
     selected = [o for o in options if o.get("id") == option_id]
     if not isinstance(option_id, str) or option_id not in ACTIONS or len(selected) != 1 or selected[0].get("available") is not True:
         raise ValueError("selected recommendation must be a known, available option")
     amount = selected[0].get("estimated_loss_krw")
     if type(amount) is not int:
         raise ValueError("selected option requires the calculator's integer KRW loss")
-    return f"가정값을 포함한 손익 비교상 최소 손실 선택지는 {ACTIONS[option_id][1]}이며 예상 손실은 {amount:,}원입니다"
+    return f"손해가 가장 적은 방법은 {ACTIONS[option_id][1]}이며 예상 손해는 약 {amount:,}원입니다(추정)"
 
 
 def duplicate_key_guard(pairs):
@@ -122,7 +132,7 @@ class NotificationGenerator:
         # Common config errors propagate. A missing reviewed passage suppresses advice, not facts.
         guidance_error = False
         try:
-            citations = retrieve(context.rule_id, policy, snapshot, self.source_root)
+            citations = retrieve(context.rule_id, policy, snapshot, self.source_root, context.ts)
         except (ConfigError, UnsafeFirstAid, OSError, UnicodeError):
             citations, guidance_error = (), True
         base = ". ".join(facts(context, summary)) + "."
