@@ -1,10 +1,4 @@
-:root { font-family: system-ui, 'Noto Sans KR', sans-serif; color: #1b2733; }
 body { margin: 0; background: #f4f7fa; }
-.topbar { display: flex; gap: 24px; align-items: center; padding: 12px 20px; background: #13243b; color: #fff; }
-.topbar nav { display: flex; gap: 16px; }
-.topbar a { color: #9fb4cc; text-decoration: none; }
-.topbar a.active { color: #fff; font-weight: 600; }
-main { max-width: 960px; margin: 0 auto; padding: 20px; }
 table { width: 100%; border-collapse: collapse; background: #fff; }
 th, td { padding: 8px 12px; border-bottom: 1px solid #e1e8ef; text-align: left; }
 .disabled { color: #8a97a5; }
@@ -57,10 +51,6 @@ summary { cursor: pointer; padding: 8px 0; font-size: 16px; color: #2f6fdc; }
 .toast-actions a { color: #2f6fdc; font-weight: 600; }
 .toast-actions button { margin-left: auto; border: 0; background: none; color: #6b7785; cursor: pointer; font-size: 16px; }
 
-/* 좁은 화면에서 상단 메뉴가 깨지지 않게 */
-.topbar { flex-wrap: wrap; gap: 8px 24px; }
-.topbar nav { flex-wrap: wrap; gap: 4px 16px; }
-.topbar a, .topbar strong { white-space: nowrap; }
 /* 지자체 대시보드 */
 .dash { display: flex; flex-direction: column; gap: 14px; }
 .dash h1 { margin: 0; font-size: 24px; }
@@ -97,13 +87,6 @@ table.areas tr.selected { background: #f1f7ff; }
 .steps { padding-left: 22px; margin: 8px 0; }
 .steps li { padding: 4px 0; }
 
-/* 시연 조작줄 */
-.demobar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 20px; background: #1d3556; color: #fff; font-size: 15px; position: sticky; top: 0; z-index: 5; }
-.demobar label { display: flex; align-items: center; gap: 8px; }
-.demobar select { font-size: 15px; padding: 4px 6px; border-radius: 6px; }
-.demobar button { width: 36px; height: 32px; border: 0; border-radius: 6px; background: #fff; color: #13243b; font-size: 14px; cursor: pointer; }
-.demobar input[type=range] { flex: 1 1 160px; min-width: 120px; }
-.demotime { min-width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* 재고 입력 폼 */
 .stock fieldset { border: 0; margin: 0; }
@@ -118,7 +101,6 @@ table.areas tr.selected { background: #f1f7ff; }
 .stock .primary { margin-top: 4px; }
 .stock legend { float: left; width: 100%; margin-bottom: 4px; }
 .stock legend + * { clear: both; }
-.demotime { white-space: nowrap; }
 
 /* 방류 수요 패널 */
 .demand { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
