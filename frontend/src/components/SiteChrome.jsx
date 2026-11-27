@@ -1,4 +1,5 @@
 import { Link, NavLink, useLocation } from 'react-router-dom';
+import { SITE_NAME } from '../constants.js';
 
 const FARMER_PATHS = ['/farmer', '/stock', '/notifications'];
 
@@ -20,7 +21,7 @@ export function SiteHeader() {
       <div className="site-header-inner">
         <Link to="/" className="wordmark">
           <Logo />
-          <span>조피볼락 스트레스 조기경보</span>
+          <span>{SITE_NAME}</span>
         </Link>
         <nav aria-label="주 메뉴">
           <NavLink to="/" end>서비스 소개</NavLink>
@@ -36,7 +37,7 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
-        <p className="footer-title">조피볼락 스트레스 조기경보</p>
+        <p className="footer-title">{SITE_NAME}</p>
         <p>해커톤 시연용 화면입니다. 화면의 모든 수치는 시뮬레이션 데이터입니다.</p>
         <p>의심 원인은 추정이며 확정 진단이 아닙니다. 질병이 의심되면 수산질병관리사에게 진단을 요청해 주세요.</p>
         <nav aria-label="바로가기">
