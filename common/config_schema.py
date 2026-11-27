@@ -162,6 +162,7 @@ class R8Behavior(ConfigModel):
     rubbing_rate_x_min: Annotated[float, Field(ge=1)]
     sustained_hours_min: Positive
     missing_observation: Literal["pause"]
+    max_pause_hours: Positive
 
 
 class R7Behavior(ConfigModel):

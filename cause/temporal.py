@@ -63,20 +63,27 @@ class TemporalRules:
                     and means[-1] is not None and means[-1] >= thresholds["cause_min_stress"]
                     and all(a is not None and b is not None and b - a >= rules["R5"]["behavior"]["min_daily_increase"]
                             for a, b in zip(means, means[1:])))
-        duration, began = self.rubbing.get(cage, (timedelta(), None))
+        duration, began, paused = self.rubbing.get(cage, (timedelta(), None, timedelta()))
         gap = cage in self.last and ts - self.last[cage] != cycle
         if not eligible or gap:
-            duration, began = timedelta(), None
+            duration, began, paused = timedelta(), None, timedelta()
         observed = (eligible and quality is not None and quality >= thresholds["quality"]["rubbing_min"]
                     and rubbing is not None)
         if observed:
+            paused = timedelta()
             if rubbing >= rules["R8"]["behavior"]["rubbing_rate_x_min"]:
                 if began is None:
                     began = ts - cycle
                 duration += cycle
             else:
                 duration, began = timedelta(), None
-        self.rubbing[cage] = duration, began
+        elif eligible and began is not None:
+            # Count only unobserved cycle intervals. A resumed valid observation
+            # is not another paused interval; exactly max_pause_hours is allowed.
+            paused += cycle
+            if paused > timedelta(hours=rules["R8"]["behavior"]["max_pause_hours"]):
+                duration, began, paused = timedelta(), None, timedelta()
+        self.rubbing[cage] = duration, began, paused
         self.last[cage] = ts
         return {"R5": bool(eligible and trend_ok),
                 "R8": bool(observed and duration >= timedelta(hours=rules["R8"]["behavior"]["sustained_hours_min"])),
@@ -84,6 +91,7 @@ class TemporalRules:
                             "last_daily_mean_min": thresholds["cause_min_stress"],
                             "trend_window_complete": complete, "rubbing_observed_hours": duration.total_seconds() / 3600,
                             "rubbing_window_start": None if began is None else began.isoformat(),
+                            "rubbing_pause_hours": paused.total_seconds() / 3600,
                             "rubbing_current_observed": observed}}
 
 
