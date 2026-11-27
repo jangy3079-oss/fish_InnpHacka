@@ -8,10 +8,13 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 
 from fusion.fuse import fuse, load_jsonl
+from cause import CauseEngine
+from cause.store import save_jsonl as save_causes
+from common.config_loader import ConfigLoader
 from pipeline import export
 from simulator.generate import DEFAULT, generate
 from simulator.scenario import load_scenario
-from stress.levels import apply_levels, refuge_loss_signal
+from stress.levels import apply_levels
 from stress.model import StressModel
 from stress.store import save_jsonl
 
@@ -29,15 +32,19 @@ def score_scenario(name: str, out_dir: Path, model: StressModel) -> dict:
     d = out_dir / name
     fused = [f for f in fuse(load_jsonl(d / "metrics.jsonl")) if f.cage_id == model.cage_id]
     scores = model.score_series(fused)
-    changes = apply_levels(scores, refuge_loss_signal(scores, fused))
+    snapshot_loader = ConfigLoader()
+    results = CauseEngine(snapshot_loader).evaluate_series(scores, fused)
+    changes = apply_levels(scores, [r.immediate_danger for r in results],
+                           cfg=snapshot_loader.last_good.to_dict()["thresholds"])
     labels = json.loads((d / "labels.json").read_text(encoding="utf-8"))
     sc = load_scenario(name)
     start = export._parse(labels["start"])
-    status = export.status_rows(scores, fused, start)
+    status = export.status_rows(scores, fused, start, results)
     series = export.hourly_timeseries(fused, scores)
     meta = export.meta(labels, changes, scores, model.model_version, sc.cycle_minutes)
     export.write(d / "api", status, series, meta)
     save_jsonl(scores, d / "stress_score.jsonl")
+    save_causes(results, d / "cause_estimate.jsonl")
     return {"scenario": name, "cycles": len(status), "max_level": meta["max_level"],
             "level_changes": len(meta["level_changes"]), "lead_time_h": meta["lead_time_h"]}
 
