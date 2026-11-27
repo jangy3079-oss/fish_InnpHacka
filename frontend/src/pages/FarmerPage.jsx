@@ -95,7 +95,16 @@ export default function FarmerPage() {
 
   const isProfit = rec.kind !== 'none' && rec.kind !== 'first_aid';
 
-  // 넓은 화면에서는 왼쪽에 지금 상태와 조치, 오른쪽에 판단 근거를 둔다.
+  // 넓은 화면에서는 왼쪽에 지금 상태, 오른쪽에 판단 근거를 둔다.
+  // 조치 카드(1차 조치, 추천)는 길어서, 고수온·태풍 외 시나리오에서는 오른쪽 맨 위로 보내 왼쪽이 길어지지 않게 한다.
+  const keyCard =
+    rec.kind === 'first_aid' ? (
+      <FirstAidCard key={rec.ts} rec={rec} rule={status.cause?.[0]?.rule_id} />
+    ) : isProfit ? (
+      <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />
+    ) : null;
+  const moveRight = demo.scenario !== 'heatwave_typhoon';
+
   return (
     <div className="farmer-page">
       <FarmerTabs />
@@ -106,12 +115,12 @@ export default function FarmerPage() {
           {rec.kind === 'none' && (
             <section className="card key"><h2>지금 추천하는 조치</h2><p>지금은 따로 할 조치가 없습니다.</p></section>
           )}
-          {rec.kind === 'first_aid' && <FirstAidCard key={rec.ts} rec={rec} rule={status.cause?.[0]?.rule_id} />}
-          {isProfit && <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />}
+          {!moveRight && keyCard}
           <CauseList causes={status.cause ?? []} status={status} />
           <EvidenceSummary evidence={status.evidence} />
         </div>
         <div className="farmer">
+          {moveRight && keyCard}
           {isProfit && <ProfitCompare rec={rec} />}
           <EvidenceCharts cageId={CAGE_ID} alertAt={isAlert(status) ? status.ts : undefined} />
         </div>
