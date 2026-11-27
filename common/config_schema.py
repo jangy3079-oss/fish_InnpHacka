@@ -239,6 +239,7 @@ class LossOption(ConfigModel):
 
 class Insurance(ConfigModel):
     payout_rate: Ratio
+    eligible_options: list[Text]
 
 
 class Costs(ConfigModel):
@@ -255,6 +256,8 @@ class Costs(ConfigModel):
             raise ValueError("mortality rates require all four levels")
         if not self.option_loss or set(self.option_loss) != set(self.action_cost_krw):
             raise ValueError("option_loss and action_cost_krw must define the same options")
+        if len(set(self.insurance.eligible_options)) != len(self.insurance.eligible_options) or not set(self.insurance.eligible_options) <= set(self.option_loss):
+            raise ValueError("insurance options must be unique configured actions")
         return self
 
 

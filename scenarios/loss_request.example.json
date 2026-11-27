@@ -1,0 +1,14 @@
+{
+  "cage_id": "3",
+  "farm_id": "1",
+  "sea_area_id": "1",
+  "species": "조피볼락",
+  "level": "danger",
+  "primary_rule_id": "R2",
+  "stock": [
+    {"size_group": "mid", "count": 1000, "avg_weight_kg": "0.3", "insured": false}
+  ],
+  "other_area_release_count": 0,
+  "insurance_confirmed": false,
+  "release_support_confirmed": false
+}

@@ -39,6 +39,8 @@ option_loss:
   net_depth_adjust: {mortality_factor: 0.6}
   overwinter_move: {mortality_factor: 0.5}
   feed_stop: {mortality_factor: 0.9}
+  feed_reduction: {mortality_factor: 0.95} # [가정, #27] 사료 감량. 중단과 별도 선택지
+  density_control: {mortality_factor: 0.65} # [가정, #27] 밀도 조절 효과, 실증 전
 
 # C(a): 조치 비용 (원) [가정·임시]
 action_cost_krw:
@@ -49,8 +51,13 @@ action_cost_krw:
   early_harvest: 400000         # 출하 운송·작업비
   release: 200000               # 방류 신청·운송
   feed_stop: 0
+  feed_reduction: 0            # [가정, #27]
+  density_control: 500000      # [가정·임시, #27] 작업/이동 비용
 
 # 보험금 (S(a)의 일부). [확인] 가입 여부는 어가 입력(FR-ADM-03)을 따른다.
 # 0 은 "아직 반영하지 않음"이다.
 insurance:
   payout_rate: 0.0
+  # [가정, #27] 가입 재고의 예상 폐사 손실에만 적용. 출하 할인/방류 포기는 제외.
+  # 실제 보상 적용 확인(입력 insurance_confirmed) 없이는 차감하지 않는다.
+  eligible_options: [keep, feed_stop, feed_reduction, oxygen_boost, density_control, net_depth_adjust, overwinter_move]
