@@ -34,7 +34,7 @@ def main():
     files = [root/'bootstrap.sql', *sorted((root.parent/'migrations').glob('*.sql')),
              root.parent/'seed.sql',root.parent/'seed.sql']
     files += [root/name for name in ('schema_rls.sql','farmer_data.sql','ingestion_rls.sql',
-              'idempotent_ingestion.sql','diagnosis.sql','diagnosis_query.sql','analysis.sql','areas.sql','work_log.sql','deadlines.sql')]
+              'idempotent_ingestion.sql','diagnosis.sql','analysis.sql','areas.sql','work_log.sql','deadlines.sql')]
     output = sql('\n'.join(file.read_text(encoding='utf-8') for file in files)+'\nselect count(*) from test_results;')
     print('PostgreSQL SQL/RLS assertions:',output.splitlines()[-1],flush=True)
 

@@ -54,7 +54,6 @@ diagnosis_policy: # [가정, #28] 조회/저장 범위와 오래된 결과 제�
   lookback_hours: 72
   max_points: 1000
   max_cause_age_minutes: 60
-  min_request_interval_minutes: 60 # [가정, #203] 같은 소유자/가두리의 새 접수 간격, 같은 키 재시도는 제외
 
 # 알림에서 막을 약품 사전 (VC-08: 약품명·투약량 0건)
 # 생성 문장에 아래 단어가 하나라도 있으면 그 문장을 버리고 템플릿 문장으로 보낸다.

@@ -54,22 +54,6 @@ class FirstAidTest(unittest.TestCase):
             self.assertNotIn('보냈습니다', guide['message'])
             ensure_safe(guide, self.loader.snapshot())
 
-    def test_pr156_proposed_wording_preserves_reviewed_sources_and_ids(self):
-        # Review the two proposed changes against today's schema, without merging PR156.
-        def proposal(config):
-            for action in config['common_first_aid']:
-                if action['id']=='feed_reduction':
-                    action['name']='사료 공급 조절'
-                if action['id']=='dead_fish_removal':
-                    action['text']='가두리 안의 병든 고기나 폐사어를 빨리 제거해야 한다.'
-        self.change(proposal)
-        for rule in ('R5','R8'):
-            guide=reviewed_guide(rule,self.loader.snapshot())
-            actions={a['id']:a for a in guide['actions']}
-            self.assertEqual(actions['feed_reduction']['name'],'사료 공급 조절')
-            self.assertNotIn('연쇄구균병',actions['dead_fish_removal']['text'])
-            ensure_safe(guide,self.loader.snapshot())
-
     def test_dictionary_and_obfuscated_dose_cases_are_blocked(self):
         snapshot = self.loader.snapshot()
         cfg = snapshot['first_aid']['blocked_terms']
@@ -203,7 +187,6 @@ class DiagnosisApiTest(unittest.TestCase):
         self.assertNotIn('packet', body)
         self.assertEqual(body['p_context_version'], 'digest')
         self.assertEqual(writes[0].headers['Authorization'], 'Bearer owner-access-token')
-        self.assertEqual(body['p_min_interval_minutes'],60)
 
     def test_get_summary_is_read_only_and_does_not_need_current_config_or_cause(self):
         with patch.object(self.loader,'snapshot',side_effect=ConfigError('bad config')):

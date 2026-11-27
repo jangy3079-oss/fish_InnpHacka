@@ -1,9 +1,8 @@
-# 진단 접수 조회·중복 억제 (#203)
+# 진단 접수 조회 (#203)
 
-## GET /cages/{id}/diagnosis-request
-
-현재 소유자 본인이 생성한 최신 접수 하나를 반환한다. `?request_key=<UUID>`로 특정 접수를 조회할 수 있다.
-없는 접수는404 `diagnosis_request_not_found`, 접근 불가 가두리는404 `cage_not_found`, 소유자 아닌 RPC 접근은403이다.
+`GET /cages/{id}/diagnosis-request`는 현재 소유자 본인이 만든 최신 접수 요약을 반환한다.
+`?request_key=<UUID>`로 특정 접수를 찾을 수 있다. 없는 접수는404 `diagnosis_request_not_found`,
+접근 불가 가두리는404 `cage_not_found`, 소유자 아닌 RPC 접근은403이다.
 
 ```json
 {"persisted":true,"id":10,"cage_id":3,"request_key":"11111111-1111-4111-8111-111111111111",
@@ -11,59 +10,33 @@
  "created_at":"2026-11-28T00:00:00Z","observed_at":"2026-11-27T23:55:00Z"}
 ```
 
-HTTP200, database/private,no-store/Vary:Authorization. created_at desc/id desc로 최신을 정한다.
-packet·그래프·creator_id·자유 문구는 반환하지 않는다. 현재 원인 변경/만료·YAML 오류와 무관하게
-저장된 요약을 읽으며 생성·전달·DB 갱신·quota 소비를 하지 않는다. 소유권 이전 시 다른 생성자의 접수를 노출하지 않는다.
-공개 stable security-invoker RPC가 소유자 검사 private 함수를 호출한다. 사용자 Bearer를 유지하고 service_role로 우회하지 않는다.
+조회는 생성·수정·외부 전송 없이 저장된 결과와 시각만 읽는다. packet·그래프·생성자 원문은 반환하지 않는다.
+현재 원인/설정이 바뀌어도 과거 접수 요약을 읽을 수 있으며, 문구를 재생성하지 않는다.
+사용자 Bearer·소유권 검사, private/no-store/Vary:Authorization을 유지한다.
 
-## 생성·재시도·간격
+## 접수 규칙
 
-기존 POST는 request_key UUID만 받으며201/pending/dispatch_status=pending이다. 외부 전달은 비활성이다.
-동일 사용자/UUID는 원래 snapshot을 반환한다. 현재 원인 변경/만료·간격은 재시도를 막지 않는다.
-새 UUID라도 같은 생성자·가두리·primary_cause_id가 이미 접수됐으면409 `data_conflict`다.
-과거 중복 행을 삭제/통합하지 않고 새 생성만 억제한다.
+- 같은 UUID 재시도는 원래 접수를 반환한다. 현재 원인 소멸도 기존 접수 재조회/재시도를 막지 않는다.
+- **같은 소유자·가두리·관측 회차에는 한 번만 접수한다.** UUID를 바꾸거나 같은 회차의 R5/R8을 바꿔도409다.
+- 다른 관측 회차는 최신 원인·유효기간·revision 검증을 통과하면 접수할 수 있다. 임의의60분 대기 제한은 없다.
+- 게시 분석이 있는 가두리는 최신 회차/ready/R5·R8/유효기간/revision을 확인한다. 원인이 사라진 뒤 과거 cause 행으로 새 접수를 만들지 않는다.
+- 게시 분석 없는 #28 원시 입력 경로는 기존 검증을 유지한다. 잠금 뒤 중복을 검사하므로 동시 접수도 한 건만 저장한다.
+- POST의 기존 UUID 본문과 생성 RPC 인자는 바꾸지 않는다. 새 YAML 키도 추가하지 않는다.
 
-다른 원인의 새 접수도 같은 소유자/가두리의 최근 접수와 간격을 검사한다.
-API는 `first_aid.diagnosis_policy.min_request_interval_minutes`(60분 MVP 가정)를 RPC에 전달한다.
-RPC가 허용하는 정책 인자 범위는1~1440분이다. 따라서60분은 현재 API 설정 기준이며,
-직접 RPC까지 보호된 전역 DB 설정으로 고정된 값이라고 주장하지 않는다.
-직접 RPC에도 동일 정책 강제가 필요하면 신뢰된 정책 저장/권한 경로를 후속으로 확정한다.
-정확히 간격이 지난 다른 원인은 허용하지만 같은 원인의 새 UUID는 계속 거부한다.
-가두리/어가 잠금 뒤 키·이벤트·최근 접수를 검사하고 기존 context version·R5/R8 검증을 거쳐 저장한다.
-게시 분석이 있는 가두리는 최신 회차와 원인 시각 일치·ready·R5/R8·유효기간·현재 revision도 확인한다.
-최신 분석에서 원인이 사라진 뒤 남아 있는 과거 cause 행으로 새 접수를 만들지 않는다. 게시 분석이 없는 #28 원시 입력 경로는 기존 검증을 유지한다.
-동시 같은 UUID는 같은 행, 다른 UUID의 중복/간격 내 접수는 하나만 저장한다.
-409 뒤에는 조회/현재 관측 재확인과 사용자 확인을 거치며 자동으로 새 UUID·다른 원인을 전송하지 않는다.
+화면 진입에는 GET만 호출한다. 조회 실패에는 신규 접수를 막고, 현재 회차 접수와 과거 이력을 구분한다.
+사용자 클릭에서만 POST하며 응답 유실 때 같은 UUID를 유지한다. 시연에서는 실제 접수 API를 호출하지 않는다.
+`pending`은 접수·전달 대기이며 외부 전달은 수행하지 않는다.
 
-## 화면·보관·문구
-
-FirstAidCard 진입에는 GET만 호출한다. 조회 실패에는 신규 접수를 막고 인증/권한 확인을 안내한다.
-현재 추천과 같은 observed_at 접수는 접수 상태, 다른 시각은 최근 이력으로 표시한다.
-사용자 클릭만 POST하며 기존 sessionStorage UUID 재시도를 유지한다. 시연에서는 GET/POST를 하지 않는다.
-화면 변경 시 늦은 응답을 무시한다. 실제 Supabase 세션/Bearer 연결은 #200/#207이며 시연 로그인이 이를 대체하지 않는다.
-
-onset/censored·source/confidence·잘림·official 필터는 유지한다.
-PR #156의 두 문구 수정안을 임시 설정에서 스키마·출처·금칙어 검증으로 검토했고, 이후 main에 병합된 문구도 반영했다.
-이 작업에서 별도로 PR #156을 병합하지 않았다. source snapshot/config_revision은 유지하지만 당시 rendered 문구/archive는 저장하지 않는다.
-완전한 당시 문구 재현·보관/삭제·수신기관·dispatcher는 #207 및 운영 후속이다.
-
-## 배포·검증
-
-YAML 필수 키·API·migration20261128000200을 함께 배포한다. 생성 RPC에 p_min_interval_minutes가 추가되고
-옛 생성 서명의 authenticated 실행은 회수되므로 배포 중 구 API POST를 중지한다. RPC cache/실제 소유자·권한 회수는 원격에서 확인한다.
+기존 API/YAML과 호환되는 migration20261128000200을 적용하면 된다. 실환경 인증 연결은 기존 #200/#207 범위다.
 #34·#35·#45 구현은 변경하지 않는다.
 
+## 변경 범위 검증
+
 ```sh
-python -m unittest tests.test_diagnosis -q
-python -m unittest discover -s tests -q
+python -m unittest tests.test_diagnosis tests.test_api -q
 npm test --prefix supabase/tests
-npm run build --prefix frontend
 node --test frontend/tests/diagnosis-client.test.mjs
-docker run --name fish203-pg -e POSTGRES_HOST_AUTH_METHOD=trust -d postgres:17-alpine
-python supabase/tests/diagnosis_concurrency.py --container fish203-pg
-docker rm -f fish203-pg
 ```
 
-동시성 도구는 새 일회용 DB 전용이다. 실제 Lock 대기 뒤 첫 세션을 commit하여 같은 UUID 재시도·새 UUID 중복·다른 이벤트 간격을 검사한다.
-SQL은 조회 부작용·권한·정확한 간격 경계·stale context·불변 snapshot을 검증한다.
-프론트는 production build 확인이며 브라우저 E2E/실제 로그인·hosted Auth/PostgREST·원격 배포를 완료했다고 보지 않는다.
+별도 Docker 검증은 `diagnosis_concurrency.py`의 동일 관측 동시 접수1건만 실행한다.
+전체 모델 재학습·기존 수집 경합·이미 병합된 문구 수정안의 재적용 테스트는 이 작업에서 반복하지 않는다.

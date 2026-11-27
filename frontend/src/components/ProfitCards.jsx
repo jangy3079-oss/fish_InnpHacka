@@ -183,7 +183,7 @@ export function FirstAidCard({ rec, rule }) {
       if (started !== generation.current) return;
       setError(
         e.status === 409
-          ? '이미 접수되었거나 최신 관측·접수 간격을 확인해야 합니다. 상태를 다시 확인해 주세요.'
+          ? '이미 접수되었거나 최신 관측을 확인해야 합니다. 상태를 다시 확인해 주세요.'
           : e.status === 403
             ? '이 가두리의 소유자만 요청할 수 있습니다.'
             : e.status === 422 || e.status === 503

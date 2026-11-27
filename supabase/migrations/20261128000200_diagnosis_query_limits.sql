@@ -3,7 +3,7 @@ create index diagnosis_event_idx on private.diagnosis_request(creator_id,cage_id
 create index diagnosis_recent_idx on private.diagnosis_request(creator_id,cage_id,created_at desc,id desc);
 
 -- Historical duplicates are retained. All new writes go through the locked guard.
--- Keep the old implementation private, but revoke the old callable signatures.
+-- Keep the commit helper private; retain the existing public signature with a guard.
 alter function private.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision)
   rename to commit_diagnosis_request;
 revoke all on function private.commit_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision),
@@ -11,7 +11,7 @@ revoke all on function private.commit_diagnosis_request(bigint,uuid,text,bigint,
 
 create function private.create_diagnosis_request(p_cage_id bigint,p_request_key uuid,p_context_version text,
   p_primary_cause_id bigint,p_config_revision text,p_lookback_hours double precision,p_max_points integer,
-  p_max_age_minutes double precision,p_min_interval_minutes integer) returns jsonb
+  p_max_age_minutes double precision) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare latest private.analysis_run; cause_time timestamptz;
 begin
@@ -19,15 +19,12 @@ begin
   perform 1 from public.cage c join public.farm f on f.id=c.farm_id
     where c.id=p_cage_id and f.owner_user_id=auth.uid() for update of c,f;
   if not found then raise insufficient_privilege using message='Owner access required'; end if;
-  if p_min_interval_minutes is null or p_min_interval_minutes not between 1 and 1440 then
-    raise invalid_parameter_value using message='Invalid diagnosis interval';
-  end if;
-  -- A retry must not consume quota or become invalid when the current cause changes.
+  -- Retries keep their original snapshot even when the current cause changes.
   if not exists(select 1 from private.diagnosis_request where creator_id=auth.uid() and request_key=p_request_key) then
+    select ts into cause_time from public.cause_estimate where id=p_primary_cause_id and cage_id=p_cage_id;
     -- Once published analyses exist, a past cause row is not a current diagnosis.
     select * into latest from private.analysis_run where cage_id=p_cage_id order by ts desc limit 1;
     if found then
-      select ts into cause_time from public.cause_estimate where id=p_primary_cause_id and cage_id=p_cage_id;
       if cause_time is distinct from latest.ts or latest.status->>'data_status' is distinct from 'ready'
         or latest.valid_until<now() or latest.config_revision is distinct from p_config_revision
         or not exists(select 1 from jsonb_array_elements(coalesce(latest.status->'cause','[]'::jsonb)) c
@@ -36,25 +33,25 @@ begin
       end if;
     end if;
     if exists(select 1 from private.diagnosis_request where creator_id=auth.uid() and cage_id=p_cage_id
-        and (primary_cause_id=p_primary_cause_id or created_at>now()-make_interval(mins=>p_min_interval_minutes))) then
-      raise serialization_failure using message='Diagnosis already requested or interval not elapsed';
+        and (primary_cause_id=p_primary_cause_id or (snapshot->>'cause_ts')::timestamptz=cause_time)) then
+      raise serialization_failure using message='Diagnosis already requested for this observation';
     end if;
   end if;
   return private.commit_diagnosis_request(p_cage_id,p_request_key,p_context_version,p_primary_cause_id,
     p_config_revision,p_lookback_hours,p_max_points,p_max_age_minutes);
 end;
 $$;
-create function public.create_diagnosis_request(p_cage_id bigint,p_request_key uuid,p_context_version text,
+create or replace function public.create_diagnosis_request(p_cage_id bigint,p_request_key uuid,p_context_version text,
   p_primary_cause_id bigint,p_config_revision text,p_lookback_hours double precision,p_max_points integer,
-  p_max_age_minutes double precision,p_min_interval_minutes integer) returns jsonb
+  p_max_age_minutes double precision) returns jsonb
 language sql security invoker set search_path='' as $$
   select private.create_diagnosis_request(p_cage_id,p_request_key,p_context_version,p_primary_cause_id,
-    p_config_revision,p_lookback_hours,p_max_points,p_max_age_minutes,p_min_interval_minutes);
+    p_config_revision,p_lookback_hours,p_max_points,p_max_age_minutes);
 $$;
-revoke all on function private.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision,integer),
-  public.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision,integer) from public,anon,authenticated;
-grant execute on function private.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision,integer),
-  public.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision,integer) to authenticated;
+revoke all on function private.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision),
+  public.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision) from public,anon,authenticated;
+grant execute on function private.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision),
+  public.create_diagnosis_request(bigint,uuid,text,bigint,text,double precision,integer,double precision) to authenticated;
 
 create function private.read_diagnosis_request(p_cage_id bigint,p_request_key uuid) returns jsonb
 language plpgsql stable security definer set search_path='' as $$

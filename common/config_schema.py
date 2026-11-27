@@ -370,7 +370,6 @@ class FirstAidAction(ConfigModel):
 
 
 class DiagnosisPolicy(ConfigModel):
-    min_request_interval_minutes: Annotated[int, Field(ge=1, le=1440)]
     lookback_hours: Annotated[float, Field(gt=0, le=168)]
     max_points: Annotated[int, Field(gt=0, le=1000)]
     max_cause_age_minutes: Annotated[float, Field(gt=0, le=1440)]

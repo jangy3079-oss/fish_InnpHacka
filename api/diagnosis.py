@@ -128,7 +128,7 @@ def create_request(store, cage_id, request, loader):
         if not data.get("persisted"):
             data = store.request("POST", "/rest/v1/rpc/create_diagnosis_request", json={**params,
                 "p_context_version": data["context_version"], "p_primary_cause_id": packet["primary_cause_id"],
-                "p_config_revision": snapshot.revision, "p_min_interval_minutes": policy['min_request_interval_minutes']})
+                "p_config_revision": snapshot.revision})
         if data.get("persisted") is not True or data.get("cage_id") != cage_id or data.get("request_key") != str(request.request_key):
             raise ValueError("Invalid receipt scope")
         # Construct from the committed snapshot (including idempotent replays), never a client packet.
