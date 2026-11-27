@@ -83,6 +83,7 @@ const qs = (params) => {
 export const api = {
   // 시연 입력이 바뀔 때 바로 요청하지 않고 잠시 기다린다(실제 서버는 한 번에 하나씩 계산한다).
   debounceMs: USE_MOCK ? 0 : 300,
+  isMock: USE_MOCK, // 목업 모드면 모든 화면이 파일 데이터다
 
   // demo: {scenario, t}. 시연 중이면 POST /demo/scenario/{name}?t= 응답의 status를 쓴다.
   getStatus: (cageId, demo) => {
