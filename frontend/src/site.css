@@ -29,7 +29,6 @@ body {
 
 /* 본문 틀 */
 .container { max-width: 1120px; margin: 0 auto; padding: 28px 20px 80px; }
-.narrow { max-width: 520px; margin: 0 auto; }
 
 /* 푸터 */
 .site-footer { background: var(--sea); color: var(--sea-text); }
@@ -169,4 +168,25 @@ body {
   .stock-sum::before { content: attr(data-label); font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-right: 8px; }
   .form-actions { justify-content: stretch; }
   .form-actions .primary { width: 100%; }
+}
+
+/* 알림: 시간 순 타임라인과 안내 */
+.notif-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (min-width: 1000px) { .notif-grid { grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; } }
+.timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+.timeline::before { content: ''; position: absolute; top: 12px; bottom: 12px; left: 120px; width: 2px; background: #c5d3da; }
+.tl-item { position: relative; display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 0 44px; padding-bottom: 18px; }
+.tl-time { display: flex; flex-direction: column; align-items: flex-end; padding-top: 14px; font-size: 14px; color: #6b7785; font-variant-numeric: tabular-nums; }
+.tl-time strong { font-size: 20px; color: var(--ink); }
+.tl-dot { position: absolute; left: 114px; top: 20px; width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--paper); box-sizing: content-box; margin-left: -2px; }
+.tl-card { border-top: 4px solid; font-size: 18px; line-height: 1.6; }
+.tl-card h2 { margin: 0 0 6px; font-size: 20px; }
+.tl-card p { margin: 0 0 8px; max-width: 60ch; }
+.tl-card a { font-weight: 700; color: var(--teal); }
+.empty { margin: 0; font-size: 18px; color: var(--ink-soft); }
+@media (max-width: 720px) {
+  .timeline::before { left: 7px; }
+  .tl-item { grid-template-columns: minmax(0, 1fr); gap: 6px 0; padding-left: 34px; }
+  .tl-time { flex-direction: row; align-items: baseline; gap: 8px; padding-top: 0; }
+  .tl-dot { left: 0; top: 4px; margin-left: 0; }
 }
