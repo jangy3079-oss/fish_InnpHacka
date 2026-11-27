@@ -7,6 +7,11 @@ from pipeline.run import run
 from pipeline.timeline import Timeline
 
 ROOT = Path(__file__).resolve().parents[1]
+# SDD 8장 GET /cages/{id}/status 예시의 키 (프론트 scenarios.json frames와 같음)
+STATUS_KEYS = {"cage_id", "ts", "stress_score", "level", "baseline_status", "cause", "evidence",
+               "camera_weight", "missing_sources"}
+# 프론트 근거 그래프가 쓰는 시계열 지표
+FRONT_SERIES = ("vertical_dist", "activity", "temp_surface", "temp_mid")
 
 
 class PipelineExportTest(unittest.TestCase):
@@ -23,16 +28,14 @@ class PipelineExportTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
-    def test_status_matches_frontend_mock_keys(self):
-        mock = json.loads((ROOT / "frontend/src/mocks/status.json").read_text(encoding="utf-8"))
+    def test_status_has_api_keys(self):
         row = self.hw.status_at(125)
-        self.assertTrue(set(mock) <= set(row), set(mock) - set(row))
+        self.assertTrue(STATUS_KEYS <= set(row), STATUS_KEYS - set(row))
         self.assertEqual(row["cause"], [])
         self.assertIn("temp_surface", row["evidence"])
 
-    def test_timeseries_matches_frontend_mock(self):
-        mock = json.loads((ROOT / "frontend/src/mocks/timeseries.json").read_text(encoding="utf-8"))
-        for m in mock:
+    def test_timeseries_has_front_metrics(self):
+        for m in FRONT_SERIES:
             pts = self.hw.series[m]
             self.assertGreater(len(pts), 100)
             self.assertEqual(set(pts[0]), {"ts", "value"})
