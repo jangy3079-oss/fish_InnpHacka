@@ -47,7 +47,7 @@ rules:
     env:
       temp_diff_max_c: 1         # 표층-중층 차 1℃ 미만으로 떨어짐 [사례]
       temp_surface_min_c: 25     # [논문]
-    immediate_danger: true       # thresholds.yaml 의 immediate_rules 와 연결
+    immediate_danger: true       # thresholds.yaml 의 immediate_danger_rules 와 연결
     first_action: [immediate_alert, compare_options]
     compare_options: [net_depth_adjust, overwinter_move, early_harvest, emergency_release]
 

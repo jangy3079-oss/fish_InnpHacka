@@ -6,33 +6,25 @@
 cycle_minutes: 5
 
 # 경보 단계 (SDD 6.2). 지수는 0~100.
-# hold_hours: 이 구간에 연속으로 머물러야 해당 단계로 올린다.
+# 이 키 이름(levels, hold_hours, release_hours)은 stress/levels.py 의 load_thresholds 가 읽는다 (#24, #61).
+# levels: 단계별 최소 지수. 정상 0~39 / 주의 40~59 / 경고 60~79 / 위험 80~100
 levels:
-  - name: normal
-    label: 정상
-    min: 0
-    max: 39
-    hold_hours: 0
-  - name: caution
-    label: 주의
-    min: 40
-    max: 59
-    hold_hours: 2
-  - name: warning
-    label: 경고
-    min: 60
-    max: 79
-    hold_hours: 2
-  - name: danger
-    label: 위험
-    min: 80
-    max: 100
-    hold_hours: 1
-    # 이 규칙이 발동하면 유지 시간 없이 즉시 위험 (R2 피난처 소실)
-    immediate_rules: [R2]
+  주의: 40
+  경고: 60
+  위험: 80
 
-# 단계가 내려갈 때: 6시간 연속으로 조건이 풀려야 한다 (경보가 오르내리는 것 방지)
-downgrade_hold_hours: 6
+# hold_hours: 이 구간에 연속으로 머물러야 해당 단계로 올린다 (정상은 유지 시간 없음)
+hold_hours:
+  주의: 2
+  경고: 2
+  위험: 1
+
+# release_hours: 단계가 내려갈 때 6시간 연속으로 조건이 풀려야 한다 (경보가 오르내리는 것 방지)
+# 단, 단계를 올린 근거 센서 묶음이 안 보이는 주기는 이 시간에 세지 않는다 (#61, SDD 6.2 추가 규칙)
+release_hours: 6
+
+# 이 규칙이 발동하면 유지 시간 없이 즉시 위험 (R2 피난처 소실)
+immediate_danger_rules: [R2]
 
 # 같은 단계 알림은 6시간에 1회만 (NFR-REL-04)
 alert_dedup_hours: 6
