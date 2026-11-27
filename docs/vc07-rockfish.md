@@ -11,6 +11,13 @@ CFD RF-DETR Nano를 같은 조피볼락 이미지 10~20장에서 conf=0.3/0.1로
 `categories/images/annotations`, bbox는 `[x,y,width,height]`이다.
 샘플 다운로드에도 AI Hub 로그인이 필요하다. 이미지를 다른 어종으로 대체하지 않는다.
 
+> **출처 표기:** 이 시험은 한국지능정보사회진흥원(NIA)이 구축·개방한 AI 허브 「어류 행동 영상」 데이터를 활용했습니다 (수행기관 글로비트 외).
+>
+> **이용 조건** ([AI 허브 데이터 이용정책](https://www.aihub.or.kr/intrcn/guid/usagepolicy.do), 2026-11-27 확인, #48)
+> - 내국인만 신청 가능, 인공지능 학습·연구개발 목적으로 이용. 데이터셋 판매 등 상업적 이용은 수행기관과 별도 협의
+> - 승인 없이 다른 사람이 원본을 **열람하게 하거나 제공**하면 안 된다 → 원본 이미지·라벨·오버레이는 저장소에 올리지 않고 로컬 `data/out/vc07/`에만 둔다. 공개하는 것은 집계 수치와 파일명·해시 메타데이터뿐이다
+> - 2차적 저작물(발표 자료 포함)에도 NIA 사업결과임을 밝힌다. 발표에 AI Hub 이미지를 넣으려면 제공기관 확인을 먼저 받는다
+
 ```sh
 python -m pip install -r requirements-vision.txt
 python -m vision.evaluate extract --archive '/path/to/Training/[원천]kr_part2.zip' --labels '/path/to/Training/[라벨]kr_part2.json' --category KoreaRockfish --candidates 120 --out data/out/vc07/pool
