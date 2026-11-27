@@ -106,7 +106,7 @@ export default function FarmerPage() {
           {rec.kind === 'none' && (
             <section className="card key"><h2>지금 추천하는 조치</h2><p>지금은 따로 할 조치가 없습니다.</p></section>
           )}
-          {rec.kind === 'first_aid' && <FirstAidCard key={rec.ts} rec={rec} />}
+          {rec.kind === 'first_aid' && <FirstAidCard key={rec.ts} rec={rec} rule={status.cause?.[0]?.rule_id} />}
           {isProfit && <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />}
           <CauseList causes={status.cause ?? []} status={status} />
           <EvidenceSummary evidence={status.evidence} />
