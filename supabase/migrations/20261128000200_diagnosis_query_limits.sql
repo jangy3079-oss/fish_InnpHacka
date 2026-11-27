@@ -13,6 +13,7 @@ create function private.create_diagnosis_request(p_cage_id bigint,p_request_key 
   p_primary_cause_id bigint,p_config_revision text,p_lookback_hours double precision,p_max_points integer,
   p_max_age_minutes double precision,p_min_interval_minutes integer) returns jsonb
 language plpgsql security definer set search_path='' as $$
+declare latest private.analysis_run; cause_time timestamptz;
 begin
   if auth.uid() is null then raise insufficient_privilege using message='Owner access required'; end if;
   perform 1 from public.cage c join public.farm f on f.id=c.farm_id
@@ -23,6 +24,17 @@ begin
   end if;
   -- A retry must not consume quota or become invalid when the current cause changes.
   if not exists(select 1 from private.diagnosis_request where creator_id=auth.uid() and request_key=p_request_key) then
+    -- Once published analyses exist, a past cause row is not a current diagnosis.
+    select * into latest from private.analysis_run where cage_id=p_cage_id order by ts desc limit 1;
+    if found then
+      select ts into cause_time from public.cause_estimate where id=p_primary_cause_id and cage_id=p_cage_id;
+      if cause_time is distinct from latest.ts or latest.status->>'data_status' is distinct from 'ready'
+        or latest.valid_until<now() or latest.config_revision is distinct from p_config_revision
+        or not exists(select 1 from jsonb_array_elements(coalesce(latest.status->'cause','[]'::jsonb)) c
+                      where c->>'rule_id' in ('R5','R8')) then
+        raise serialization_failure using message='Current diagnosis context is unavailable';
+      end if;
+    end if;
     if exists(select 1 from private.diagnosis_request where creator_id=auth.uid() and cage_id=p_cage_id
         and (primary_cause_id=p_primary_cause_id or created_at>now()-make_interval(mins=>p_min_interval_minutes))) then
       raise serialization_failure using message='Diagnosis already requested or interval not elapsed';

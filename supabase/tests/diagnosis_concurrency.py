@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from uuid import uuid4
 
 
 def main():
@@ -26,8 +27,14 @@ def main():
     auth="set role authenticated; set request.jwt.claims='"+json.dumps({'sub':'00000000-0000-4000-8000-000000000001'})+"';\n"
     keys=['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb']
     for variant in ('same_key','same_event_new_key','different_event_cooldown'):
-        sql("delete from private.diagnosis_request; insert into public.cause_estimate(cage_id,ts,cause,rule_id,probability,evidence) "
+        sql("delete from private.recommendation_choice; delete from private.analysis_run; delete from private.diagnosis_request; "
+            "update public.cause_estimate set ts=clock_timestamp()-interval '2 days'; "
+            "insert into public.cause_estimate(cage_id,ts,cause,rule_id,probability,evidence) "
             "select 3,t,'질병 의심',r,0.5,'{}' from (select clock_timestamp()-interval '5 seconds' t) x cross join (values('R5'),('R8')) v(r);")
+        sql("insert into private.analysis_run(cage_id,ts,actor_id,request_key,input_version,stock_version,payload_hash,config_revision,valid_until,status) "
+            f"select 3,max(ts),'00000000-0000-4000-8000-000000000001','{uuid4()}',"
+            "'input','stock','payload',repeat('a',64),now()+interval '1 hour','{\"data_status\":\"ready\",\"cause\":[{\"rule_id\":\"R5\"},{\"rule_id\":\"R8\"}]}' "
+            "from public.cause_estimate where cage_id=3;")
         data=json.loads(sql(auth+f"select public.diagnosis_context(3,'{keys[0]}',72,1000,60);"))
         causes=data['context']['causes']
         def call(key,cause_id):

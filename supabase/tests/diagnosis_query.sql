@@ -28,6 +28,27 @@ begin;
 update private.diagnosis_request set created_at=now()-interval '60 minutes';
 insert into public.cause_estimate(cage_id,ts,cause,probability,rule_id,evidence)
   values(3,date_trunc('minute',now())-interval '1 minute','질병 의심',1,'R5','{}');
+insert into private.analysis_run(cage_id,ts,actor_id,request_key,input_version,stock_version,payload_hash,config_revision,valid_until,status)
+  select 3,max(ts),'00000000-0000-4000-8000-000000000001','cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    'input','stock','payload',repeat('a',64),now()+interval '1 hour','{"data_status":"ready","cause":[]}'
+  from public.cause_estimate where cage_id=3;
+set local role authenticated;
+set local request.jwt.claims='{"sub":"00000000-0000-4000-8000-000000000001"}';
+select pg_temp.expect_error($q$select public.create_diagnosis_request(3,'77777777-7777-4777-8777-777777777777','stale',
+  (select max(id) from public.cause_estimate where cage_id=3),repeat('a',64),72,1000,60,60)$q$,'40001','empty current cause cannot reuse old R5');
+select pg_temp.check_ok(public.create_diagnosis_request(3,'11111111-1111-4111-8111-111111111111','stale',1,repeat('b',64),72,1000,60,60)->>'persisted'='true','old UUID retry survives cause disappearance');
+reset role;
+update private.analysis_run set status='{"data_status":"ready","cause":[{"rule_id":"R5"}]}',valid_until=now()-interval '1 second';
+set local role authenticated;
+select pg_temp.expect_error($q$select public.create_diagnosis_request(3,'77777777-7777-4777-8777-777777777777','stale',
+  (select max(id) from public.cause_estimate where cage_id=3),repeat('a',64),72,1000,60,60)$q$,'40001','expired analysis cannot accept request');
+reset role;
+update private.analysis_run set valid_until=now()+interval '1 hour',config_revision=repeat('b',64);
+set local role authenticated;
+select pg_temp.expect_error($q$select public.create_diagnosis_request(3,'77777777-7777-4777-8777-777777777777','stale',
+  (select max(id) from public.cause_estimate where cage_id=3),repeat('a',64),72,1000,60,60)$q$,'40001','different analysis revision cannot accept request');
+reset role;
+update private.analysis_run set config_revision=repeat('a',64);
 set local role authenticated;
 set local request.jwt.claims='{"sub":"00000000-0000-4000-8000-000000000001"}';
 do $$
