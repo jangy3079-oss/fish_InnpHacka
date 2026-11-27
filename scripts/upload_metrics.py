@@ -1,6 +1,7 @@
-"""Upload simulator records.jsonl or the shared JSON fixture without rewriting it."""
+"""Upload metrics.jsonl (sonar/env/camera) or the shared JSON fixture without rewriting it."""
 
 import argparse
+from dataclasses import dataclass, asdict
 import json
 import os
 from pathlib import Path
@@ -25,28 +26,46 @@ def read_records(path: Path) -> list[MetricRecord]:
     return records
 
 
-def upload(records: list[MetricRecord], client: httpx.Client, base_url: str, token: str,
-           batch_size: int = 500) -> int:
-    inserted = 0
+@dataclass(frozen=True)
+class UploadReport:
+    confirmed_count: int
+    inserted_count: int
+    duplicate_count: int
+
+
+def upload_report(records: list[MetricRecord], client: httpx.Client, base_url: str, token: str,
+                  batch_size: int = 500) -> UploadReport:
+    if type(batch_size) is not int or not 1 <= batch_size <= 1000:
+        raise ValueError('batch_size must be an integer between 1 and 1000')
+    confirmed = inserted = duplicates = 0
     for start in range(0, len(records), batch_size):
         batch = records[start:start + batch_size]
         try:
-            response = client.post(base_url.rstrip("/") + "/ingest/metrics",
-                headers={"Authorization": f"Bearer {token}"},
-                json=[r.model_dump(mode="json") for r in batch])
+            response = client.post(base_url.rstrip('/') + '/ingest/metrics',
+                headers={'Authorization': f'Bearer {token}'},
+                json=[r.model_dump(mode='json') for r in batch])
         except httpx.RequestError:
-            raise UploadError(f"Upload interrupted after {inserted} confirmed records; current batch outcome is unknown. Check storage before retrying.") from None
+            raise UploadError(f'Upload interrupted after {confirmed} confirmed records; current batch outcome is unknown. Check storage before retrying.') from None
         if response.status_code != 201:
-            raise UploadError(f"Upload stopped: HTTP {response.status_code}, {inserted} records previously confirmed. No automatic retry.")
+            raise UploadError(f'Upload stopped: HTTP {response.status_code}, {confirmed} records previously confirmed. No automatic retry.')
         try:
             receipt = response.json()
-            if (receipt.get("persisted") is not True or receipt.get("received_count") != len(batch)
-                    or receipt.get("inserted_count") != len(batch)):
+            counts = [receipt['received_count'], receipt['inserted_count'], receipt.get('duplicate_count', 0)]
+            if (receipt.get('persisted') is not True or any(type(n) is not int or n<0 for n in counts)
+                    or counts[0] != len(batch) or counts[0] != counts[1]+counts[2]):
                 raise ValueError
-        except (ValueError, AttributeError):
-            raise UploadError("Unexpected upload acknowledgement; check storage before retrying.") from None
-        inserted += len(batch)
-    return inserted
+        except (ValueError, AttributeError, KeyError, TypeError):
+            raise UploadError('Unexpected upload acknowledgement; check storage before retrying.') from None
+        confirmed += counts[0]
+        inserted += counts[1]
+        duplicates += counts[2]
+    return UploadReport(confirmed, inserted, duplicates)
+
+
+def upload(records: list[MetricRecord], client: httpx.Client, base_url: str, token: str,
+           batch_size: int = 500) -> int:
+    """Compatibility return: confirmed records, including acknowledged duplicates."""
+    return upload_report(records, client, base_url, token, batch_size).confirmed_count
 
 
 def main(argv=None) -> int:
@@ -72,8 +91,8 @@ def main(argv=None) -> int:
         if not token:
             raise ValueError("Set INGEST_ACCESS_TOKEN to a dedicated edge account access token")
         with httpx.Client(timeout=30, follow_redirects=False) as client:
-            count = upload(records, client, args.base_url, token, args.batch_size)
-        print(json.dumps({"inserted_count": count}))
+            report = upload_report(records, client, args.base_url, token, args.batch_size)
+        print(json.dumps(asdict(report)))
         return 0
     except UploadError as exc:
         print(str(exc))

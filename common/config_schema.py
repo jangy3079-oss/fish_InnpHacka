@@ -161,6 +161,7 @@ class NormalEnvironmentBounds(ConfigModel):
 class R8Behavior(ConfigModel):
     rubbing_rate_x_min: Annotated[float, Field(ge=1)]
     sustained_hours_min: Positive
+    max_pause_hours: Positive
     missing_observation: Literal["pause"]
 
 

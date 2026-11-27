@@ -40,6 +40,7 @@ from sonar.metrics import extract
 from cause import CauseContext, CauseEngine
 from pipeline.contexts import scenario_contexts
 from common.config_loader import ConfigLoader
+from common.data_config import FixedSnapshot, snapshot_or_current
 from stress.levels import apply_levels
 from stress.model import StressModel
 
@@ -55,28 +56,30 @@ def _p(s: str) -> datetime:
     return datetime.fromisoformat(s.replace("Z", "+00:00"))
 
 
-def _run(name: str, seed_k: int):
+def _run(name: str, seed_k: int, *, snapshot=None):
+    snapshot = snapshot_or_current(snapshot)
     sc = load_scenario(name)
     sc = dataclasses.replace(sc, seed=sc.seed + SEED_STEP * seed_k)
     sim = simulate(sc)
     recs = sim.records + extract(synthesize(sim))
-    return sim, recs, fuse(recs), build_labels(sim)
+    return sim, recs, fuse(recs, snapshot=snapshot), build_labels(sim)
 
 
-def _levels(model: StressModel, fused, sc=None):
+def _levels(model: StressModel, fused, sc=None, *, snapshot=None):
     """시연 파이프라인(pipeline/run.py)과 같게: 원인 엔진의 R2 즉시 위험 신호로 경보 단계."""
-    scores, changes, _ = _levels_causes(model, fused, sc)
+    scores, changes, _ = _levels_causes(model, fused, sc, snapshot=snapshot)
     return scores, changes
 
 
-def _levels_causes(model: StressModel, fused, sc=None):
+def _levels_causes(model: StressModel, fused, sc=None, *, snapshot=None):
     """sc: 시나리오. 특보·적조 특보·작업 기록을 원인 엔진 입력으로 (pipeline.contexts). None이면 모두 미확인."""
-    scores = model.score_series(fused)
-    loader = ConfigLoader()
+    snapshot = snapshot_or_current(snapshot)
+    scores = model.score_series(fused, snapshot=snapshot)
+    loader = FixedSnapshot(snapshot)
     contexts = scenario_contexts(sc, [s.ts for s in scores]) if sc is not None else [CauseContext()] * len(scores)
     results = CauseEngine(loader).evaluate_series(scores, fused, contexts=contexts)
     changes = apply_levels(scores, [r.immediate_danger for r in results],
-                           cfg=loader.last_good.to_dict()["thresholds"])
+                           cfg=snapshot.to_dict()["thresholds"])
     return scores, changes, results
 
 
@@ -213,13 +216,14 @@ def alarms(changes) -> int:
 
 def run_seed(k: int) -> dict:
     t0 = time.time()
-    _, _, base_fused, _ = _run("normal_14d", k)
-    model = StressModel(base_fused[0].cage_id).fit(base_fused)
-    out: Dict[str, dict] = {"seed_k": k, "model_version": model.model_version}
+    snapshot = ConfigLoader().snapshot()
+    _, _, base_fused, _ = _run("normal_14d", k, snapshot=snapshot)
+    model = StressModel(base_fused[0].cage_id).fit(base_fused, snapshot=snapshot)
+    out: Dict[str, dict] = {"seed_k": k, "model_version": model.model_version, "config_revision": snapshot.revision}
 
     for name in ALERT_SCENARIOS + QUIET_SCENARIOS + EXTENDED_SCENARIOS:
-        sim, recs, fused, labels = _run(name, k)
-        scores, changes, causes = _levels_causes(model, fused, sim.scenario)
+        sim, recs, fused, labels = _run(name, k, snapshot=snapshot)
+        scores, changes, causes = _levels_causes(model, fused, sim.scenario, snapshot=snapshot)
         r = {"alarms": alarms(changes), "level_changes": len(changes),
              "max_level": max((s.level for s in scores if s.level), key=["정상", "주의", "경고", "위험"].index)}
         if name in ALERT_SCENARIOS + EXTENDED_SCENARIOS:
@@ -233,7 +237,7 @@ def run_seed(k: int) -> dict:
         if name == "feeding_drop":
             r["vc03_r7"] = vc03_management(causes, labels, "R7")
         out[name] = r
-    base_scores, base_changes = _levels(model, base_fused)
+    base_scores, base_changes = _levels(model, base_fused, snapshot=snapshot)
     out["normal_14d"] = {"alarms": alarms(base_changes)}
     out["seconds"] = round(time.time() - t0, 1)
     return out

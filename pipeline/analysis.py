@@ -12,7 +12,7 @@ from decision import ComparisonRequest, LossCalculator
 from decision.actions import ACTIONS, GUIDANCE_ACTIONS, canonical_action
 from decision.first_aid import ensure_safe, reviewed_guide
 from decision.deadlines import with_deadlines
-from fusion.fuse import FusedFeatures, _bucket, fuse
+from fusion.fuse import FusedFeatures, _bucket, fuse, configuration_signature
 from pipeline.contexts import observed_contexts
 from stress.levels import apply_levels
 from stress import model as model_config
@@ -129,9 +129,9 @@ def build_bundle(context, model, producer_id, species, snapshot, *, advisory_act
     fused = []
     stamp = start
     while stamp<end:
-        fused.append(observed.get(stamp) or FusedFeatures(producer_id,stamp,{}, {},None,0,missing_sources=['sonar','camera','env']))
+        fused.append(observed.get(stamp) or FusedFeatures(producer_id,stamp,{}, {},None,0,missing_sources=['sonar','camera','env'],fusion_signature=configuration_signature(fusion_cfg)))
         stamp += cycle
-    scores = model.score_series(fused)
+    scores = model.score_series(fused, snapshot=snapshot)
     if len(scores)!=len(fused):
         raise ValueError('Model output alignment mismatch')
     for s, f in zip(scores, fused):
@@ -153,7 +153,7 @@ def build_bundle(context, model, producer_id, species, snapshot, *, advisory_act
               'evidence': evidence, 'camera_weight': f.camera_weight, 'missing_sources': f.missing_sources,
               'metric_reliability': reliability(f,latest_metrics,thresholds['analysis']), 'model_version': last.model_version or 'untrained',
               'baseline_windows': last.baseline_windows, 'cause': cause.status_causes(),
-              'level_held_due_to_missing': not warm and last.score is None,
+              'level_held_due_to_missing': not warm and (last.score is None or getattr(last,'level_held_due_to_missing',False)),
               'last_observation_at': max((r.ts for r in records), default=None).isoformat() if records else None}
     r7_evidence = next((c.evidence for c in cause.estimates if c.rule_id=='R7'),{})
     status.update(r7_held_due_to_missing=r7_evidence.get('feeding_held_due_to_missing',False),

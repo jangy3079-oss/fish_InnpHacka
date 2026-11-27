@@ -13,7 +13,7 @@
 - 같은 5분 주기(ts를 주기 시작으로 내림) 안의 레코드를 한 묶음으로 본다
 
 임계값은 config/thresholds.yaml 의 fusion.gate_low, fusion.full_at, fusion.max_camera_weight,
-quality.camera_only_min 을 읽는다 (#77). 파일·키가 없으면 아래 기본값(SDD 6.1).
+quality.camera_only_min 을 검증된 snapshot에서 읽는다. 파일·키 오류는 ConfigError이며 기본값으로 대체하지 않는다.
 """
 
 from __future__ import annotations
@@ -24,23 +24,18 @@ from datetime import datetime, timezone
 from typing import Dict, Iterable, List, Optional, Sequence, Union
 
 from common import MetricName, MetricRecord, MetricSource
-from common.config import get as cfg_get
+from common.data_config import fusion_parameters, snapshot_or_current
+import hashlib
+import json
 
-# 기본값 (config/thresholds.yaml 이 없을 때)
-Q_MIN = 0.3            # 이 아래면 카메라 가중치 0
-Q_FULL = 0.7           # 이 이상이면 카메라 가중치 최대
-W_MAX = 0.5
-Q_CAMERA_ONLY = 0.6    # 카메라 전용 지표 사용 하한
+def params(snapshot=None) -> dict:
+    """Read the validated five-file bundle once, or use a pinned batch snapshot."""
+    return fusion_parameters(snapshot_or_current(snapshot))
 
 
-def params() -> dict:
-    """융합 임계값 (config/thresholds.yaml → 없으면 기본값)."""
-    return {
-        "q_min": float(cfg_get("thresholds", "fusion.gate_low", Q_MIN)),
-        "q_full": float(cfg_get("thresholds", "fusion.full_at", Q_FULL)),
-        "w_max": float(cfg_get("thresholds", "fusion.max_camera_weight", W_MAX)),
-        "q_camera_only": float(cfg_get("thresholds", "quality.camera_only_min", Q_CAMERA_ONLY)),
-    }
+def configuration_signature(configuration):
+    return hashlib.sha256(json.dumps(configuration, sort_keys=True, allow_nan=False).encode()).hexdigest()
+
 
 SHARED = (MetricName.VERTICAL_DIST, MetricName.ACTIVITY)
 SONAR_ONLY = (MetricName.COHESION,)
@@ -70,6 +65,7 @@ class FusedFeatures:
     camera_weight: float               # 공용 지표에 쓴 카메라 가중치 w(q)
     weights: Dict[str, float] = field(default_factory=dict)   # 지표별 실제 카메라 비중 (0~1)
     missing_sources: List[str] = field(default_factory=list)
+    fusion_signature: str | None = None
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -144,12 +140,18 @@ def fuse_cycle(cage_id: str, ts: datetime, records: Iterable[MetricRecord],
     env = {m.value: _mean(vals.get(("env", m), [])) for m in ENV}
     missing = [s for s in expected_sources if s not in present]
     return FusedFeatures(cage_id=cage_id, ts=ts, features=feats, env=env, quality=q,
-                         camera_weight=w, weights=weights, missing_sources=missing)
+                         camera_weight=w, weights=weights, missing_sources=missing, fusion_signature=configuration_signature(prm))
 
 
-def fuse(records: Iterable[MetricRecord], cycle_minutes: int = 5,
-         expected_sources: Sequence[str] = ALL_SOURCES, configuration=None) -> List[FusedFeatures]:
+def fuse(records: Iterable[MetricRecord], cycle_minutes: float | None = None,
+         expected_sources: Sequence[str] = ALL_SOURCES, configuration=None, *, snapshot=None) -> List[FusedFeatures]:
     """MetricRecord 묶음 → (가두리, 주기)별 FusedFeatures, 시간 순."""
+    if configuration is None or cycle_minutes is None:
+        snapshot = snapshot_or_current(snapshot)
+    if configuration is None:
+        configuration = params(snapshot)
+    if cycle_minutes is None:
+        cycle_minutes = snapshot['thresholds']['cycle_minutes']
     groups: Dict[tuple, list] = defaultdict(list)
     for r in records:
         groups[(r.cage_id, _bucket(r.ts, cycle_minutes))].append(r)

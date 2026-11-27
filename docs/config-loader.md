@@ -1,3 +1,6 @@
+> #212 데이터·모델 소비 경로는 검증 snapshot을 사용하며 암묵적 기본값/last_good 폴백을 하지 않습니다.
+> [현재 데이터·모델 후속 계약](data-model-followups.md)을 따릅니다. 아래 연계 제안은 초기 구현 시점 기록입니다.
+
 # config YAML 로더 — #11
 
 SDD 7장·NFR-MNT-01의 thresholds, cause_rules, release_rules, costs, first_aid를 읽는다.

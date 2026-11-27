@@ -36,6 +36,7 @@ class TemporalRules:
         self.trend = defaultdict(deque)
         self.rubbing = {}
         self.last = {}
+        self.pause = {}
 
     def evaluate(self, cage, ts, score, ready, normal, context, rubbing, quality, cfg, thresholds):
         rules = cfg["rules"]
@@ -65,17 +66,37 @@ class TemporalRules:
                             for a, b in zip(means, means[1:])))
         duration, began = self.rubbing.get(cage, (timedelta(), None))
         gap = cage in self.last and ts - self.last[cage] != cycle
+        pause_start = self.pause.get(cage)
+        reset_reason = None
         if not eligible or gap:
             duration, began = timedelta(), None
+            pause_start = None
+            reset_reason = 'observation_gap' if gap else 'context_unavailable'
         observed = (eligible and quality is not None and quality >= thresholds["quality"]["rubbing_min"]
                     and rubbing is not None)
+        pause_end = ts-cycle if observed else ts
+        if pause_start is not None and pause_end-pause_start > timedelta(hours=rules['R8']['behavior']['max_pause_hours']):
+            duration, began = timedelta(), None
+            reset_reason = 'pause_expired'
         if observed:
+            pause_start = None
             if rubbing >= rules["R8"]["behavior"]["rubbing_rate_x_min"]:
                 if began is None:
                     began = ts - cycle
                 duration += cycle
             else:
                 duration, began = timedelta(), None
+                reset_reason = 'observed_normal'
+        elif eligible and began is not None and pause_start is None:
+            # The first unobserved cycle begins at its interval start.
+            pause_start = ts-cycle
+        if pause_start is not None and ts-pause_start > timedelta(hours=rules['R8']['behavior']['max_pause_hours']):
+            duration, began = timedelta(), None
+            reset_reason = 'pause_expired'
+        if pause_start is None:
+            self.pause.pop(cage, None)
+        else:
+            self.pause[cage] = pause_start
         self.rubbing[cage] = duration, began
         self.last[cage] = ts
         return {"R5": bool(eligible and trend_ok),
@@ -84,7 +105,11 @@ class TemporalRules:
                             "last_daily_mean_min": thresholds["cause_min_stress"],
                             "trend_window_complete": complete, "rubbing_observed_hours": duration.total_seconds() / 3600,
                             "rubbing_window_start": None if began is None else began.isoformat(),
-                            "rubbing_current_observed": observed}}
+                            "rubbing_current_observed": observed,
+                            "rubbing_pause_hours": (ts-pause_start).total_seconds()/3600 if pause_start else 0,
+                            "rubbing_reset_reason": reset_reason,
+                            "trend_observed_hours": sum(coverage)*24,
+                            "trend_needed_hours": days*24}}
 
 
 class WorkRules:
