@@ -20,6 +20,8 @@ from .farmer_data import FarmerDataStore, get_farmer_store
 from .echogram import EchogramRenderer, get_echogram_renderer
 from .diagnosis import create_request, get_diagnosis_loader
 from .analysis import read_status,read_recommendation,choose,get_analysis_loader
+from .demo import get_replay_engine, replay
+from pipeline.replay import ReplayEngine
 from common.config_loader import ConfigLoader
 
 from .schemas import (
@@ -48,9 +50,9 @@ def time_window(
 
 
 app = FastAPI(
-    title="Rockfish Guard API", version="0.6.0",
+    title="Rockfish Guard API", version="0.7.0",
     description="어민 상태·추천·선택과 지표 수집·재고·시계열·에코그램·진단 접수는 인증된 실제 데이터 경로입니다. "
-                "시나리오 재생·지자체·관리자 경로는 목업입니다. docs/analysis-api.md 등 API 계약 문서 참조.",
+                "시나리오 재생은 DB 저장 없는 합성 분석입니다. 지자체·관리자 경로는 목업입니다. docs/scenario-replay-api.md 등 API 계약 문서 참조.",
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
@@ -64,6 +66,9 @@ async def mock_header(request, call_next):
     path = request.url.path.rstrip("/")
     real = path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
     response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
+    if path.startswith('/demo/scenario/'):
+        response.headers['X-Data-Mode'] = 'simulation'
+        response.headers['Cache-Control'] = 'no-store'
     if real:
         response.headers["Cache-Control"] = "private, no-store"
         response.headers["Vary"] = ", ".join(filter(None, [response.headers.get("Vary"), "Authorization"]))
@@ -166,9 +171,10 @@ def diagnosis(id: Id, body: DiagnosisRequest,
 
 
 @app.post("/demo/scenario/{name}", response_model=DemoResult, tags=["demo"],
-          description="시나리오명·시간을 반환하지만 파이프라인 재생은 하지 않습니다. 모든 시나리오에서 동일한 status fixture를 반환합니다.")
-def demo(name: Scenario, t: Annotated[float, Query(ge=0, allow_inf_nan=False)] = 0):
-    return {"scenario": name, "t": t, "status": status_fixture()}
+          description="합성 시나리오의 경과 시간 t(시간 단위)까지 완료된 주기만 분석합니다. 상태·원인·추천·시계열을 반환하며 DB 저장·조치 실행·알림 전송은 하지 않습니다.")
+def demo(name: Scenario, engine: Annotated[ReplayEngine,Depends(get_replay_engine)],
+         t: Annotated[float, Query(ge=0, allow_inf_nan=False)] = 0):
+    return replay(engine,name,t)
 
 
 @app.put("/admin/config/{file}", response_model=MockReceipt, tags=["admin"])
