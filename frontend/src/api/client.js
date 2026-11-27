@@ -158,6 +158,12 @@ export const api = {
   },
 
   // 본문은 request_key뿐이다(자유 문구 note는 지원하지 않는다). 키는 성공이나 확정 오류가 나올 때까지 같은 값으로 다시 보낸다.
+  getDiagnosisRequest: (cageId) => USE_MOCK ? delay(null)
+    : http(`/cages/${cageId}/diagnosis-request`).catch((e) => {
+        if (e.status === 404) return null;
+        throw e;
+      }),
+
   requestDiagnosis: (cageId) =>
     USE_MOCK
       ? delay({ mock: true, persisted: false })

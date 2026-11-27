@@ -10,7 +10,7 @@ from common import MetricRecord
 from common.config_loader import ConfigError, ConfigLoader
 from decision.first_aid import UnsafeFirstAid, ensure_safe, reviewed_guide
 from .farmer_data import data_error
-from .schemas import DiagnosisReceipt
+from .schemas import DiagnosisReceipt, DiagnosisSummary
 
 
 class ContextModel(BaseModel):
@@ -100,6 +100,21 @@ def get_diagnosis_loader():
     return ConfigLoader()
 
 
+def read_request(store, cage_id, request_key=None):
+    store.require_cage(cage_id)
+    data = store.request('POST', '/rest/v1/rpc/read_diagnosis_request', json={
+        'p_cage_id': cage_id, 'p_request_key': str(request_key) if request_key is not None else None})
+    if data is None:
+        raise data_error(404, 'diagnosis_request_not_found', 'No matching diagnosis request')
+    try:
+        summary = DiagnosisSummary.model_validate(data)
+        if summary.cage_id != cage_id or (request_key is not None and summary.request_key != request_key):
+            raise ValueError
+        return summary
+    except (ValueError, TypeError):
+        raise data_error(503, 'invalid_diagnosis_receipt', 'Invalid diagnosis receipt') from None
+
+
 def create_request(store, cage_id, request, loader):
     try:
         snapshot = loader.snapshot()
@@ -113,7 +128,7 @@ def create_request(store, cage_id, request, loader):
         if not data.get("persisted"):
             data = store.request("POST", "/rest/v1/rpc/create_diagnosis_request", json={**params,
                 "p_context_version": data["context_version"], "p_primary_cause_id": packet["primary_cause_id"],
-                "p_config_revision": snapshot.revision})
+                "p_config_revision": snapshot.revision, "p_min_interval_minutes": policy['min_request_interval_minutes']})
         if data.get("persisted") is not True or data.get("cage_id") != cage_id or data.get("request_key") != str(request.request_key):
             raise ValueError("Invalid receipt scope")
         # Construct from the committed snapshot (including idempotent replays), never a client packet.

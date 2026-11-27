@@ -17,13 +17,13 @@ begin
   perform pg_temp.check_ok(v->'context'->'causes'->0->>'rule_id'='R5','context uses actual cause row');
   perform pg_temp.check_ok(jsonb_array_length(v->'context'->'metrics')>0,'context contains observed graph points');
   perform pg_temp.check_ok(jsonb_array_length(v->'context'->'stress')>0,'context contains observed stress');
-  r=public.create_diagnosis_request(3,'11111111-1111-4111-8111-111111111111',v->>'context_version',1,repeat('a',64),72,1000,60);
+  r=public.create_diagnosis_request(3,'11111111-1111-4111-8111-111111111111',v->>'context_version',1,repeat('a',64),72,1000,60,60);
   perform pg_temp.check_ok(r->>'persisted'='true' and r->>'status'='pending','request stored pending, not sent');
-  again=public.create_diagnosis_request(3,'11111111-1111-4111-8111-111111111111','outdated',1,repeat('b',64),72,1000,60);
+  again=public.create_diagnosis_request(3,'11111111-1111-4111-8111-111111111111','outdated',1,repeat('b',64),72,1000,60,60);
   perform pg_temp.check_ok(r=again,'same request key returns identical stored receipt');
 end;
 $$;
-select pg_temp.expect_error($q$select public.create_diagnosis_request(3,'22222222-2222-4222-8222-222222222222','outdated',1,repeat('a',64),72,1000,60)$q$,'40001','stale snapshot cannot be submitted');
+select pg_temp.expect_error($q$select public.create_diagnosis_request(3,'22222222-2222-4222-8222-222222222222','outdated',1,repeat('a',64),72,1000,60,60)$q$,'40001','stale snapshot cannot be submitted');
 select pg_temp.expect_error($q$select public.diagnosis_context(3,'22222222-2222-4222-8222-222222222222',1000,1000,60)$q$,'22023','lookback resource bound');
 select pg_temp.expect_error($q$select public.diagnosis_context(3,'22222222-2222-4222-8222-222222222222',72,1001,60)$q$,'22023','point resource bound');
 select pg_temp.expect_error($q$select public.diagnosis_context(3,null,72,1000,60)$q$,'22023','idempotency key required');
@@ -47,7 +47,7 @@ do $$
 declare v jsonb;
 begin
   v=public.diagnosis_context(3,'33333333-3333-4333-8333-333333333333',72,1000,60);
-  perform pg_temp.expect_error(format('select public.create_diagnosis_request(3,%L,%L,1,%L,72,1000,60)',
+  perform pg_temp.expect_error(format('select public.create_diagnosis_request(3,%L,%L,1,%L,72,1000,60,60)',
     '33333333-3333-4333-8333-333333333333',v->>'context_version',repeat('a',64)),'40001','non-disease cause cannot be committed');
 end;
 $$;
