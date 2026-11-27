@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import HeroEchogram from '../components/HeroEchogram.jsx';
 import { LEVELS } from '../constants.js';
+import { usePageTitle } from '../usePageTitle.js';
 
 // 경보 단계 기준 (config/thresholds.yaml): 정상 0~39, 주의 40~59, 경고 60~79, 위험 80~100
 const SCALE = [
@@ -18,6 +19,7 @@ const STEPS = [
 ];
 
 export default function HomePage() {
+  usePageTitle('');
   return (
     <>
       <section className="hero">

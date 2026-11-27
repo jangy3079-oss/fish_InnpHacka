@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { useDemo } from '../demo/DemoContext.jsx';
+import { ErrorNotice, LoadingBlock, Skeleton } from './States.jsx';
 
 const W = 480;
 const H = 170;
@@ -147,8 +148,26 @@ export default function EvidenceCharts({ cageId, alertAt }) {
   const ts = useTimeseries(cageId, 'temp_surface');
   const tm = useTimeseries(cageId, 'temp_mid');
 
-  if (!vd || !act || !ts || !tm) return <p className="hint">그래프를 불러오는 중…</p>;
-  if ([vd, act, ts, tm].some((d) => d.failed)) return <p className="error">그래프를 불러오지 못했습니다.</p>;
+  if (!vd || !act || !ts || !tm) {
+    return (
+      <section className="card" id="evidence">
+        <h2>왜 이렇게 판단했나요?</h2>
+        <LoadingBlock label="그래프를 불러오는 중입니다">
+          <Skeleton height={170} />
+          <div style={{ height: 14 }} />
+          <Skeleton height={170} />
+        </LoadingBlock>
+      </section>
+    );
+  }
+  if ([vd, act, ts, tm].some((d) => d.failed)) {
+    return (
+      <section className="card" id="evidence">
+        <h2>왜 이렇게 판단했나요?</h2>
+        <ErrorNotice message="그래프를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." />
+      </section>
+    );
+  }
 
   if (vd.points.length < 2) return (
       <section className="card" id="evidence" ref={scrollToHash}>

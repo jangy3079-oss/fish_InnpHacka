@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDemo } from '../demo/DemoContext.jsx';
+import { usePageTitle } from '../usePageTitle.js';
+import { ErrorNotice, LoadingBlock, Skeleton } from '../components/States.jsx';
 import { FarmerTabs } from '../components/SiteChrome.jsx';
 import { api } from '../api/client.js';
 import { LEVELS } from '../constants.js';
@@ -14,7 +16,9 @@ const clock = (iso) => new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digi
 export default function NotificationsPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null); // null | 'unavailable' | 'failed'
+  const [attempt, setAttempt] = useState(0);
   const { demo } = useDemo();
+  usePageTitle('알림');
 
   useEffect(() => {
     let alive = true;
@@ -22,7 +26,7 @@ export default function NotificationsPage() {
     return () => {
       alive = false;
     };
-  }, [demo]);
+  }, [demo, attempt]);
 
   return (
     <div className="notif-page">
@@ -39,8 +43,16 @@ export default function NotificationsPage() {
               <p className="empty">아직 알림 기능이 준비되지 않았습니다. 준비되면 단계가 바뀔 때마다 여기에 알림이 쌓입니다.</p>
             </div>
           )}
-          {error === 'failed' && <p className="error big">알림을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>}
-          {!error && !data && <p className="big">불러오는 중…</p>}
+          {error === 'failed' && (
+            <ErrorNotice message="알림을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." onRetry={() => { setError(null); setAttempt((a) => a + 1); }} />
+          )}
+          {!error && !data && (
+            <LoadingBlock label="알림을 불러오는 중입니다">
+              <Skeleton height={130} />
+              <div style={{ height: 14 }} />
+              <Skeleton height={130} />
+            </LoadingBlock>
+          )}
           {data && data.items.length === 0 && (
             <div className="card">
               <p className="empty">아직 알림이 없습니다. 단계가 바뀌면 여기에 쌓입니다.</p>

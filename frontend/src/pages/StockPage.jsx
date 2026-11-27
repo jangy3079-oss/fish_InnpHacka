@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FarmerTabs } from '../components/SiteChrome.jsx';
 import { api } from '../api/client.js';
+import { usePageTitle } from '../usePageTitle.js';
 
 const CAGE_ID = 3;
 const SIZES = [
@@ -14,6 +15,7 @@ export default function StockPage() {
   const [rows, setRows] = useState(() => Object.fromEntries(SIZES.map((s) => [s.id, { count: '', weight: '' }])));
   const [insured, setInsured] = useState(null); // true | false | null(미선택)
   const [errors, setErrors] = useState({});
+  usePageTitle('재고 입력');
   const [state, setState] = useState('idle'); // idle | sending | done | error
 
   const set = (id, key, value) => {
