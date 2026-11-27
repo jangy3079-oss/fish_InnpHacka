@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
+import { FirstAidCard, ProfitCompare } from '../components/ProfitCards.jsx';
 import { LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
 
 const CAGE_ID = 3;
@@ -30,7 +31,14 @@ export default function FarmerPage() {
       <LevelCard status={status} />
       <SourceNotice status={status} />
       <CauseList causes={status.cause} />
-      <Recommendation rec={rec} />
+      {rec.kind === 'first_aid' ? (
+        <FirstAidCard rec={rec} />
+      ) : (
+        <>
+          <Recommendation rec={rec} />
+          <ProfitCompare rec={rec} />
+        </>
+      )}
       <EvidenceCharts cageId={CAGE_ID} alertAt={isAlert(status) ? status.ts : undefined} />
     </div>
   );
@@ -97,7 +105,6 @@ function Recommendation({ rec }) {
   const [error, setError] = useState(null);
 
   const main = rec.options.find((o) => o.id === rec.recommended_option);
-  const others = rec.options.filter((o) => o.id !== rec.recommended_option);
   if (!main) return null;
 
   const choose = async (option) => {
@@ -127,20 +134,6 @@ function Recommendation({ rec }) {
       )}
       {error && <p className="error">{error}</p>}
 
-      {others.length > 0 && (
-        <details>
-          <summary>다른 방법 보기</summary>
-          <ul className="others">
-            {others.map((o) => (
-              <li key={o.id} className={o.available ? '' : 'disabled'}>
-                <strong>{o.label}</strong>
-                {!o.available && ' (지금은 선택할 수 없음)'}
-                {o.reason && <span> — {o.reason}</span>}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
     </section>
   );
 }
