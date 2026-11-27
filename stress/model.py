@@ -14,7 +14,7 @@
    카메라 특징이 없는 윈도우(밤, 탁함, 카메라 없음)는 소나 점수만 쓴다.
 3. 점수: PyOD Isolation Forest 이상 점수 → 학습 분포 백분위 → 0~100
      학습 범위 안(≤ 99백분위)   : 0.4 × 백분위          → 0~39 (정상)
-     학습 범위 밖(> 99백분위)   : 40 + 60 × ((s − s99)/(s_ext − s99))^0.8
+     학습 범위 밖(> 99백분위)   : 40 + 60 × ((s − s99)/(s_ext − s99))^1.6
        s_ext = 학습 범위에서 아주 멀리 떨어진 점의 점수 (Isolation Forest 점수 상한 근사)
 4. 콜드 스타트: 기준선 윈도우가 168개(7일치) 미만이면 warming_up, 점수 없음.
 5. model_version: 'm5-iforest-<버전>+<가두리>.<학습 종료일>.<학습 데이터 해시 8자리>'
@@ -37,6 +37,7 @@ from pyod.models.iforest import IForest
 from fusion.fuse import FusedFeatures
 
 MODEL_VERSION = "m5-iforest-1.0"
+SCORE_GAMMA = 1.6               # 학습 범위 밖 점수 곡선 (1보다 크면 아주 멀리 벗어나야 80 이상)
 MIN_BASELINE_WINDOWS = 168       # 7일 × 24 (SDD 5.3 설계 가정값)
 MIN_DAYPART_WINDOWS = 24         # 낮·밤 각각 이 이상이어야 그 기준선 모델을 만든다
 WINDOW_CYCLES = 12               # 5분 × 12 = 1시간
@@ -149,7 +150,7 @@ class _Detector:
         pct = 100.0 * np.searchsorted(self.train_scores, raw, side="right") / self.train_scores.size
         inside = np.minimum(0.4 * pct, 39.0)
         span = max(self.s_ext - self.s99, 1e-6)
-        outside = 40.0 + 60.0 * np.clip((raw - self.s99) / span, 0.0, 1.0) ** 0.8
+        outside = 40.0 + 60.0 * np.clip((raw - self.s99) / span, 0.0, 1.0) ** SCORE_GAMMA
         return np.where(raw <= self.s99, inside, outside)
 
 
