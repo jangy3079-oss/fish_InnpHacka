@@ -1,11 +1,15 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { DEMO_ACCOUNTS, useAuth } from '../auth/AuthContext.jsx';
 import { usePageTitle } from '../usePageTitle.js';
 
 // 시연용 로그인: 비밀번호 없이 계정을 골라 들어간다.
 export default function LoginPage() {
   usePageTitle('로그인');
-  const { user, login, logout } = useAuth();
+  const { user, login, logout, loginReal, loading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { state } = useLocation();
 
@@ -20,6 +24,19 @@ export default function LoginPage() {
   return (
     <div className="login">
       <h1>로그인</h1>
+      <form className="card" onSubmit={async (e) => {
+        e.preventDefault(); setError('');
+        try {
+          const p = await loginReal(email, password); setPassword('');
+          navigate(p.role === 'official' ? '/dashboard' : p.role === 'farmer' ? '/farmer' : '/', { replace: true });
+        } catch { setError('로그인하지 못했습니다. 계정과 서비스 설정을 확인해 주세요.'); }
+      }}>
+        <h2>실제 계정으로 로그인</h2>
+        <label>이메일 <input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+        <label>비밀번호 <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <button className="primary" disabled={loading}>로그인</button>
+        {error && <p className="error" role="alert">{error}</p>}
+      </form>
       {state?.reason && <p className="notice" role="status">{state.reason}</p>}
       <p className="lead">시연용 계정입니다. 비밀번호 없이 들어갈 계정을 골라 주세요.</p>
       <ul className="accounts">

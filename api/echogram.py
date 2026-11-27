@@ -4,7 +4,7 @@ import io
 import json
 import os
 from dataclasses import dataclass
-from datetime import timezone
+from datetime import timedelta, timezone
 from pathlib import Path
 from threading import Lock
 from zipfile import BadZipFile, ZipFile
@@ -75,7 +75,7 @@ class EchogramRenderer:
                 top, bottom = float(depth[0]), float(depth[-1])
                 if top == bottom:
                     top, bottom = max(0, top - 0.05), bottom + 0.05
-                figure = Figure(figsize=(9, 3), dpi=100, layout="constrained")
+                figure = Figure(figsize=(6, 2), dpi=150, layout="constrained")
                 canvas = FigureCanvasAgg(figure)
                 axes = figure.subplots()
                 image = axes.imshow(display.T, aspect="auto", origin="upper", cmap="viridis",
@@ -84,8 +84,8 @@ class EchogramRenderer:
                 axes.xaxis.set_major_locator(FixedLocator([(first + last) / 2]) if times.size == 1
                                             else mdates.AutoDateLocator(minticks=3, maxticks=5))
                 time_format = "%m-%d\n%H:%M:%S" if last - first < 1 / 24 else "%m-%d\n%H:%M"
-                axes.xaxis.set_major_formatter(mdates.DateFormatter(time_format, tz=timezone.utc))
-                axes.set(xlabel="Time (UTC)", ylabel="Depth (m)", title=f"Cage {cage_id} echogram")
+                axes.xaxis.set_major_formatter(mdates.DateFormatter(time_format, tz=timezone(timedelta(hours=9))))
+                axes.set(xlabel="Time (KST)", ylabel="Depth (m)", title=f"Cage {cage_id} echogram")
                 figure.colorbar(image, ax=axes, label="Sv (dB)")
                 output = io.BytesIO()
                 canvas.print_png(output)

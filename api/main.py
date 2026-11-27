@@ -19,6 +19,7 @@ from .ingestion import MAX_BATCH_SIZE, SupabaseMetricStore, get_metric_store
 
 from .farmer_data import FarmerDataStore, get_farmer_store
 from .areas import router as areas_router
+from .access import router as access_router
 from .echogram import EchogramRenderer, get_echogram_renderer
 from .diagnosis import create_request, read_request, get_diagnosis_loader
 from .analysis import read_status,read_recommendation,choose,get_analysis_loader
@@ -60,6 +61,7 @@ app = FastAPI(
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
 app.include_router(areas_router)
+app.include_router(access_router)
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
                    allow_methods=["GET", "POST", "PUT"], allow_headers=["Content-Type", "Authorization"],
                    expose_headers=["X-Data-Mode"])
@@ -69,7 +71,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=Fals
 async def mock_header(request, call_next):
     response = await call_next(request)
     path = request.url.path.rstrip("/")
-    real = path.startswith("/areas/") or path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request", "work-log"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
+    real = path.startswith("/areas/") or path in ("/me", "/ingest/metrics") or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request", "work-log"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
     response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
     if path.startswith('/admin/config/'):
         response.headers['X-Data-Mode'] = 'configuration'

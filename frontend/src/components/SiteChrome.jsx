@@ -28,7 +28,7 @@ export function SiteHeader() {
         </Link>
         <nav aria-label="주 메뉴">
           <NavLink to="/" end>서비스 소개</NavLink>
-          {user?.role === 'farmer' && <NavLink to="/farmer" className={farmerActive ? 'active' : undefined}>어민 화면</NavLink>}
+          {(user?.role === 'farmer' || user?.cages?.some((c) => c.can_write_stock)) && <NavLink to="/farmer" className={farmerActive ? 'active' : undefined}>어민 화면</NavLink>}
           {user?.role === 'official' && <NavLink to="/dashboard">지자체 대시보드</NavLink>}
         </nav>
         <div className="account">
@@ -47,11 +47,12 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+  const { user } = useAuth();
   return (
     <footer className="site-footer">
       <div className="site-footer-inner">
         <p className="footer-title">{SITE_NAME}</p>
-        <p>해커톤 시연용 화면입니다. 화면의 모든 수치는 시뮬레이션 데이터입니다.</p>
+        <p>{user?.real ? '실제 계정의 접근 가능한 관측 정보를 조회합니다. 파일 시연은 별도로 표시합니다.' : '해커톤 시연용 화면입니다. 화면의 모든 수치는 시뮬레이션 데이터입니다.'}</p>
         <p>의심 원인은 추정이며 확정 진단이 아닙니다. 질병이 의심되면 수산질병관리사에게 진단을 요청해 주세요.</p>
         <nav aria-label="바로가기">
           <Link to="/">서비스 소개</Link>
@@ -65,8 +66,12 @@ export function SiteFooter() {
 
 // 어민 화면 안에서 이동하는 탭
 export function FarmerTabs() {
+  const { user, cageId, selectCage } = useAuth();
   return (
     <nav className="tabs" aria-label="어민 화면 메뉴">
+      {user?.real && <label>가두리 <select value={cageId ?? ''} onChange={(e) => selectCage(Number(e.target.value))}>
+        {user.cages.filter((c) => c.can_write_stock).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select></label>}
       <NavLink to="/farmer">현황</NavLink>
       <NavLink to="/stock">재고 입력</NavLink>
       <NavLink to="/notifications">알림</NavLink>

@@ -21,7 +21,8 @@ export default function DashboardPage() {
   useEffect(() => {
     let alive = true;
     // 해역 경계는 아직 API에 없을 수 있어, 실패해도 표와 차트는 보여준다.
-    Promise.all([api.getStressMap(demo), api.getAreaShapes().catch(() => null)])
+    setMap(null); setShapes(null); setError(null);
+    Promise.all([api.getStressMap(demo), api.getAreaShapes(demo).catch(() => null)])
       .then(([m, s]) => {
         if (!alive) return;
         setMap(m);
@@ -65,7 +66,7 @@ export default function DashboardPage() {
       <div className="dash-grid">
         <section className="card">
           <h2>해역 지도</h2>
-          {shapes ? (
+          {shapes?.features?.length ? (
             <AreaMap shapes={shapes} areas={map.areas} selectedId={selected} onSelect={setSelected} />
           ) : (
             <p className="hint">해역 경계 데이터를 아직 받을 수 없어 지도를 표시하지 못합니다. 오른쪽 표를 확인해 주세요.</p>

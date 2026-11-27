@@ -3,18 +3,30 @@
 import { hoursAt, notificationsAt, recommendationAt, releaseDemandAt, statusAt, stressMapAt, timeseriesAt } from '../mocks/demo.js';
 import areasGeo from '../mocks/areas.geojson?raw';
 import echogramMock from '../mocks/echogram.svg';
+import { session, sessionEpoch, refreshSession, clearSession, forbidden } from '../auth/session.js';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000';
 // 실제 모드에서도 사용자가 '파일 재생'을 고르면(demo.file) 파일 데이터를 쓴다. 자동으로 바꾸지 않는다.
-const files = (demo) => USE_MOCK || demo?.file === true;
+const files = (demo) => (!session()?.access_token && USE_MOCK) || demo?.file === true;
 const delay = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 150));
 
-async function http(path, options) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
+async function request(path, options = {}, retried = false, started = sessionEpoch()) {
+  const token = session()?.access_token;
+  if (token) {
+    const url = new URL(BASE);
+    if (url.protocol !== 'https:' && !(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) throw new Error('API 주소를 확인해 주세요.');
+  }
+  const res = await fetch(`${BASE}${path}`, { ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers, ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+  if (started !== sessionEpoch()) throw new DOMException('Session changed', 'AbortError');
+  if (res.status === 401 && !retried && token) {
+    await refreshSession(token);
+    if (started !== sessionEpoch()) throw new DOMException('Session changed', 'AbortError');
+    return request(path, options, true, started);
+  }
+  if (res.status === 401) clearSession();
+  if (res.status === 403) forbidden();
   if (!res.ok) {
     // 화면에서 상태 코드로 안내 문구를 가를 수 있게 담아 둔다.
     const err = new Error(`API ${res.status}: ${path}`);
@@ -22,8 +34,9 @@ async function http(path, options) {
     err.code = (await res.json().catch(() => null))?.detail?.code;
     throw err;
   }
-  return res.json();
+  return res;
 }
+const http = async (path, options) => (await request(path, options)).json();
 
 // 실제 추천 응답을 화면이 읽는 모양으로 맞춘다. kind가 없으면 응답 필드로 판단한다.
 function normalizeRecommendation(r) {
@@ -110,6 +123,8 @@ const qs = (params) => {
 };
 
 export const api = {
+  live: () => !!session()?.access_token,
+  getMe: () => http('/me'),
   // 시연 입력이 바뀔 때 바로 요청하지 않고 잠시 기다린다(실제 서버는 한 번에 하나씩 계산한다).
   debounceFor: (demo) => (files(demo) ? 0 : 300),
   isMock: USE_MOCK, // 목업 모드면 모든 화면이 파일 데이터다
@@ -118,7 +133,7 @@ export const api = {
   // demo: {scenario, t}. 시연 중이면 POST /demo/scenario/{name}?t= 응답의 status를 쓴다.
   getStatus: (cageId, demo) => {
     if (files(demo)) return delay({ ...statusAt(cageId, demo), simulated: true });
-    if (!demo) return http(`/cages/${cageId}/status`);
+    if (!demo || api.live()) return http(`/cages/${cageId}/status`);
     return demoResult(demo).then((r) => ({
       ...r.status,
       cage_id: Number(cageId),
@@ -130,19 +145,29 @@ export const api = {
   getTimeseries: (cageId, metric, { from, to, demo } = {}) => {
     if (files(demo)) return delay(timeseriesAt(cageId, metric, demo));
     // 시연 중에는 같은 응답의 timeseries를 쓴다. DB 경로를 부르지 않는다.
-    if (demo) return demoResult(demo).then((r) => ({ cage_id: Number(cageId), metric, points: r.timeseries?.[metric] ?? [] }));
-    return http(`/cages/${cageId}/timeseries${qs({ metric, from, to })}`);
+    if (demo && !api.live()) return demoResult(demo).then((r) => ({ cage_id: Number(cageId), metric, points: r.timeseries?.[metric] ?? [] }));
+    const source = ['vertical_dist','activity','cohesion'].includes(metric) ? 'sonar'
+      : ['feeding','still_ratio','rubbing_rate','quality'].includes(metric) ? 'camera' : 'env';
+    const until = to ?? new Date().toISOString();
+    const since = from ?? new Date(Date.parse(until) - 72 * 3600_000).toISOString();
+    return http(`/cages/${cageId}/timeseries${qs({ metric, from: since, to: until, source, limit: 1000 })}`).then((r) => ({ ...r, raw: true }));
   },
 
   // 에코그램은 이미지(SVG)이므로 URL을 반환한다.
   getEchogramUrl: (cageId, { from, to, demo } = {}) =>
     files(demo) ? echogramMock : `${BASE}/cages/${cageId}/echogram${qs({ from, to })}`,
+  getEchogram: async (cageId, { from, to, demo } = {}) => {
+    if (files(demo)) return { url: echogramMock, revoke: () => {} };
+    const response = await request(`/cages/${cageId}/echogram${qs({ from, to })}`);
+    const url = URL.createObjectURL(await response.blob());
+    return { url, revoke: () => URL.revokeObjectURL(url) };
+  },
 
   // 추천이 없는 회차(정상 등)는 404, 금전 정보 권한이 없으면 403이다. 둘 다 화면 오류가 아니라 '추천 없음'으로 받는다.
   getRecommendation: (cageId, demo) => {
     if (files(demo)) return delay({ ...recommendationAt(cageId, demo), simulated: true });
     // 시연 응답의 추천은 id=0, selectable=false인 표시 전용이다. recommendation이 null이면 추천 없음이다.
-    if (demo) {
+    if (demo && !api.live()) {
       return demoResult(demo).then((r) =>
         r.recommendation
           ? { ...normalizeRecommendation(r.recommendation), cage_id: Number(cageId), simulated: true }
@@ -159,14 +184,14 @@ export const api = {
   },
 
   // 본문은 request_key뿐이다(자유 문구 note는 지원하지 않는다). 키는 성공이나 확정 오류가 나올 때까지 같은 값으로 다시 보낸다.
-  getDiagnosisRequest: (cageId) => USE_MOCK ? delay(null)
+  getDiagnosisRequest: (cageId) => USE_MOCK && !api.live() ? delay(null)
     : http(`/cages/${cageId}/diagnosis-request`).catch((e) => {
         if (e.status === 404 && e.code === 'diagnosis_request_not_found') return null;
         throw e;
       }),
 
   requestDiagnosis: (cageId) =>
-    USE_MOCK
+    USE_MOCK && !api.live()
       ? delay({ mock: true, persisted: false })
       : http(`/cages/${cageId}/diagnosis-request`, {
           method: 'POST',
@@ -184,7 +209,7 @@ export const api = {
 
   // 합성 추천(id=0)은 표시 전용이라 저장 API로 보내지 않는다.
   chooseOption: (recommendationId, optionId) =>
-    USE_MOCK || recommendationId === 0
+    (USE_MOCK && !api.live()) || recommendationId === 0
       ? delay({ mock: true, persisted: false })
       : http(`/recommendations/${recommendationId}/choice`, {
           method: 'POST',
@@ -206,15 +231,19 @@ export const api = {
     files(demo) ? delay(notificationsAt(cageId, demo)) : http(`/cages/${cageId}/notifications`),
 
   // body: {stock: [{size_group: 'fry'|'mid'|'market', count, avg_weight_kg}], insured}
-  putStock: (cageId, body) =>
-    USE_MOCK
+  getStock: (cageId, demo) => files(demo) || !api.live()
+    ? delay({ cage_id: Number(cageId), stock: [], insured: null, insured_mixed: false, simulated: true })
+    : http(`/cages/${cageId}/stock`),
+  putStock: (cageId, body, demo) =>
+    files(demo) || !api.live()
       ? delay({ mock: true, persisted: false })
       : http(`/cages/${cageId}/stock`, { method: 'PUT', body: JSON.stringify(body) }),
 
-  getStressMap: (demo) => (files(demo) ? delay(stressMapAt(demo)) : http('/areas/stress-map')),
+  getStressMap: (demo) => files(demo) ? delay(stressMapAt(demo))
+    : Promise.all([http('/areas/stress-map'), http('/areas/cause-distribution')]).then(([map, counts]) => ({ ...map, cause_distribution: counts.cause_distribution })),
 
   // 해역 경계(GeoJSON). 계약상 지도 응답 형식이 미정이라 프론트는 area_id로 stress-map과 이어 붙인다.
-  getAreaShapes: () => (USE_MOCK ? delay(JSON.parse(areasGeo)) : http('/areas/shapes')),
+  getAreaShapes: (demo) => (files(demo) ? delay(JSON.parse(areasGeo)) : http('/areas/shapes')),
 
   getReleaseDemand: (areaId, demo) =>
     files(demo) ? delay(releaseDemandAt(areaId, demo)) : http(`/areas/${areaId}/release-demand`),
