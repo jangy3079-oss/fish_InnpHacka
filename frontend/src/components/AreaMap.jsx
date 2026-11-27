@@ -28,12 +28,14 @@ function popupNode(a) {
   const level = document.createElement('span');
   level.className = 'pop-level';
   level.style.color = lv?.color ?? '#14212b';
-  level.textContent = `${lv?.icon ?? ''} ${a.level}`;
+  level.textContent = `${lv?.icon ?? ''} ${a.level ?? '미집계'}`;
   const score = document.createElement('span');
-  score.textContent = `스트레스 지수 ${Math.round(a.stress_score)}`;
+  score.textContent = `스트레스 지수 ${a.stress_score == null ? '미집계' : Math.round(a.stress_score)}`;
   const cages = document.createElement('span');
   cages.textContent = `가두리 ${a.cage_count}곳`;
-  box.append(name, level, score, cages);
+  const coverage = document.createElement('span');
+  coverage.textContent = a.data_status ? `집계 ${a.assessed_cage_count} · 단계 유지 ${a.held_cage_count} · 미집계 ${a.unavailable_cage_count}` : '';
+  box.append(name, level, score, cages, coverage);
   return box;
 }
 
@@ -54,7 +56,7 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     ...shapes,
     features: shapes.features.map((f) => {
       const a = areas.find((x) => x.area_id === f.properties.area_id);
-      return { ...f, properties: { ...f.properties, level: a?.level ?? '정상', name: a?.name ?? '' } };
+      return { ...f, properties: { ...f.properties, level: a?.level ?? '미집계', name: a?.name ?? '' } };
     }),
   };
 
@@ -98,7 +100,7 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
         if (!a) return;
         const lv = LEVELS[a.level];
         nameEl.textContent = a.name;
-        levelEl.textContent = `${lv?.icon ?? ''} ${a.level}`;
+        levelEl.textContent = `${lv?.icon ?? ''} ${a.level ?? '미집계'}`;
         node.style.borderColor = lv?.color ?? '#9aa6b3';
         levelEl.style.color = lv?.color ?? '#14212b';
         node.classList.toggle('selected', Number(id) === selRef.current);

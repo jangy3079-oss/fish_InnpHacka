@@ -1,7 +1,10 @@
 # API 계약 초안 — #4
 
+> #35 해역 두 GET은 공무원 인증·허용 해역의 실제 DB 집계다. nullable/부분 집계·방류 추천 기준은
+> [해역 집계 API 계약](area-aggregates.md)을 따른다. 아래 기존 목업 응답은 #4 당시 기록이다.
+
 > #30 시나리오 재생은 실제 합성 센서 분석으로 교체했다. `t`는 시간 단위, `mock=false/simulated=true/persisted=false`다.
-> [시나리오 재생 API 계약](scenario-replay-api.md)을 따른다. 알림·지자체·R4/R6(#34/#35/#45)은 별도 담당 범위다.
+> [시나리오 재생 API 계약](scenario-replay-api.md)을 따른다. 알림·R4/R6(#34/#45)은 별도 담당 범위다.
 
 > #104 상태·추천 조회·선택 저장은 인증된 실제 게시 데이터 경로다. 선택에는 request_key UUID가 필요하다.
 > [분석 저장·어민 API 계약](analysis-api.md)을 따른다. 아래 #4 목업 설명은 당시 기록이다.

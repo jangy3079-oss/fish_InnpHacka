@@ -17,6 +17,7 @@ from common import MetricRecord
 from .ingestion import MAX_BATCH_SIZE, SupabaseMetricStore, get_metric_store
 
 from .farmer_data import FarmerDataStore, get_farmer_store
+from .areas import router as areas_router
 from .echogram import EchogramRenderer, get_echogram_renderer
 from .diagnosis import create_request, get_diagnosis_loader
 from .analysis import read_status,read_recommendation,choose,get_analysis_loader
@@ -26,8 +27,8 @@ from common.config_loader import ConfigLoader
 
 from .schemas import (
     CageStatus, ChoiceRequest, ChoiceReceipt, ConfigFile, ConfigRequest, DemoResult,
-    DiagnosisRequest, DiagnosisReceipt, Metric, MockReceipt, Recommendation, ReleaseDemand,
-    Scenario, StockRequest, StressMap, Timeseries, StockReceipt, IngestReceipt,
+    DiagnosisRequest, DiagnosisReceipt, Metric, MockReceipt, Recommendation,
+    Scenario, StockRequest, Timeseries, StockReceipt, IngestReceipt,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures/status.json"
@@ -50,11 +51,12 @@ def time_window(
 
 
 app = FastAPI(
-    title="Rockfish Guard API", version="0.7.0",
-    description="어민 상태·추천·선택과 지표 수집·재고·시계열·에코그램·진단 접수는 인증된 실제 데이터 경로입니다. "
-                "시나리오 재생은 DB 저장 없는 합성 분석입니다. 지자체·관리자 경로는 목업입니다. docs/scenario-replay-api.md 등 API 계약 문서 참조.",
+    title="Rockfish Guard API", version="0.8.0",
+    description="해역 집계와 어민 상태·추천·선택, 지표 수집·재고·시계열·에코그램·진단 접수는 인증된 실제 데이터 경로입니다. "
+                "시나리오 재생은 DB 저장 없는 합성 분석입니다. 관리자 경로는 목업입니다. docs/scenario-replay-api.md 등 API 계약 문서 참조.",
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
+app.include_router(areas_router)
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
                    allow_methods=["GET", "POST", "PUT"], allow_headers=["Content-Type", "Authorization"],
                    expose_headers=["X-Data-Mode"])
@@ -64,7 +66,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=Fals
 async def mock_header(request, call_next):
     response = await call_next(request)
     path = request.url.path.rstrip("/")
-    real = path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
+    real = path.startswith("/areas/") or path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
     response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
     if path.startswith('/demo/scenario/'):
         response.headers['X-Data-Mode'] = 'simulation'
@@ -142,16 +144,6 @@ def choice(id: Id, body: ChoiceRequest,store: Annotated[FarmerDataStore,Depends(
          description="소유자만 재고 전체를 원자적으로 대체합니다. 요청에서 생략한 크기 그룹은 제거됩니다.")
 def stock(id: Id, body: StockRequest, store: Annotated[FarmerDataStore, Depends(get_farmer_store)]):
     return store.replace_stock(id, body)
-
-
-@app.get("/areas/stress-map", response_model=StressMap, tags=["areas"])
-def stress_map():
-    return {"ts": status_fixture()["ts"], "areas": [{"area_id": 1, "name": "시연 해역", "level": "경고", "stress_score": 64, "cage_count": 1}]}
-
-
-@app.get("/areas/{id}/release-demand", response_model=ReleaseDemand, tags=["areas"])
-def release_demand(id: Id):
-    return {"area_id": id, "ts": status_fixture()["ts"], "estimated_fish_count": 0, "cage_count": 0}
 
 
 @app.exception_handler(RequestValidationError)
