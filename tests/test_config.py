@@ -1,4 +1,3 @@
-import importlib
 import os
 import tempfile
 import unittest
@@ -41,17 +40,18 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(fuse_mod.camera_weight(0.7), fuse_mod.W_MAX)
 
     def test_stress_min_windows_from_yaml(self):
-        self.use("baseline: {min_windows: 400}\n")
-        from stress import model
-        m = importlib.reload(model)
-        try:
-            self.assertEqual(m.MIN_BASELINE_WINDOWS, 400)
-            _, _, fused, _ = scenario("normal_14d")
-            self.assertEqual(m.StressModel("cage-003").fit(fused).status, "warming_up")   # 336 < 400
-        finally:
-            os.environ.pop("ROCKFISH_CONFIG_DIR", None)
-            config.clear_cache()
-            importlib.reload(model)
+        # 모듈 상수는 import 시점에 읽으므로 별도 프로세스에서 확인한다 (reload하면 pickle 클래스가 어긋남)
+        import subprocess
+        import sys
+        d = tempfile.mkdtemp()
+        Path(d, "thresholds.yaml").write_text("baseline: {min_windows: 400}\n", encoding="utf-8")
+        code = ("from stress import model; from tests.pipeline_cache import scenario;"
+                "_, _, fused, _ = scenario('normal_14d');"
+                "print(model.MIN_BASELINE_WINDOWS, model.StressModel('cage-003').fit(fused).status)")
+        root = Path(__file__).resolve().parents[1]
+        out = subprocess.run([sys.executable, "-c", code], cwd=root, capture_output=True, text=True,
+                             env={**os.environ, "ROCKFISH_CONFIG_DIR": d}, timeout=300)
+        self.assertEqual(out.stdout.split(), ["400", "warming_up"], out.stderr[-500:])   # 336 < 400
 
 
 class StressRowContractTest(unittest.TestCase):
