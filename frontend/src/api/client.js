@@ -4,11 +4,13 @@ import status from '../mocks/status.json';
 import timeseries from '../mocks/timeseries.json';
 import recommendation from '../mocks/recommendation.json';
 import stressMap from '../mocks/stress-map.json';
+import notifications from '../mocks/notifications.json';
 import releaseDemand from '../mocks/release-demand.json';
 import echogramMock from '../mocks/echogram.svg';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000';
+const loadedAt = Date.now();
 const delay = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 150));
 
 async function http(path, options) {
@@ -27,8 +29,13 @@ const qs = (params) => {
 };
 
 export const api = {
-  getStatus: (cageId) =>
-    USE_MOCK ? delay({ ...status, cage_id: Number(cageId) }) : http(`/cages/${cageId}/status`),
+  // 목업에서는 ?demo=rise 로 페이지를 연 지 5초 뒤부터 단계가 '주의'→'경고'로 오르는 상황을 볼 수 있다.
+  getStatus: (cageId) => {
+    if (!USE_MOCK) return http(`/cages/${cageId}/status`);
+    const rising = new URLSearchParams(window.location.search).get('demo') === 'rise';
+    const base = rising && Date.now() - loadedAt < 5000 ? { ...status, level: '주의', stress_score: 41 } : status;
+    return delay({ ...base, cage_id: Number(cageId) });
+  },
 
   getTimeseries: (cageId, metric, { from, to } = {}) =>
     USE_MOCK
@@ -51,6 +58,12 @@ export const api = {
           method: 'POST',
           body: JSON.stringify({ option_id: optionId }),
         }),
+
+  // 계약 초안에 없는 API. 알림 문장 생성(#34)과 함께 백엔드와 맞춘다.
+  getNotifications: (cageId) =>
+    USE_MOCK
+      ? delay({ ...notifications, cage_id: Number(cageId) })
+      : http(`/cages/${cageId}/notifications`),
 
   getStressMap: () => (USE_MOCK ? delay(stressMap) : http('/areas/stress-map')),
 

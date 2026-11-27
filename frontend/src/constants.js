@@ -22,3 +22,5 @@ export function formatTime(iso) {
     hour12: false,
   });
 }
+
+export const LEVEL_RANK = { 정상: 0, 주의: 1, 경고: 2, 위험: 3 };
