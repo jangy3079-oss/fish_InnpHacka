@@ -1,6 +1,6 @@
 // 모든 API 호출은 이 파일에서만 한다.
 // VITE_USE_MOCK=false 로 바꾸면 목업 대신 실제 API(VITE_API_BASE)를 호출한다.
-import { notificationsAt, recommendationAt, releaseDemandAt, statusAt, stressMapAt, timeseriesAt } from '../mocks/demo.js';
+import { hoursAt, notificationsAt, recommendationAt, releaseDemandAt, statusAt, stressMapAt, timeseriesAt } from '../mocks/demo.js';
 import areasGeo from '../mocks/areas.geojson?raw';
 import echogramMock from '../mocks/echogram.svg';
 
@@ -33,7 +33,8 @@ export const api = {
   getStatus: (cageId, demo) => {
     if (USE_MOCK) return delay(statusAt(cageId, demo));
     if (!demo) return http(`/cages/${cageId}/status`);
-    return http(`/demo/scenario/${demo.scenario}?t=${demo.t}`, { method: 'POST' }).then((r) => ({ ...r.status, cage_id: Number(cageId) }));
+    // 서버의 t는 시나리오 시작 후 경과 시간(시간 단위)이다. 프레임 번호가 아니다.
+    return http(`/demo/scenario/${demo.scenario}?t=${hoursAt(demo)}`, { method: 'POST' }).then((r) => ({ ...r.status, cage_id: Number(cageId) }));
   },
 
   getTimeseries: (cageId, metric, { from, to, demo } = {}) =>
