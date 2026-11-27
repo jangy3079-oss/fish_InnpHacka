@@ -41,3 +41,22 @@ summary { cursor: pointer; padding: 8px 0; font-size: 16px; color: #2f6fdc; }
 .echogram { width: 100%; height: auto; border-radius: 8px; display: block; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
 .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; }
+
+/* 손익 비교 카드 */
+.options { list-style: none; margin: 8px 0 0; padding: 0; }
+.option { padding: 12px 0; border-bottom: 1px solid #eef1f4; }
+.option.recommended { background: #f1f7ff; margin: 0 -8px; padding: 12px 8px; border-radius: 8px; }
+.option.blocked { color: #6b7785; }
+.option-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.loss { font-size: 20px; font-weight: 800; white-space: nowrap; }
+.blocked .loss { font-size: 16px; }
+.badge { margin-left: 8px; padding: 2px 8px; font-size: 13px; color: #fff; background: #2f6fdc; border-radius: 10px; vertical-align: 2px; }
+.reason { font-size: 16px; margin: 4px 0 0; }
+.why-not { color: #b3261e; }
+.formula { font-size: 15px; background: #f4f7fa; border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+.inputs { margin: 0; font-size: 15px; }
+.inputs div { display: flex; justify-content: space-between; padding: 3px 0; }
+.inputs dt { color: #6b7785; }
+.inputs dd { margin: 0; font-weight: 600; }
+.steps { padding-left: 22px; margin: 8px 0; }
+.steps li { padding: 4px 0; }
