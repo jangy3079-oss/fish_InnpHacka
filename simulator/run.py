@@ -5,7 +5,9 @@
 출력 (data/out/<시나리오>/)
   records.jsonl  env·camera MetricRecord (5분 주기)
   truth.csv      주기별 참값 (환경, 활동 배율, 급이 반응, 정지 비율, 품질 등)
-  positions.npy  핑×개체 수심 (float32, 에코그램 생성용)
+  positions.npy  핑×개체 수심 (float32)
+  echogram.npz   합성 에코그램 Sv(dB) (#7)
+  echogram.png   에코그램 미리보기
 """
 
 from __future__ import annotations
@@ -170,7 +172,7 @@ def make_records(res: SimulationResult, rng: np.random.Generator) -> List[Metric
     return out
 
 
-def save(res: SimulationResult, out_dir: Path) -> Path:
+def save(res: SimulationResult, out_dir: Path, echogram: bool = True) -> Path:
     d = Path(out_dir) / res.scenario.name
     d.mkdir(parents=True, exist_ok=True)
     with (d / "records.jsonl").open("w", encoding="utf-8") as f:
@@ -184,6 +186,11 @@ def save(res: SimulationResult, out_dir: Path) -> Path:
             w.writerow([_ts(res.cycle_time[c])] + [round(float(res.truth[k][c]), 4) for k in keys]
                        + [round(float(x), 4) for x in res.truth["vertical_dist"][c]])
     np.save(d / "positions.npy", res.positions)
+    if echogram:
+        from simulator.echogram import preview_png, save_npz, synthesize
+        eg = synthesize(res)
+        save_npz(eg, d / "echogram.npz")
+        preview_png(eg, d / "echogram.png")
     return d
 
 
@@ -191,9 +198,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="조피볼락 개체 기반 시뮬레이터")
     ap.add_argument("scenario", help="scenarios/<이름>.yaml 의 이름 또는 경로")
     ap.add_argument("--out", default="data/out")
+    ap.add_argument("--no-echogram", action="store_true", help="에코그램 생성 생략")
     a = ap.parse_args(argv)
     res = simulate(load_scenario(a.scenario))
-    d = save(res, Path(a.out))
+    d = save(res, Path(a.out), echogram=not a.no_echogram)
     print(json.dumps({"scenario": res.scenario.name, "cycles": int(res.cycle_time.size),
                       "records": len(res.records), "out": str(d)}, ensure_ascii=False))
 
