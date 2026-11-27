@@ -14,8 +14,8 @@ const SCALE = [
 const STEPS = [
   { title: '관측', text: '소나와 카메라가 5분마다 물고기의 깊이, 움직임, 모여 있는 정도를 잽니다.' },
   { title: '판단', text: '평소와 비교해 스트레스 지수(0~100)를 계산하고 의심되는 원인을 추정합니다.' },
-  { title: '알림', text: '지수가 올라 단계가 바뀌면 바로 알려드립니다.' },
-  { title: '대응', text: '방법별 예상 손해를 비교해 가장 덜 잃는 대응을 추천합니다.' },
+  { title: '알림', text: '지수가 일정 시간 이어져 단계가 오르면 알려드립니다. 피난처가 사라지는 위급 상황은 바로 알립니다.' },
+  { title: '대응', text: '원인에 맞는 대응을 안내합니다. 손해를 비교할 수 있는 경우에는 가장 덜 잃는 방법을 추천합니다.' },
 ];
 
 export default function HomePage() {
@@ -27,7 +27,7 @@ export default function HomePage() {
           <div className="hero-copy">
             <h1>가두리 물고기의 움직임으로 폐사 위험을 먼저 알려드립니다</h1>
             <p>
-              소나와 카메라로 조피볼락이 평소와 다르게 움직이는 것을 찾아내고, 그 이유와 손해가 가장 적은 대응을 알려줍니다.
+              소나와 카메라로 조피볼락이 평소와 다르게 움직이는 것을 찾아내고, 그 이유와 대응 방법을 알려줍니다.
             </p>
             <div className="hero-actions">
               <Link to="/farmer" className="btn btn-light">어민 화면 열기</Link>
