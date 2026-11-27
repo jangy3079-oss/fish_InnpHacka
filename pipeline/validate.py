@@ -15,6 +15,8 @@ VC-05 거짓 경보               turbidity_event 경보 발령(정상 → 그 �
 VC-03 원인 추정 정확도        정답 경보 구간의 원인 엔진(cause/) 1순위 원인. 구간마다 가장 많이 나온 1순위가 정답이면 합격,
                               경보 구간이 없는 turbidity_event는 원인이 한 번도 안 나와야 합격
                               권장 규칙 R4(red_tide)·R6(net_change)는 VC-02·03을 따로 계산하고 요약 합격에 넣지 않는다 (#174)
+                              R7 섭식 저하(feeding_drop)는 경보 대상이 아닌 관리 원인이라 따로 센다 (vc03_management, #180):
+                              R7 정답 구간의 최빈 1순위가 R7이고, 시나리오 전체에서 R7 외 원인이 안 나오면 합격
 """
 
 from __future__ import annotations
@@ -108,6 +110,28 @@ def vc03(results, labels) -> dict:
                             "counts": dict(cnt)}
         ok = ok and mode == iv["rule_id"]
     return {"no_alert_scenario": False, "pass": ok, "by_interval": out}
+
+
+def vc03_management(results, labels, rule_id: str = "R7") -> dict:
+    """경보 없이 관리 권고만 내는 원인(R7)의 1순위 집계. 정답 구간은 alert_expected=False인 rule_id 구간."""
+    from collections import Counter
+    out, ok = {}, True
+    intervals = [iv for iv in labels["intervals"] if iv["rule_id"] == rule_id and not iv["alert_expected"]]
+    for i, iv in enumerate(intervals):
+        sub = [r for r in results if _in(r.ts, iv)]
+        named = [t for t in (_top1(r) for r in sub) if t]
+        cnt = Counter(named)
+        mode = cnt.most_common(1)[0][0] if cnt else None
+        out[f'{iv["cause"]}#{i + 1}'] = {"expected": rule_id, "mode_top1": mode,
+                                         "top1_accuracy": round(cnt.get(rule_id, 0) / len(named), 3) if named else None,
+                                         "coverage": round(len(named) / len(sub), 3) if sub else None, "counts": dict(cnt)}
+        ok = ok and mode == rule_id
+    others = sum(1 for r in results if _top1(r) not in (None, rule_id))
+    # 주 구간 = 가장 긴 정답 구간. 23℃ 경계를 일교차로 잠깐 넘는 짧은 구간은 급이 감소가 판정선(−15%)보다 작다
+    main = max(range(len(intervals)), key=lambda i: _p(intervals[i]["end"]) - _p(intervals[i]["start"]), default=None)
+    main_ok = main is not None and out[f'{intervals[main]["cause"]}#{main + 1}']["mode_top1"] == rule_id
+    return {"pass": bool(intervals) and ok and others == 0, "main_interval_pass": bool(main_ok and others == 0),
+            "other_cause_cycles": others, "by_interval": out}
 
 
 def _in(ts: datetime, iv: dict) -> bool:
@@ -206,6 +230,8 @@ def run_seed(k: int) -> dict:
             r["vc01"] = vc01(recs, fused, labels)
         if name in VC03_SCENARIOS + EXTENDED_SCENARIOS:
             r["vc03"] = vc03(causes, labels)
+        if name == "feeding_drop":
+            r["vc03_r7"] = vc03_management(causes, labels, "R7")
         out[name] = r
     base_scores, base_changes = _levels(model, base_fused)
     out["normal_14d"] = {"alarms": alarms(base_changes)}
@@ -255,6 +281,13 @@ def summarize(runs: List[dict]) -> dict:
     for n in ext:
         s[f"vc02_recall_{n}"] = stat(col(lambda r, n=n: r[n]["vc02"]["recall"]))
     s["vc03_ext_pass_by_scenario"] = {n: sum(r[n]["vc03"]["pass"] for r in runs) for n in ext}
+    if all("vc03_r7" in r.get("feeding_drop", {}) for r in runs):
+        s["vc03_r7_pass"] = sum(r["feeding_drop"]["vc03_r7"]["pass"] for r in runs)
+        s["vc03_r7_main_pass"] = sum(r["feeding_drop"]["vc03_r7"]["main_interval_pass"] for r in runs)
+        s["vc03_r7_other_cause_cycles"] = col(lambda r: r["feeding_drop"]["vc03_r7"]["other_cause_cycles"])
+        acc = lambda r: [v["top1_accuracy"] for v in r["feeding_drop"]["vc03_r7"]["by_interval"].values() if v["top1_accuracy"] is not None]
+        s["vc03_r7_accuracy"] = stat(col(lambda r: float(np.mean(acc(r))) if acc(r) else None))   # 원인이 나온 구간만
+        s["vc03_r7_coverage"] = stat(col(lambda r: np.mean([v["coverage"] or 0 for v in r["feeding_drop"]["vc03_r7"]["by_interval"].values()])))
     return s
 
 
@@ -275,6 +308,9 @@ def to_markdown(res: dict) -> str:
          f"| VC-03 (권장 R4·R6) | " + ", ".join(f"{k} {v}/{len(runs)} (재현율 {s[f'vc02_recall_{k}']['mean']})"
                                               for k, v in s.get("vc03_ext_pass_by_scenario", {}).items())
          + " | 요약 합격에 넣지 않음 |",
+         *([f"| VC-03 (R7 섭식 저하, 경보 없음) | feeding_drop 모든 구간 {s['vc03_r7_pass']}/{len(runs)}, 주 구간 {s['vc03_r7_main_pass']}/{len(runs)} "
+            f"(원인이 나온 주기의 1순위 정답률 {s['vc03_r7_accuracy']['mean']}, 원인 나온 비율 {s['vc03_r7_coverage']['mean']}, "
+            f"R7 외 원인 주기 {s['vc03_r7_other_cause_cycles']}) | 요약 합격에 넣지 않음 |"] if "vc03_r7_pass" in s else []),
          f"| VC-05 | 탁도 경보 {s['vc05_turbidity_alarms']}건 (덤: 급이 저하 {s['vc05_feeding_drop_alarms']}, 정상 14일 {s['vc05_normal_alarms']}) | {ok(s['vc05_pass_all'])} |",
          "", "## 시드별", "",
          "| 시드 | VC-01 카메라/융합 std | VC-01 탁도 중 평균 이탈 카메라/융합 | VC-02 고수온 | VC-02 질병 | VC-02 기생충 | VC-04 선행(h) | VC-05 탁도 경보 |",
@@ -312,7 +348,10 @@ def to_markdown(res: dict) -> str:
           "- 경보 단계는 시연 파이프라인과 같게 원인 엔진(`cause/`)의 R2 즉시 위험 신호를 씀",
           "- VC-05: 경보 단계가 '정상'에서 올라간 횟수",
           "- VC-03: 정답 경보 구간 5분 주기마다 원인 엔진의 표시 대상 중 확률 최대(동점은 엔진 순서) = 1순위. 구간 최빈 1순위가 정답이면 합격. "
-          "1순위 정답률 = 원인이 나온 주기 중 1순위가 정답인 비율, 원인 나온 비율 = 구간 주기 중 원인이 하나라도 나온 비율"]
+          "1순위 정답률 = 원인이 나온 주기 중 1순위가 정답인 비율, 원인 나온 비율 = 구간 주기 중 원인이 하나라도 나온 비율",
+          "- VC-03 R7: `feeding_drop`의 R7 정답 구간(경보 대상 아님)마다 최빈 1순위가 R7이고 시나리오 전체에서 R7 외 원인이 0건이면 합격. "
+          "주 구간 = 가장 긴 R7 구간. 1일차 오후 일교차로 표층이 23℃를 잠깐 넘는 짧은 구간은 급이 감소가 R7 판정선(−15%)보다 작아 R7이 안 나올 수 있다 "
+          "(정답 라벨은 23℃ 도달만 본다)"]
     return "\n".join(L) + "\n"
 
 
