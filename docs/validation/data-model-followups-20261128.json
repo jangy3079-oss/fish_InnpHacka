@@ -1,0 +1,632 @@
+{
+  "created_at_utc": "2026-11-27T15:15:28.171306+00:00",
+  "tested_code_head": "96bf640a5b626051af34d8c3d88e87f6f4539dbb",
+  "tested_main": "fb88e75",
+  "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
+  "verification": {
+    "python_tests_passed": 398,
+    "postgresql_assertions_passed": 236,
+    "generated_scenarios": 8,
+    "exported_frames": 384,
+    "independent_process_model_load_and_score_count": 2304,
+    "engine_only_export_has_label_fallback": false,
+    "r7_held_frames": 20
+  },
+  "vc_summary": {
+    "vc01_camera_std": {
+      "mean": 0.28,
+      "min": 0.237,
+      "max": 0.306
+    },
+    "vc01_fused_std": {
+      "mean": 0.09,
+      "min": 0.082,
+      "max": 0.099
+    },
+    "vc01_pass_all": true,
+    "vc04_lead_h": {
+      "mean": 92.659,
+      "min": 89.33,
+      "max": 106.25
+    },
+    "vc04_lead_27c_h": {
+      "mean": 53.992,
+      "min": 50.67,
+      "max": 67.58
+    },
+    "vc04_pass_all": true,
+    "vc05_turbidity_alarms": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "vc05_feeding_drop_alarms": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "vc05_normal_alarms": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "vc05_pass_all": true,
+    "vc02_recall_heatwave_typhoon": {
+      "mean": 0.982,
+      "min": 0.965,
+      "max": 1.0
+    },
+    "vc02_recall_disease_suspect": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "vc02_recall_parasite_suspect": {
+      "mean": 0.967,
+      "min": 0.96,
+      "max": 0.978
+    },
+    "vc02_recall_mean": 0.983,
+    "vc02_pass_all": true,
+    "vc03_pass_by_scenario": {
+      "heatwave_typhoon": 10,
+      "turbidity_event": 10,
+      "disease_suspect": 10,
+      "parasite_suspect": 9
+    },
+    "vc03_pass_all": false,
+    "vc02_recall_red_tide": {
+      "mean": 0.925,
+      "min": 0.91,
+      "max": 0.975
+    },
+    "vc02_recall_net_change": {
+      "mean": 0.913,
+      "min": 0.801,
+      "max": 0.952
+    },
+    "vc03_ext_pass_by_scenario": {
+      "red_tide": 10,
+      "net_change": 10
+    },
+    "vc03_r7_pass": 5,
+    "vc03_r7_main_pass": 10,
+    "vc03_r7_other_cause_cycles": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "vc03_r7_accuracy": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0
+    },
+    "vc03_r7_coverage": {
+      "mean": 0.46,
+      "min": 0.37,
+      "max": 0.637
+    }
+  },
+  "per_seed": [
+    {
+      "seed_k": 0,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 1.0,
+            "coverage": 0.099,
+            "counts": {
+              "R8": 77
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": true,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.336,
+            "counts": {
+              "R7": 36
+            }
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.811,
+            "counts": {
+              "R7": 417
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 1,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.154c751c.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 1.0,
+            "coverage": 0.164,
+            "counts": {
+              "R8": 128
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": false,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": null,
+            "top1_accuracy": null,
+            "coverage": 0.0,
+            "counts": {}
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.794,
+            "counts": {
+              "R7": 408
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 2,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.63df439d.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 1.0,
+            "coverage": 0.062,
+            "counts": {
+              "R8": 48
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": true,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.037,
+            "counts": {
+              "R7": 4
+            }
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.811,
+            "counts": {
+              "R7": 417
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 3,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.42169e68.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 0.745,
+            "coverage": 0.191,
+            "counts": {
+              "R8": 111,
+              "R5": 38
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": true,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.019,
+            "counts": {
+              "R7": 2
+            }
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.782,
+            "counts": {
+              "R7": 402
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 4,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.ec60fb26.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 0.988,
+            "coverage": 0.213,
+            "counts": {
+              "R8": 164,
+              "R5": 2
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": true,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.467,
+            "counts": {
+              "R7": 50
+            }
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.807,
+            "counts": {
+              "R7": 415
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 5,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.a1d39d25.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 1.0,
+            "coverage": 0.1,
+            "counts": {
+              "R8": 78
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": true,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.374,
+            "counts": {
+              "R7": 40
+            }
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.86,
+            "counts": {
+              "R7": 442
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 6,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.24d5ba0b.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": false,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R5",
+            "top1_accuracy": 0.013,
+            "coverage": 0.199,
+            "counts": {
+              "R5": 153,
+              "R8": 2
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": false,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": null,
+            "top1_accuracy": null,
+            "coverage": 0.0,
+            "counts": {}
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.813,
+            "counts": {
+              "R7": 418
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 7,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.8d47a314.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 1.0,
+            "coverage": 0.117,
+            "counts": {
+              "R8": 91
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": false,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": null,
+            "top1_accuracy": null,
+            "coverage": 0.0,
+            "counts": {}
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.786,
+            "counts": {
+              "R7": 404
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 8,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.a2b20318.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 1.0,
+            "coverage": 0.259,
+            "counts": {
+              "R8": 202
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": false,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": null,
+            "top1_accuracy": null,
+            "coverage": 0.0,
+            "counts": {}
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.767,
+            "counts": {
+              "R7": 394
+            }
+          }
+        }
+      }
+    },
+    {
+      "seed_k": 9,
+      "model_version": "m5-iforest-1.1+cage-003.20260804.562e7914.0644a85c",
+      "parasite_vc03": {
+        "no_alert_scenario": false,
+        "pass": true,
+        "by_interval": {
+          "parasite_suspect": {
+            "expected": "R8",
+            "mode_top1": "R8",
+            "top1_accuracy": 1.0,
+            "coverage": 0.124,
+            "counts": {
+              "R8": 97
+            }
+          }
+        }
+      },
+      "feeding_r7": {
+        "pass": false,
+        "main_interval_pass": true,
+        "other_cause_cycles": 0,
+        "by_interval": {
+          "feeding_drop#1": {
+            "expected": "R7",
+            "mode_top1": null,
+            "top1_accuracy": null,
+            "coverage": 0.0,
+            "counts": {}
+          },
+          "feeding_drop#2": {
+            "expected": "R7",
+            "mode_top1": "R7",
+            "top1_accuracy": 1.0,
+            "coverage": 0.741,
+            "counts": {
+              "R7": 381
+            }
+          }
+        }
+      }
+    }
+  ],
+  "local_api_warmup": {
+    "simulated": true,
+    "persisted": false,
+    "measurements": [
+      {
+        "scenario": "heatwave_typhoon",
+        "requested_hours": 0.0,
+        "effective_hours": 0.0,
+        "seconds": 2.6284,
+        "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
+        "scenario_revision": "6afa91824ec8aba8565750d2cf80a6c36801ba3785582fbe01a26d6f37dbf44a",
+        "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
+      },
+      {
+        "scenario": "heatwave_typhoon",
+        "requested_hours": 26.0,
+        "effective_hours": 26.0,
+        "seconds": 0.0706,
+        "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
+        "scenario_revision": "6afa91824ec8aba8565750d2cf80a6c36801ba3785582fbe01a26d6f37dbf44a",
+        "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
+      },
+      {
+        "scenario": "heatwave_typhoon",
+        "requested_hours": 26.0,
+        "effective_hours": 26.0,
+        "seconds": 0.0037,
+        "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
+        "scenario_revision": "6afa91824ec8aba8565750d2cf80a6c36801ba3785582fbe01a26d6f37dbf44a",
+        "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
+      },
+      {
+        "scenario": "feeding_drop",
+        "requested_hours": 48.0,
+        "effective_hours": 48.0,
+        "seconds": 0.3643,
+        "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
+        "scenario_revision": "34173db37df41e2e912c638105b498a5ff03af1646c114512652403a2163d067",
+        "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
+      },
+      {
+        "scenario": "parasite_suspect",
+        "requested_hours": 60.0,
+        "effective_hours": 60.0,
+        "seconds": 0.4989,
+        "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
+        "scenario_revision": "c3757a784b0761f96cbcf5ca5f584cf114eb4c7fb062f062647ce24d53da45a6",
+        "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
+      }
+    ]
+  },
+  "limitations": [
+    "Synthetic inputs; no field calibration, remote Supabase or real account verification.",
+    "VC03 parasite first-rank passes 9/10; R7 main interval 10/10, all intervals 5/10.",
+    "Local timing is an observation, not a deployment SLA; caches are per worker.",
+    "R8 16h pause core was already merged in PR #209 and is preserved.",
+    "New pending/source/last_seen fields are data export metadata; API/DB/UI integration remains in parent issues.",
+    "Legacy models without training metadata must be retrained."
+  ]
+}
