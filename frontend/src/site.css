@@ -383,3 +383,7 @@ input, progress { accent-color: var(--accent); }
 .demo-source p { margin: 0; font-size: 14px; color: var(--ink-soft); }
 .demo-source button { align-self: flex-start; font: inherit; font-weight: 700; font-size: 14px; color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: var(--radius); padding: 6px 10px; cursor: pointer; }
 .demo-source small { font-size: 13px; color: var(--ink-soft); }
+.calc-groups { width: 100%; margin-top: 8px; font-size: 14px; border-collapse: collapse; background: transparent; }
+.calc-groups th, .calc-groups td { padding: 5px 6px; border-bottom: 1px solid var(--line); text-align: left; font-variant-numeric: tabular-nums; }
+.calc-groups th { color: var(--ink-soft); font-weight: 600; }
+.calc-groups small { color: var(--ink-soft); }
