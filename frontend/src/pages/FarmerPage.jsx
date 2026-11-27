@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDemo } from '../demo/DemoContext.jsx';
+import { usePageTitle } from '../usePageTitle.js';
+import { ErrorNotice, LoadingBlock, Skeleton } from '../components/States.jsx';
 import { api } from '../api/client.js';
 import { FarmerTabs } from '../components/SiteChrome.jsx';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
@@ -15,6 +17,8 @@ export default function FarmerPage() {
   const [status, setStatus] = useState(null);
   const [rec, setRec] = useState(null);
   const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  usePageTitle('어민 현황');
 
   const { demo } = useDemo();
 
@@ -32,10 +36,35 @@ export default function FarmerPage() {
     return () => {
       alive = false;
     };
-  }, [demo]);
+  }, [demo, attempt]);
 
-  if (error) return <p className="error big">불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>;
-  if (!status || !rec) return <p className="big">불러오는 중…</p>;
+  if (error && (!status || !rec)) {
+    return (
+      <div className="farmer-page">
+        <ErrorNotice onRetry={() => { setError(null); setAttempt((a) => a + 1); }} />
+      </div>
+    );
+  }
+  if (!status || !rec) {
+    return (
+      <div className="farmer-page">
+        <FarmerTabs />
+        <LoadingBlock label="어민 현황을 불러오는 중입니다">
+          <div className="farmer-grid">
+            <div className="farmer">
+              <Skeleton height={230} />
+              <Skeleton height={130} />
+              <Skeleton height={190} />
+            </div>
+            <div className="farmer">
+              <Skeleton height={420} />
+              <Skeleton height={300} />
+            </div>
+          </div>
+        </LoadingBlock>
+      </div>
+    );
+  }
 
   const isProfit = rec.kind !== 'none' && rec.kind !== 'first_aid';
 

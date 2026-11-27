@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDemo } from '../demo/DemoContext.jsx';
+import { usePageTitle } from '../usePageTitle.js';
+import { ErrorNotice, LoadingBlock, Skeleton } from '../components/States.jsx';
 import { api } from '../api/client.js';
 import AreaMap from '../components/AreaMap.jsx';
 import ReleaseDemandPanel from '../components/ReleaseDemandPanel.jsx';
@@ -11,6 +13,8 @@ export default function DashboardPage() {
   const [shapes, setShapes] = useState(null);
   const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  usePageTitle('지자체 대시보드');
 
   const { demo } = useDemo();
 
@@ -27,10 +31,20 @@ export default function DashboardPage() {
     return () => {
       alive = false;
     };
-  }, [demo]);
+  }, [demo, attempt]);
 
-  if (error) return <p className="error big">불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>;
-  if (!map) return <p className="big">불러오는 중…</p>;
+  if (error && !map) return <ErrorNotice onRetry={() => { setError(null); setAttempt((a) => a + 1); }} />;
+  if (!map) {
+    return (
+      <LoadingBlock label="대시보드를 불러오는 중입니다">
+        <Skeleton height={36} width="260px" />
+        <div style={{ height: 12 }} />
+        <Skeleton height={380} />
+        <div style={{ height: 14 }} />
+        <Skeleton height={200} />
+      </LoadingBlock>
+    );
+  }
 
   const counts = Object.keys(LEVELS).map((lv) => ({ lv, n: map.areas.filter((a) => a.level === lv).length }));
 
