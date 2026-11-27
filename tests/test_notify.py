@@ -42,10 +42,30 @@ class NotificationTests(unittest.TestCase):
     def test_real_calculator_result_is_rendered_without_new_api_schema(self):
         comparison = self.comparison()
         result = NotificationGenerator().generate(context(), recommendation=comparison)
-        self.assertIn("최소 손실 선택지", result.message)
-        self.assertIn("예상 손실", result.message)
+        self.assertIn("손해가 가장 적은 방법", result.message)
+        self.assertIn("예상 손해", result.message)
+        for jargon in ("최소 손실", "가정값을 포함한", "기준선"):     # #232 쉬운 표현
+            self.assertNotIn(jargon, result.message)
         self.assertEqual(len(sentences(result.message)), 3)
         self.assertNotIn("확정 손실", result.message)
+
+    def test_r7_follows_feeding_management_not_lowest_loss(self):
+        """#232: R7 알림은 손해 최소('유지')가 아니라 분석 추천과 같은 사료 감량을 권한다."""
+        comparison = self.comparison(level="normal", primary_rule_id="R7")
+        self.assertEqual(comparison["lowest_loss_option"], "keep")
+        r7 = context(level="정상", stress_score=38.0, rule_id="R7",
+                     evidence={"temp_surface": 23.4, "activity_change": 0.02, "feeding_change": -0.18})
+        result = NotificationGenerator().generate(r7, recommendation=comparison)
+        self.assertIn("사료 양을 줄이세요", result.message)
+        self.assertIn("먹이 반응 평소보다 18% 감소", result.message)
+        self.assertNotIn("손해가 가장 적은", result.message)
+        self.assertNotIn("20%", result.message)                    # 감량률 수치는 알림에 쓰지 않음
+        self.assertLessEqual(len(sentences(result.message)), 3)
+        for option in comparison["options"]:
+            if option["id"] == "reduce_feed":
+                option["available"] = False
+        result = NotificationGenerator().generate(r7, recommendation=comparison)
+        self.assertIn("권할 수 있는 사료 관리 방법이 계산되지 않았습니다", result.message)
 
     def test_wrong_cage_revision_level_or_unavailable_recommendation_rejected(self):
         import copy
@@ -109,7 +129,7 @@ class NotificationTests(unittest.TestCase):
     def test_warming_up_never_invents_score_or_cause(self):
         result = NotificationGenerator().generate(context(baseline_status="warming_up", stress_score=None,
                                                          level=None, rule_id=None))
-        self.assertIn("학습 중", result.message)
+        self.assertIn("익히는 중", result.message)
         self.assertNotIn("0점", result.message)
         self.assertEqual(len(sentences(result.message)), 2)
 
@@ -126,7 +146,7 @@ class NotificationTests(unittest.TestCase):
         self.assertIsNone(result.fallback_reason)
 
     def test_activity_increase_decrease_and_observed_zero_are_distinct(self):
-        for value, phrase in ((-.4, "40% 감소"), (.2, "20% 증가"), (0., "변화 없음")):
+        for value, phrase in ((-.4, "40% 감소"), (.2, "20% 증가"), (0., "평소와 같음")):
             result = NotificationGenerator().generate(context(evidence={"activity_change": value}))
             self.assertIn(phrase, result.message)
 
