@@ -104,7 +104,7 @@ def behavior(dr: Drivers, grid: np.ndarray, rubbing_multiplier: float = 4.0) -> 
     pdf = (1 - d) * pref + d / grid.size
 
     act = (1.0 * dr.day + NIGHT_ACTIVITY * (1 - dr.day))
-    act *= float(heat_activity(dr.temp_surface)) * (1 - 0.35 * d)
+    act *= float(heat_activity(dr.temp_surface)) * (1 - 0.5 * d)
     act *= 1 - 0.5 * dr.disease
     act *= 1 + 0.15 * dr.parasite      # 몸 비비기·급회전으로 조금 더 움직임
 
@@ -133,8 +133,10 @@ class FishSchool:
 
     def step(self, b: Behavior) -> np.ndarray:
         n = self.z.size
-        moving = self.rng.random(n) >= b.still
-        prop = self.z + self.rng.normal(0.0, STEP_SD * b.activity, n)
+        # 활동 지수는 '움직이는 개체 비율'과 '걸음 크기' 둘 다에 반영한다
+        p_move = (1.0 - b.still) * min(1.0, b.activity)
+        moving = self.rng.random(n) < p_move
+        prop = self.z + self.rng.normal(0.0, STEP_SD * (0.5 + 0.5 * b.activity), n)
         lo, hi = self.grid[0], self.grid[-1]
         prop = np.where(prop < lo, 2 * lo - prop, prop)       # 경계 반사
         prop = np.where(prop > hi, 2 * hi - prop, prop)
