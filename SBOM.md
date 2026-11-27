@@ -60,7 +60,7 @@ CFD 공식 README는 시험 영상 출처를 Pexels @amnart-keawted-2221199로 �
 - 저장소 LICENSE 파일은 **MIT**다 (Copyright 2019 Md Jahidul Islam). SDD와 SRS의 "확인 필요"는 이 결과로 해소된다.
 - 다만 GitHub가 자동 분류에 실패해 "Other"로 표시한다. LICENSE 본문 첫 줄이 MIT 문구인 것을 직접 읽어 확인했다.
 - **아직 확인하지 못한 것:** 사전학습 가중치와 학습에 쓴 EUVP 등 데이터셋의 라이선스는 별도일 수 있다. 영상 개선에 실제로 도입하기 전에 가중치 배포처의 안내를 확인한다.
-- 해커톤은 OpenCV CLAHE를 쓰므로 영향 없다.
+- **결론 (#46, 데이터·모델 결정):** 해커톤은 OpenCV CLAHE를 유지하고 FUnIE-GAN은 확장으로 둔다. 가중치 조건이 확인되지 않아 CLAHE와의 비교 시험은 하지 않았다. 가중치 배포처 라이선스(상업 이용 가능 여부 포함)를 확인한 뒤 VC-07 시험셋의 저품질 프레임에서 CLAHE와 품질 점수·탐지 수를 비교한다.
 
 ### 2.2 Community Fish Detector (M3)
 
