@@ -28,7 +28,7 @@ from common.config_loader import ConfigLoader
 from .schemas import (
     CageStatus, ChoiceRequest, ChoiceReceipt, ConfigFile, ConfigRequest, DemoResult,
     DiagnosisRequest, DiagnosisReceipt, Metric, MockReceipt, Recommendation,
-    Scenario, StockRequest, Timeseries, StockReceipt, IngestReceipt,
+    Scenario, StockRequest, Timeseries, StockReceipt, IngestReceipt, WorkLogReceipt, WorkLogRequest,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures/status.json"
@@ -66,7 +66,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=Fals
 async def mock_header(request, call_next):
     response = await call_next(request)
     path = request.url.path.rstrip("/")
-    real = path.startswith("/areas/") or path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
+    real = path.startswith("/areas/") or path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"status", "recommendation", "timeseries", "stock", "echogram", "diagnosis-request", "work-log"}) or (path.startswith('/recommendations/') and path.endswith('/choice'))
     response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
     if path.startswith('/demo/scenario/'):
         response.headers['X-Data-Mode'] = 'simulation'
@@ -148,8 +148,10 @@ def stock(id: Id, body: StockRequest, store: Annotated[FarmerDataStore, Depends(
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(request, exc):
-    if request.url.path.rstrip("/").endswith(("/diagnosis-request",'/choice')):
-        code = 'invalid_choice_request' if request.url.path.rstrip('/').endswith('/choice') else 'invalid_diagnosis_request'
+    if request.url.path.rstrip("/").endswith(("/diagnosis-request",'/choice','/work-log')):
+        path = request.url.path.rstrip('/')
+        code = ('invalid_choice_request' if path.endswith('/choice') else 'invalid_work_log_request' if path.endswith('/work-log')
+                else 'invalid_diagnosis_request')
         return JSONResponse(status_code=422, content={"detail": {"code": code, "message": "Invalid request"}})
     return await request_validation_exception_handler(request, exc)
 
@@ -160,6 +162,15 @@ def diagnosis(id: Id, body: DiagnosisRequest,
               store: Annotated[FarmerDataStore, Depends(get_farmer_store)],
               loader: Annotated[ConfigLoader, Depends(get_diagnosis_loader)]):
     return create_request(store, id, body, loader)
+
+
+@app.post("/cages/{id}/work-log", response_model=WorkLogReceipt, status_code=201, tags=["cages"],
+          responses={401: {"description": "인증 실패"}, 403: {"description": "소유자가 아님"}, 404: {"description": "가두리 없음"},
+                     409: {"description": "같은 request_key로 다른 내용"}, 422: {"description": "종류·시각 오류 (미래, 7일 초과)"}},
+          description="소유자의 망갈이(net_change)·선별(sorting) 작업 기록을 저장합니다. 원인 규칙 R6(작업 스트레스)의 입력입니다. "
+                      "같은 request_key 재전송은 같은 영수증을 돌려줍니다.")
+def work_log(id: Id, body: WorkLogRequest, store: Annotated[FarmerDataStore, Depends(get_farmer_store)]):
+    return store.record_work_log(id, body)
 
 
 @app.post("/demo/scenario/{name}", response_model=DemoResult, tags=["demo"],

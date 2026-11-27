@@ -60,6 +60,7 @@ python -m pipeline.validate --seeds 10   # VC-01~05 검증 (시드 10개, 약 1�
 DB 지표 분석→결과 저장→어민 상태/추천 조회→선택 저장은 [어민 API 2차 안내](docs/analysis-api.md)를 확인하세요.
 
 공통 1차 조치와 소유자 진단 접수는 [진단 API 안내](docs/diagnosis-api.md)를 확인하세요.
+적조 특보 적재와 망갈이·선별 작업 기록(원인 규칙 R4·R6 입력)은 [적조 특보·작업 기록 안내](docs/red-tide-work-log.md)를 확인하세요.
 진단 POST는 실제 DB 저장 경로이며 외부 전달은 대기 상태입니다.
 
 그룹별 손익과 긴급방류 요건은 [손익 계산기 안내](docs/loss-calculator.md)를 확인하세요.
