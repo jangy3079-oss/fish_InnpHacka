@@ -12,10 +12,14 @@ export const SOURCE_LABELS = {
   env: '수온·환경 센서',
 };
 
+// 서비스 이름은 아직 확정되지 않았다. 여기 한 곳만 바꾸면 탭 제목에 반영된다. (로고 글자와 index.html은 따로 바꿔야 함)
+export const SITE_NAME = '조피볼락 스트레스 조기경보';
+
+// "8월 12일 14:00" 형식. 월·일이 모호하지 않게 쓴다.
 export function formatTime(iso) {
   const d = new Date(iso);
   return d.toLocaleString('ko-KR', {
-    month: 'numeric',
+    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',

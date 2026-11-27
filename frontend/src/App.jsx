@@ -14,8 +14,9 @@ export default function App() {
   const isHome = pathname === '/';
   return (
     <DemoProvider>
+      <a className="skip-link" href="#main">본문 바로가기</a>
       <SiteHeader />
-      <main className={isHome ? 'home' : 'container'}>
+      <main id="main" tabIndex={-1} className={isHome ? 'home' : 'container'}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/farmer" element={<FarmerPage />} />
