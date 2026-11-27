@@ -1,16 +1,17 @@
 {
   "created_at_utc": "2026-11-27T15:15:28.171306+00:00",
-  "tested_code_head": "96bf640a5b626051af34d8c3d88e87f6f4539dbb",
-  "tested_main": "fb88e75",
+  "tested_code_head": "4cc40858d95e1b331563a9a2b5bbbee03c2c6a68",
+  "tested_main": "7dc9f6b",
   "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
   "verification": {
-    "python_tests_passed": 398,
+    "python_tests_passed": 399,
     "postgresql_assertions_passed": 236,
     "generated_scenarios": 8,
     "exported_frames": 384,
     "independent_process_model_load_and_score_count": 2304,
     "engine_only_export_has_label_fallback": false,
-    "r7_held_frames": 20
+    "r7_held_frames": 20,
+    "invalid_analysis_config_does_not_block_raw_api_startup": true
   },
   "vc_summary": {
     "vc01_camera_std": {
@@ -578,7 +579,7 @@
         "scenario": "heatwave_typhoon",
         "requested_hours": 0.0,
         "effective_hours": 0.0,
-        "seconds": 2.6284,
+        "seconds": 2.7189,
         "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
         "scenario_revision": "6afa91824ec8aba8565750d2cf80a6c36801ba3785582fbe01a26d6f37dbf44a",
         "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
@@ -587,7 +588,7 @@
         "scenario": "heatwave_typhoon",
         "requested_hours": 26.0,
         "effective_hours": 26.0,
-        "seconds": 0.0706,
+        "seconds": 0.0761,
         "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
         "scenario_revision": "6afa91824ec8aba8565750d2cf80a6c36801ba3785582fbe01a26d6f37dbf44a",
         "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
@@ -596,7 +597,7 @@
         "scenario": "heatwave_typhoon",
         "requested_hours": 26.0,
         "effective_hours": 26.0,
-        "seconds": 0.0037,
+        "seconds": 0.0038,
         "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
         "scenario_revision": "6afa91824ec8aba8565750d2cf80a6c36801ba3785582fbe01a26d6f37dbf44a",
         "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
@@ -605,7 +606,7 @@
         "scenario": "feeding_drop",
         "requested_hours": 48.0,
         "effective_hours": 48.0,
-        "seconds": 0.3643,
+        "seconds": 0.3725,
         "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
         "scenario_revision": "34173db37df41e2e912c638105b498a5ff03af1646c114512652403a2163d067",
         "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
@@ -614,7 +615,7 @@
         "scenario": "parasite_suspect",
         "requested_hours": 60.0,
         "effective_hours": 60.0,
-        "seconds": 0.4989,
+        "seconds": 0.519,
         "config_revision": "c3901dea41f2a8d30771ee8ba33c7d3bcb63d5ea7c55a7883c7efef7518219d6",
         "scenario_revision": "c3757a784b0761f96cbcf5ca5f584cf114eb4c7fb062f062647ce24d53da45a6",
         "model_version": "m5-iforest-1.1+cage-003.20260804.eb14bb32.0644a85c"
@@ -628,5 +629,6 @@
     "R8 16h pause core was already merged in PR #209 and is preserved.",
     "New pending/source/last_seen fields are data export metadata; API/DB/UI integration remains in parent issues.",
     "Legacy models without training metadata must be retrained."
-  ]
+  ],
+  "additional_verification": "Latest main changed source documentation only; notify regressions 27 passed."
 }
