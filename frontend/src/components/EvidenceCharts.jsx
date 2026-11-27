@@ -150,7 +150,13 @@ export default function EvidenceCharts({ cageId, alertAt }) {
   if (!vd || !act || !ts || !tm) return <p className="hint">그래프를 불러오는 중…</p>;
   if ([vd, act, ts, tm].some((d) => d.failed)) return <p className="error">그래프를 불러오지 못했습니다.</p>;
 
-  if (vd.points.length < 2) return <section className="card" id="evidence"><h2>왜 이렇게 판단했나요?</h2><p className="hint">아직 그래프를 그릴 데이터가 모이지 않았습니다.</p></section>;
+  if (vd.points.length < 2) return (
+      <section className="card" id="evidence" ref={scrollToHash}>
+        <h2>왜 이렇게 판단했나요?</h2>
+        <p className="hint">아직 그래프를 그릴 데이터가 모이지 않았습니다.</p>
+        <Echogram cageId={cageId} />
+      </section>
+    );
 
   const temps = [...ts.points, ...tm.points].map((p) => p.value);
   const tMin = Math.floor(Math.min(...temps)) - 1;
