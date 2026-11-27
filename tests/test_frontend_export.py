@@ -52,7 +52,10 @@ class FrontendExportTest(unittest.TestCase):
         self.assertTrue(all(f.get("cause_source") in ("cause_engine", "scenario_label") for f in hw if f["cause"]))
         # R1·R2는 원인 엔진 결과
         self.assertTrue(any(f.get("cause_source") == "cause_engine" for f in hw if f["cause"]))
-        self.assertTrue(all(not f["cause"] for f in hw if f["level"] == "정상"))
+        normal_causes = [f for f in hw if f['level']=='정상' and f['cause']]
+        self.assertTrue(normal_causes)  # UC-04: R7 is management guidance without an alert.
+        self.assertTrue(all({c['rule_id'] for c in f['cause']}=={'R7'}
+                            and f['cause_source']=='cause_engine' and f['cause_suppression'] is None for f in normal_causes))
         para = self.data["parasite_suspect"]["frames"]
         self.assertIn("R8", {f["cause"][0]["rule_id"] for f in para if f["cause"]})
         self.assertTrue(any(f["cause_source"] == "cause_engine" for f in para if f["cause"]
