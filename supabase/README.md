@@ -4,6 +4,9 @@ SDD 7장 테이블 10개, RLS, 로컬 시연용 seed를 제공한다.
 설계·권한·합의 사항은 [DB 계약](../docs/database-contract.md)을 확인한다.
 이 PR은 SQL 파일만 제공하며 원격 Supabase에 자동 적용하지 않는다.
 
+#28 진단 접수는 `20261127000400_diagnosis_request.sql`을 포함한 전체 migration이 필요하다.
+public 테이블10개는 유지하며 private 요청 저장소와 소유자 RPC를 추가한다. [진단 계약](../docs/diagnosis-api.md)을 확인한다.
+
 ## 로컬 Supabase에서 사용
 
 Supabase CLI와 Docker가 설치된 로컬 환경에서 저장소 루트 기준:

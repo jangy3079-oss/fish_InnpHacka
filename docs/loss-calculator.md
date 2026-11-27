@@ -12,7 +12,7 @@ python -m unittest tests.test_decision -v
 예시는 합성 재고·임시 시세·가정 비용이다. 실제 가격 조회, 방류 승인, 예산 예약, 보상 지급을 수행하지 않는다.
 `LossCalculator.compare(ComparisonRequest 또는 dict)`는 부작용 없는 계산 모듈이며 JSON 응답을 CLI로도 제공한다.
 현재 HTTP `/recommendation`은 기존 목업이다. DB 재고 조회·원인/경보 연결·추천 저장/조회는 #104,
-질병 계열 1차 조치는 #28, 실행 마감은 #44의 후속 범위다.
+질병 계열은 #28의 검토된 공통 조치를 반환하며, [진단 접수](diagnosis-api.md)는 별도 인증 POST다. 실행 마감은 #44 후속이다.
 
 ## 입력
 

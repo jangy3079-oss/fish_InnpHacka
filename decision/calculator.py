@@ -6,6 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP, localcontext
 from common.config_loader import ConfigError, ConfigLoader
 from .actions import ACTIONS
 from .schemas import ComparisonRequest
+from .first_aid import ensure_safe, reviewed_guide
 
 FORMULA = "L(a) = sum_g(N_g * P_g * W_g * m_g(a)) + C(a) - S(a)"
 
@@ -86,6 +87,12 @@ class LossCalculator:
                   "primary_rule_id": request.primary_rule_id}
         if request.primary_rule_id in ("R5", "R8"):
             result.update(mode="first_aid_required", reason="질병 계열은 손익 비교 대신 별도 1차 조치·진단 요청 흐름을 사용합니다 (#28).")
+            result["first_aid"] = reviewed_guide(request.primary_rule_id, snapshot)
+            # Only the diagnosis endpoint receipt may claim a request was persisted.
+            result["first_aid"].pop("message")
+            result["first_aid"]["dispatch_status"] = "not_created"
+            result["diagnosis_request_required"] = True
+            ensure_safe(result, snapshot)
             return result
         mortality = dec(costs["expected_mortality_by_level"][request.level])
         ranked = []

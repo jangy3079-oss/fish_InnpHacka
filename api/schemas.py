@@ -1,6 +1,7 @@
 """Provisional API contracts. See docs/api-contract.md for team decisions."""
 
 from typing import Annotated, Any, Literal
+from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
@@ -107,7 +108,19 @@ class StockReceipt(Contract):
 
 
 class DiagnosisRequest(Contract):
-    note: Annotated[str, Field(max_length=2000)] = ""
+    request_key: UUID
+
+
+class DiagnosisReceipt(Contract):
+    persisted: Literal[True]
+    id: Annotated[int, Field(gt=0)]
+    cage_id: Annotated[int, Field(gt=0)]
+    request_key: UUID
+    status: Literal["pending"]
+    dispatch_status: Literal["pending"]
+    created_at: AwareDatetime
+    creation_config_revision: str
+    packet: dict[str, Any]
 
 
 class ConfigRequest(Contract):

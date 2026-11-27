@@ -8,6 +8,9 @@
 
 ## 실행 방법
 
+공통 1차 조치와 소유자 진단 접수는 [진단 API 안내](docs/diagnosis-api.md)를 확인하세요.
+진단 POST는 실제 DB 저장 경로이며 외부 전달은 대기 상태입니다.
+
 그룹별 손익과 긴급방류 요건은 [손익 계산기 안내](docs/loss-calculator.md)를 확인하세요.
 `python -m decision --input scenarios/loss_request.example.json`으로 합성 입력의 계산 근거를 조회할 수 있습니다.
 
@@ -16,7 +19,7 @@ R1·R2·R3·R5·R8 원인 추정과 #60의 피난처 소실 판정, 파이프라
 
 ### API 로컬 실행
 
-지표 수집 POST·재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 확인하는 실제 데이터 경로입니다.
+지표 수집 POST·재고 PUT·시계열·에코그램·진단 접수는 사용자 인증과 가두리 권한을 확인하는 실제 데이터 경로입니다.
 수집은 전용 edge 계정, 어민 데이터는 사용자 계정으로 인증합니다. 나머지는 기존 목업입니다. 실제 데이터 경로의 설정·RPC migration·Bearer/이미지 연계는
 [어민 데이터 API 1차 안내](docs/farmer-data-api.md)를 확인하세요.
 Python 3.11 이상, 저장소 루트에서 실행합니다.

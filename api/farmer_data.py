@@ -61,6 +61,8 @@ class FarmerDataStore:
             raise data_error(401, "invalid_token", "A valid Supabase user access token is required")
         if response.status_code == 403 or code == "42501":
             raise data_error(403, "data_forbidden", "This operation is not permitted")
+        if code in ("40001", "23505"):
+            raise data_error(409, "data_conflict", "Data changed or request key conflicts; refresh before retrying")
         if code in ("22023", "23514", "23503", "22P02", "22003"):
             raise data_error(422, "invalid_data", "Database validation rejected the request")
         raise data_error(503, "data_unavailable", "Supabase data access is unavailable")

@@ -39,7 +39,7 @@ class ApiContractTests(unittest.TestCase):
         actual = {(path, method) for path, item in schema["paths"].items() for method in item if method in {"get", "post", "put"}}
         self.assertEqual(actual, expected)
         for path, method in expected:
-            self.assertIn("201" if path == "/ingest/metrics" else "200", schema["paths"][path][method]["responses"])
+            self.assertIn("201" if path in ("/ingest/metrics", "/cages/{id}/diagnosis-request") else "200", schema["paths"][path][method]["responses"])
         self.assertEqual(self.client.get("/docs").status_code, 200)
         self.assertEqual(self.client.get("/redoc").status_code, 200)
         params = schema["paths"]["/cages/{id}/timeseries"]["get"]["parameters"]
@@ -58,7 +58,6 @@ class ApiContractTests(unittest.TestCase):
         before = self.client.get("/cages/3/status").json()
         requests = [
             ("post", "/recommendations/1/choice", {"option_id": "reduce_feed"}),
-            ("post", "/cages/3/diagnosis-request", {"note": "demo"}),
             ("put", "/admin/config/thresholds", {"values": {"warning": 60}}),
         ]
         for method, path, payload in requests:
