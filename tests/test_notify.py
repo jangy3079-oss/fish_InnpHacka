@@ -89,11 +89,11 @@ class NotificationTests(unittest.TestCase):
     def test_template_has_three_sentences_and_original_numbers(self):
         result = NotificationGenerator().generate(context())
         self.assertEqual(len(sentences(result.message)), 3)
-        for phrase in ("64점", "26.4℃", "28% 감소", "2018년"):
+        for phrase in ("64점", "26.4℃", "28% 감소", "조피볼락 양식 매뉴얼"):
             self.assertIn(phrase, result.message)
         self.assertEqual(result.mode, "template")
         self.assertEqual(result.dispatch_status, "not_dispatched")
-        self.assertEqual(result.citations[0].id, "high_temp_monitoring")
+        self.assertEqual(result.citations[0].id, "rockfish_high_temp_feed_stop")   # #232 원인별 문구
         self.assertEqual(len(result.citations[0].source_sha256), 64)
         ensure_safe(result.message, ConfigLoader().snapshot())
 
@@ -112,15 +112,49 @@ class NotificationTests(unittest.TestCase):
             self.assertIn("의심", result.message)
 
     def test_source_text_really_contains_every_selected_quote(self):
-        for rule in ("R1", "R2", "R4", "R5", "R7", "R8"):
-            result = NotificationGenerator().generate(context(rule_id=rule))
+        september = datetime(2026, 9, 20, tzinfo=timezone.utc)
+        for rule in ("R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"):
+          for ts in (TS, september):
+            result = NotificationGenerator().generate(context(rule_id=rule, ts=ts))
+            self.assertTrue(result.citations, rule)
             for citation in result.citations:
                 from notify.sources import flattened
                 document = (ROOT / citation.source).read_text()
                 self.assertIn(flattened(citation.quote), flattened(document))
 
+    def test_cause_specific_action_phrases(self):
+        """#232: 원인마다 다른 조치 구절. 수치 지시·약품·병명 단정 없음."""
+        expected = {"R1": "rockfish_high_temp_feed_stop", "R2": "rockfish_oxygen_supply", "R3": "rockfish_oxygen_supply",
+                    "R4": "red_tide_oxygen", "R6": "stress_recovery_oxygen", "R7": "rockfish_feeding_watch",
+                    "R5": "feed_reduction", "R8": "feed_reduction"}
+        snapshot = ConfigLoader().snapshot()
+        for rule, cid in expected.items():
+            result = NotificationGenerator().generate(context(rule_id=rule))
+            self.assertEqual(result.citations[0].id, cid, rule)
+            self.assertLessEqual(len(sentences(result.message)), 3)
+            ensure_safe(result.message, snapshot)
+            for banned in ("20%", "포식량", "황토", "mg/L", "흡충", "연쇄구균"):
+                self.assertNotIn(banned, result.message, rule)
+        self.assertNotIn("2018년", NotificationGenerator().generate(context(rule_id="R7")).message)
+
+    def test_r8_net_cleaning_only_in_september_october_kst(self):
+        def r8(ts):
+            return NotificationGenerator().generate(context(rule_id="R8", ts=ts))
+        for ts, seasonal in ((datetime(2026, 9, 20, tzinfo=timezone.utc), True),
+                             (datetime(2026, 10, 31, 14, 59, tzinfo=timezone.utc), True),
+                             (datetime(2026, 8, 31, 15, tzinfo=timezone.utc), True),    # KST 9월 1일 0시
+                             (datetime(2026, 8, 31, 14, 59, tzinfo=timezone.utc), False),
+                             (datetime(2026, 10, 31, 15, tzinfo=timezone.utc), False),  # KST 11월
+                             (TS, False)):
+            result = r8(ts)
+            self.assertEqual(result.citations[0].id == "rockfish_gill_fluke_net", seasonal, ts)
+            self.assertEqual("가두리망을 청소" in result.message, seasonal, ts)
+            self.assertIn("의심", result.message)
+        self.assertNotIn("가두리망", NotificationGenerator().generate(
+            context(rule_id="R5", ts=datetime(2026, 9, 20, tzinfo=timezone.utc))).message)   # R5에는 안 나감
+
     def test_missing_reviewed_rule_guidance_omits_advice(self):
-        for rule in (None, "R3", "R6"):
+        for rule in (None,):
             result = NotificationGenerator().generate(context(rule_id=rule))
             self.assertEqual(result.citations, ())
             self.assertEqual(len(sentences(result.message)), 2)

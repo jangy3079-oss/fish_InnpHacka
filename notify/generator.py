@@ -132,7 +132,7 @@ class NotificationGenerator:
         # Common config errors propagate. A missing reviewed passage suppresses advice, not facts.
         guidance_error = False
         try:
-            citations = retrieve(context.rule_id, policy, snapshot, self.source_root)
+            citations = retrieve(context.rule_id, policy, snapshot, self.source_root, context.ts)
         except (ConfigError, UnsafeFirstAid, OSError, UnicodeError):
             citations, guidance_error = (), True
         base = ". ".join(facts(context, summary)) + "."
