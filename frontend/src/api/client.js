@@ -22,6 +22,31 @@ async function http(path, options) {
   return res.json();
 }
 
+// 실제 추천 응답을 화면이 읽는 모양으로 맞춘다. kind가 없으면 응답 필드로 판단한다.
+function normalizeRecommendation(r) {
+  const firstAid = (r.first_aid ?? []).map((x) => (typeof x === 'string' ? x : x?.text)).filter(Boolean);
+  let kind = r.kind;
+  if (!kind) {
+    if (r.diagnosis_request_required) kind = 'first_aid';
+    else if (r.options?.length) kind = 'profit';
+    else kind = 'none';
+  }
+  return { ...r, kind, options: r.options ?? [], first_aid: firstAid, recommended_option: r.recommended_option ?? null };
+}
+const NO_RECOMMENDATION = { id: null, kind: 'none', recommended_option: null, options: [] };
+
+// 선택 요청의 request_key: 한 번 만들면 성공이나 확정 오류가 나올 때까지 같은 값으로 다시 보낸다.
+const keyName = (recId, optionId) => `choice-key:${recId}:${optionId}`;
+function choiceKey(recId, optionId) {
+  const name = keyName(recId, optionId);
+  let key = sessionStorage.getItem(name);
+  if (!key) {
+    key = crypto.randomUUID();
+    sessionStorage.setItem(name, key);
+  }
+  return key;
+}
+
 const qs = (params) => {
   const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null));
   const s = q.toString();
@@ -46,8 +71,17 @@ export const api = {
   getEchogramUrl: (cageId, { from, to } = {}) =>
     USE_MOCK ? echogramMock : `${BASE}/cages/${cageId}/echogram${qs({ from, to })}`,
 
+  // 추천이 없는 회차(정상 등)는 404, 금전 정보 권한이 없으면 403이다. 둘 다 화면 오류가 아니라 '추천 없음'으로 받는다.
   getRecommendation: (cageId, demo) =>
-    USE_MOCK ? delay(recommendationAt(cageId, demo)) : http(`/cages/${cageId}/recommendation`),
+    USE_MOCK
+      ? delay(recommendationAt(cageId, demo))
+      : http(`/cages/${cageId}/recommendation`)
+          .then(normalizeRecommendation)
+          .catch((e) => {
+            if (e.status === 404) return NO_RECOMMENDATION;
+            if (e.status === 403) return { ...NO_RECOMMENDATION, forbidden: true };
+            throw e;
+          }),
 
   requestDiagnosis: (cageId, note = '') =>
     USE_MOCK
@@ -62,8 +96,18 @@ export const api = {
       ? delay({ mock: true, persisted: false })
       : http(`/recommendations/${recommendationId}/choice`, {
           method: 'POST',
-          body: JSON.stringify({ option_id: optionId }),
-        }),
+          body: JSON.stringify({ option_id: optionId, request_key: choiceKey(recommendationId, optionId) }),
+        }).then(
+          (r) => {
+            sessionStorage.removeItem(keyName(recommendationId, optionId));
+            return r;
+          },
+          (e) => {
+            // 서버가 확정적으로 거절한 경우에만 키를 버린다. 타임아웃·네트워크 오류·5xx는 같은 키로 다시 보낸다.
+            if ([403, 409, 422].includes(e.status)) sessionStorage.removeItem(keyName(recommendationId, optionId));
+            throw e;
+          },
+        ),
 
   // 계약 초안에 없는 API. 알림 문장 생성(#34)과 함께 백엔드와 맞춘다.
   getNotifications: (cageId, demo) =>
