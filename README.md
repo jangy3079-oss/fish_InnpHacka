@@ -45,8 +45,6 @@
 | 프론트 | `web` | 목업 JSON으로 화면 먼저 만들고 API로 교체 | _(이름)_ |
 | 문서·검증 | 시나리오·config YAML, 비전 시험, RAG 자료, 검증, 발표 | 시나리오 YAML·규칙·비용 YAML | _(이름)_ |
 
-## 협업 규칙
-
 ## API 로컬 실행
 
 Python 3.11 이상에서 `python -m pip install -r requirements-api-dev.txt` 후
@@ -58,6 +56,8 @@ Python 3.11 이상에서 `python -m pip install -r requirements-api-dev.txt` 후
 
 `python -m unittest discover -s tests -v`로 API·공통 모델 테스트를 실행합니다.
 기본 프론트 CORS 주소는 localhost:5173과 127.0.0.1:5173이며 `API_CORS_ORIGINS`로 변경합니다.
+
+## 협업 규칙
 
 브랜치·PR·이슈 규칙은 [CONTRIBUTING.md](CONTRIBUTING.md)를 봅니다.
 
