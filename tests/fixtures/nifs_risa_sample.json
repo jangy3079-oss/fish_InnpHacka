@@ -1,0 +1,11 @@
+{
+  "_note": "형식 시험용. 필드 이름은 수과원 OpenAPI 안내(risaList)를 따랐고, 값과 중첩 구조는 실제 응답이 아님",
+  "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE"},
+  "body": {"item": [
+    {"sta_cde": "s0017", "sta_nam_kor": "통영 산양", "obs_dat": "2026-08-12", "obs_tim": "14:00", "obs_lay": "1", "wtr_tmp": "26.4", "repaire_gbn": "1", "rpr_yn": "N"},
+    {"sta_cde": "s0017", "sta_nam_kor": "통영 산양", "obs_dat": "2026-08-12", "obs_tim": "14:00", "obs_lay": "2", "wtr_tmp": "22.1", "repaire_gbn": "1", "rpr_yn": "N"},
+    {"sta_cde": "s0017", "sta_nam_kor": "통영 산양", "obs_dat": "2026-08-12", "obs_tim": "14:00", "obs_lay": "3", "wtr_tmp": "20.9", "repaire_gbn": "1", "rpr_yn": "N"},
+    {"sta_cde": "s0021", "sta_nam_kor": "거제 일운", "obs_dat": "2026-08-12", "obs_tim": "14:00", "obs_lay": "1", "wtr_tmp": "0", "repaire_gbn": "2", "rpr_yn": "Y"},
+    {"sta_cde": "s0099", "sta_nam_kor": "매핑 없음", "obs_dat": "2026-08-12", "obs_tim": "14:00", "obs_lay": "1", "wtr_tmp": "25.0", "repaire_gbn": "1", "rpr_yn": "N"}
+  ]}
+}
