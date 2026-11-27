@@ -58,51 +58,102 @@ export default function StockPage() {
     }
   };
 
+  // 입력한 값으로 크기별 합계 무게와 전체 합계를 보여준다. 숫자로 읽히는 값만 센다.
+  const totals = SIZES.map(({ id }) => {
+    const c = Number(rows[id].count);
+    const w = Number(rows[id].weight);
+    return Number.isInteger(c) && c > 0 && w > 0 ? { count: c, kg: c * w } : { count: 0, kg: 0 };
+  });
+  const sum = totals.reduce((a, t) => ({ count: a.count + t.count, kg: a.kg + t.kg }), { count: 0, kg: 0 });
+  const fmt = (n) => Math.round(n).toLocaleString('ko-KR');
+
   return (
-    <div className="narrow">
-    <FarmerTabs />
-    <form className="farmer stock" onSubmit={submit} noValidate>
-      <h1>가두리 {CAGE_ID}번 재고 입력</h1>
-      <p className="hint">손해를 계산할 때 쓰입니다. 대략적인 숫자여도 괜찮습니다.</p>
+    <div className="stock-page">
+      <FarmerTabs />
+      <header className="page-head">
+        <h1>가두리 {CAGE_ID}번 재고 입력</h1>
+        <p className="lead">크기별로 몇 마리가 있고 평균 무게가 얼마인지 알려 주세요. 대략적인 숫자여도 괜찮습니다.</p>
+      </header>
 
-      {SIZES.map(({ id, label, hint }) => (
-        <fieldset key={id} className="card">
-          <legend>{label}</legend>
-          <p className="hint">{hint}</p>
-          <label>
-            마릿수
-            <span className="input-unit">
-              <input inputMode="numeric" value={rows[id].count} onChange={(e) => set(id, 'count', e.target.value)} placeholder="0" aria-invalid={!!errors[id]} />
-              마리
-            </span>
-          </label>
-          <label>
-            평균 무게
-            <span className="input-unit">
-              <input inputMode="decimal" value={rows[id].weight} onChange={(e) => set(id, 'weight', e.target.value)} placeholder="0.0" aria-invalid={!!errors[id]} />
-              kg
-            </span>
-          </label>
-          {errors[id] && <p className="error" role="alert">{errors[id]}</p>}
-        </fieldset>
-      ))}
+      <div className="stock-grid">
+        <form className="card stock" onSubmit={submit} noValidate>
+          <div className="stock-head" aria-hidden="true">
+            <span>크기</span>
+            <span>마릿수</span>
+            <span>평균 무게</span>
+            <span>합계 무게</span>
+          </div>
 
-      <fieldset className="card">
-        <legend>재해보험</legend>
-        <div className="choices">
-          <label><input type="radio" name="insured" checked={insured === true} onChange={() => { setInsured(true); setState('idle'); }} /> 가입했습니다</label>
-          <label><input type="radio" name="insured" checked={insured === false} onChange={() => { setInsured(false); setState('idle'); }} /> 가입하지 않았습니다</label>
-        </div>
-        {errors.insured && <p className="error" role="alert">{errors.insured}</p>}
-      </fieldset>
+          {SIZES.map(({ id, label, hint }, i) => (
+            <div key={id} className="stock-row">
+              <div className="stock-name">
+                <strong>{label}</strong>
+                <span>{hint}</span>
+              </div>
+              <label data-label="마릿수">
+                <span className="input-unit">
+                  <input
+                    inputMode="numeric"
+                    aria-label={`${label} 마릿수`}
+                    value={rows[id].count}
+                    onChange={(e) => set(id, 'count', e.target.value)}
+                    placeholder="0"
+                    aria-invalid={!!errors[id]}
+                  />
+                  마리
+                </span>
+              </label>
+              <label data-label="평균 무게">
+                <span className="input-unit">
+                  <input
+                    inputMode="decimal"
+                    aria-label={`${label} 평균 무게`}
+                    value={rows[id].weight}
+                    onChange={(e) => set(id, 'weight', e.target.value)}
+                    placeholder="0.0"
+                    aria-invalid={!!errors[id]}
+                  />
+                  kg
+                </span>
+              </label>
+              <p className="stock-sum" data-label="합계 무게">{totals[i].kg ? `${fmt(totals[i].kg)}kg` : '-'}</p>
+              {errors[id] && <p className="error stock-error" role="alert">{errors[id]}</p>}
+            </div>
+          ))}
 
-      {errors.form && <p className="error" role="alert">{errors.form}</p>}
-      <button className="primary" type="submit" disabled={state === 'sending'}>
-        {state === 'sending' ? '저장 중…' : '저장하기'}
-      </button>
-      {state === 'done' && <p className="done" role="status">✔ 저장했습니다.</p>}
-      {state === 'error' && <p className="error" role="alert">저장하지 못했습니다. 다시 눌러 주세요.</p>}
-    </form>
+          <p className="stock-total">
+            전체 합계 <strong>{fmt(sum.count)}마리</strong>, 약 <strong>{fmt(sum.kg)}kg</strong>
+          </p>
+
+          <fieldset className="insured">
+            <legend>재해보험</legend>
+            <div className="choices">
+              <label><input type="radio" name="insured" checked={insured === true} onChange={() => { setInsured(true); setState('idle'); }} /> 가입했습니다</label>
+              <label><input type="radio" name="insured" checked={insured === false} onChange={() => { setInsured(false); setState('idle'); }} /> 가입하지 않았습니다</label>
+            </div>
+            {errors.insured && <p className="error" role="alert">{errors.insured}</p>}
+          </fieldset>
+
+          {errors.form && <p className="error" role="alert">{errors.form}</p>}
+          <div className="form-actions">
+            <button className="primary" type="submit" disabled={state === 'sending'}>
+              {state === 'sending' ? '저장 중…' : '저장하기'}
+            </button>
+            {state === 'done' && <p className="done" role="status">✔ 저장했습니다.</p>}
+            {state === 'error' && <p className="error" role="alert">저장하지 못했습니다. 다시 눌러 주세요.</p>}
+          </div>
+        </form>
+
+        <aside className="card aside">
+          <h2>입력한 값은 이렇게 쓰입니다</h2>
+          <ul>
+            <li>조치별 예상 손해를 계산할 때 마릿수와 평균 무게가 들어갑니다.</li>
+            <li>보험 가입 여부는 손해에서 보험금을 빼는 계산에 쓰입니다.</li>
+            <li>우리 어가의 경영 정보라서 본인과 권한을 받은 담당자만 볼 수 있습니다.</li>
+            <li>숫자가 바뀌면 언제든 다시 입력해 저장하면 됩니다.</li>
+          </ul>
+        </aside>
+      </div>
     </div>
   );
 }
