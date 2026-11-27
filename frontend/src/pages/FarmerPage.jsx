@@ -3,7 +3,7 @@ import { useDemo } from '../demo/DemoContext.jsx';
 import { api } from '../api/client.js';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
 import { FirstAidCard, ProfitCompare } from '../components/ProfitCards.jsx';
-import { LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
+import { BASELINE_WINDOWS, LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
 
 const CAGE_ID = 3;
 
@@ -57,16 +57,20 @@ export default function FarmerPage() {
 }
 
 function LevelCard({ status }) {
-  if (status.baseline_status === 'warming_up' || status.level == null) {
+  const warming = status.baseline_status === 'warming_up';
+  const lv = LEVELS[status.level];
+
+  // 단계 자체가 없으면(null) 준비 중 카드만 보여준다.
+  if (!lv) {
     return (
       <section className="card level" style={{ background: '#eef2f6' }}>
         <h1>가두리 {status.cage_id}번</h1>
         <p className="level-name">준비 중</p>
         <p>평소 상태를 파악하는 중입니다. 잠시만 기다려 주세요.</p>
+        <Warmup status={status} />
       </section>
     );
   }
-  const lv = LEVELS[status.level];
   return (
     <section className="card level" style={{ background: lv.bg, color: lv.color }}>
       <h1>가두리 {status.cage_id}번</h1>
@@ -74,11 +78,32 @@ function LevelCard({ status }) {
         <span aria-hidden="true">{lv.icon}</span> {status.level}
       </p>
       <p>{lv.message}</p>
-      <p className="score">
-        스트레스 지수 <strong>{Math.round(status.stress_score)}</strong> / 100
-      </p>
+      {warming || status.stress_score == null ? (
+        <>
+          <p className="score">스트레스 지수는 평소 상태를 파악한 뒤에 나옵니다.</p>
+          <Warmup status={status} />
+        </>
+      ) : (
+        <p className="score">
+          스트레스 지수 <strong>{Math.round(status.stress_score)}</strong> / 100
+        </p>
+      )}
       <p className="time">{formatTime(status.ts)} 기준</p>
     </section>
+  );
+}
+
+// 기준선 학습 진행률 (FR-DIA-06). baseline_windows가 없으면 문구만 보여준다.
+function Warmup({ status }) {
+  if (status.baseline_status !== 'warming_up') return null;
+  const n = status.baseline_windows;
+  if (n == null) return <p className="warmup">평소 상태를 학습하는 중입니다.</p>;
+  const done = Math.min(n, BASELINE_WINDOWS);
+  return (
+    <div className="warmup">
+      <p>평소 상태 학습 {done}/{BASELINE_WINDOWS}</p>
+      <progress value={done} max={BASELINE_WINDOWS} aria-label="평소 상태 학습 진행률" />
+    </div>
   );
 }
 
