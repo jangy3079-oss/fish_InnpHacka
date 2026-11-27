@@ -99,11 +99,11 @@ class Probability(ConfigModel):
     method: Literal["normalize_sum_to_one"]
     min_display: Ratio
     scoring: Literal["binary_all_required"]
-    tie_break_order: list[Literal["R1", "R2", "R3", "R5", "R8"]]
+    tie_break_order: list[Literal["R1", "R2", "R3", "R5", "R7", "R8"]]
 
     @model_validator(mode="after")
     def implemented_order(self) -> Self:
-        if len(self.tie_break_order) != 5 or set(self.tie_break_order) != {"R1", "R2", "R3", "R5", "R8"}:
+        if len(self.tie_break_order) != 6 or set(self.tie_break_order) != {"R1", "R2", "R3", "R5", "R7", "R8"}:
             raise ValueError("tie_break_order must list each implemented rule once")
         return self
 
@@ -160,6 +160,19 @@ class R8Behavior(ConfigModel):
     missing_observation: Literal["pause"]
 
 
+class R7Behavior(ConfigModel):
+    feeding_response_only: Literal[True]
+    feeding_change_max: Annotated[float, Field(ge=-1, lt=0)]
+    activity_change_abs_max: Annotated[float, Field(gt=0, le=1)]
+    lower_layers_ratio_x_max: Annotated[float, Field(gt=1)]
+    missing_observation: Literal['pause']
+    max_hold_hours: Annotated[float, Field(gt=0, le=48)]
+
+
+class R7Environment(ConfigModel):
+    temp_surface_min_c: float
+
+
 class Rule(ConfigModel):
     # Rule-specific evidence names are evolving in #25/#60, so these maps and
     # additional rule fields are preserved rather than silently discarded.
@@ -182,6 +195,7 @@ class CauseRules(ConfigModel):
             raise ValueError("rules must contain R1 through R8")
         for rid, behavior, environment in (("R1", R1Behavior, R1Environment), ("R2", R2Behavior, R2Environment),
                                             ("R3", R3Behavior, R3Environment), ("R5", R5Behavior, NormalEnvironment),
+                                            ("R7", R7Behavior, R7Environment),
                                             ("R8", R8Behavior, NormalEnvironment)):
             behavior.model_validate(self.rules[rid].behavior)
             environment.model_validate(self.rules[rid].env)
@@ -190,6 +204,8 @@ class CauseRules(ConfigModel):
         if self.rules["R1"].env["temp_diff_min_c"] < self.rules["R2"].env["temp_diff_max_c"]:
             raise ValueError("R1/R2 temperature difference ranges must not overlap")
         NormalEnvironmentBounds.model_validate(self.env_constants.get("normal_env"))
+        if self.rules['R7'].env['temp_surface_min_c'] >= self.env_constants['normal_env']['temp_surface_max_c']:
+            raise ValueError('R7 feeding range must be below the normal-environment upper bound')
         return self
 
 

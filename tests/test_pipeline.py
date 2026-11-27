@@ -51,7 +51,7 @@ class PipelineExportTest(unittest.TestCase):
     def test_cause_evidence_is_saved_and_matches_status(self):
         path = self.out / "heatwave_typhoon/cause_estimate.jsonl"
         rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual({r["rule_id"] for r in rows}, {"R1", "R2"})
+        self.assertEqual({r["rule_id"] for r in rows}, {"R1", "R2", "R7"})
         by_ts = {row["ts"]: row for row in self.hw.status}
         for row in rows:
             ts = row["ts"].replace("+00:00", "Z")
