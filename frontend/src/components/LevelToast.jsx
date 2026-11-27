@@ -41,6 +41,13 @@ export default function LevelToast({ cageId }) {
     };
   }, [cageId, demo]);
 
+  // 시연 중 단계가 오를 때마다 떠서 화면 위쪽을 가리므로 잠시 뒤 닫는다. 닫기 단추는 그대로 둔다.
+  useEffect(() => {
+    if (!toast) return undefined;
+    const id = setTimeout(() => setToast(null), 8000);
+    return () => clearTimeout(id);
+  }, [toast]);
+
   if (!toast) return null;
   const lv = LEVELS[toast.level];
   return (
