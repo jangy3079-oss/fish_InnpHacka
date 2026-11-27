@@ -10,6 +10,7 @@ SRS C-04: 알림의 대응 요령은 **국립수산과학원 공식 관리요령
 | [nifs_disease_rearing_management.md](nifs_disease_rearing_management.md) | 사료·밀도·폐사체 제거·산소·진단 의뢰 (병리연구과 자료 5건) | 수과원 공식 자료실 PDF | 원문 확인 ✅ (대부분 2011년 기고) |
 | [nifs_high_temp_stage_manual.md](nifs_high_temp_stage_manual.md) | 고수온 위기경보 단계별 어장관리 요령 (수온 단계·사료 중단·산소 장비·차광막) | 수과원 보도자료 첨부 표 (2018) | 원문 확인 ✅ (2018년) |
 | [nifs_rockfish_manual.md](nifs_rockfish_manual.md) | **조피볼락 양식 표준 매뉴얼** (해상가두리: 25℃ 이상 먹이 전면 중단, 고수온·적조·저수온·냉수대 관리, 사육일지). 쪽 이미지를 눈으로 읽어 옮김 | 수과원 공식 매뉴얼 (2022) | 원문 확인 ✅ (44~55쪽만) |
+| [nifs_review_mass_mortality_2022.md](nifs_review_mass_mortality_2022.md) | 해상 가두리 대량폐사 총설(2022): 원인 구성(고수온·저수온·적조가 약 95%), 조피볼락 26℃ 폐사, 대응 방향. **발표 배경 근거용, 문구 근거 아님** | 수과원 연구자 학술 총설 | 본문 확인 ✅ |
 | [nifs_stress_immunity.md](nifs_stress_immunity.md) | 스트레스를 줄이는 양식 방법 (수질·용존산소 5 mg/L 이상, 이동·수송 방법, 영양, 위생·기구 소독) | 수과원 공식 자료실 PDF (기고글, 연도 불명) | 원문 확인 ✅ |
 | [action-phrases.md](action-phrases.md) | 원인 8가지별 현장 조치 문구 후보 (알림용) | 위 문서들의 정리 | 후보 |
 | [nifs_parasitic_diseases.md](nifs_parasitic_diseases.md) | 기생충성 질병 (백점병·스쿠티카증·아가미흡충증) 증상·발생 조건·예방. 약품·투약 제외 | 수과원 공식 자료실 PDF | 원문 확인 ✅ (연도 불명, 오래된 인용) |
