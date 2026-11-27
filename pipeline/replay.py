@@ -160,6 +160,13 @@ class ReplayEngine:
             r7_evidence = next((c.evidence for c in causes[-1].estimates if c.rule_id=='R7'),{}) if causes else {}
             status.update(r7_held_due_to_missing=r7_evidence.get('feeding_held_due_to_missing',False),
                           feeding_last_observed_at=r7_evidence.get('feeding_last_observed_at'))
+            status.update(causes[-1].metadata() if causes else {'cause_source':'cause_engine','cause_pending':[]})
+            if causes:
+                status['cause'] = causes[-1].status_causes(include_metadata=True) if status['data_status']=='ready' else []
+            if status['baseline_status']=='warming_up' or status['level'] in (None,'정상') or (causes and causes[-1].status_causes()):
+                status['cause_pending'] = []
+            status['last_seen'] = {source:max((r.ts for r in visible_records if r.source.value==source),default=None)
+                                   for source in ('sonar','camera','env')}
             status['config_revision'] = snapshot.revision
             # Hourly aggregation uses the visible prefix only; no partial hour can read future observations.
             series = hourly_timeseries(fused,scores)

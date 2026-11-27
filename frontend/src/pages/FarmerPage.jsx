@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDemo } from '../demo/DemoContext.jsx';
+import { useAuth } from '../auth/AuthContext.jsx';
 import { usePageTitle } from '../usePageTitle.js';
 import { ErrorNotice, LoadingBlock, Skeleton } from '../components/States.jsx';
 import { api } from '../api/client.js';
@@ -10,12 +11,12 @@ import EvidenceSummary from '../components/EvidenceSummary.jsx';
 import { FirstAidCard, ProfitCompare, formatKrw } from '../components/ProfitCards.jsx';
 import { BASELINE_WINDOWS, LEVELS, LEVEL_RANK, SOURCE_LABELS, formatTime } from '../constants.js';
 
-const CAGE_ID = 3;
 
 // 경고·위험이면 현재 시점을 경보 시점으로 표시한다. (과거 경보 이력 API는 아직 없음)
 const isAlert = (s) => s.level === '경고' || s.level === '위험';
 
 export default function FarmerPage() {
+  const { cageId: CAGE_ID, user } = useAuth();
   const [status, setStatus] = useState(null);
   const [rec, setRec] = useState(null);
   const [error, setError] = useState(null);
@@ -38,6 +39,8 @@ export default function FarmerPage() {
   // 시나리오·시각이 바뀌면 다시 불러온다. 이전 화면은 새 값이 올 때까지 유지해 깜빡임을 줄인다.
   useEffect(() => {
     let alive = true;
+    setStatus(null); setRec(null);
+    if (CAGE_ID == null) { setBusy(false); setError('접근 가능한 가두리가 없습니다.'); return; }
     setBusy(true); // 응답이 올 때까지 재생을 멈춘다
     // 슬라이더를 빠르게 움직일 때 중간 값마다 요청하지 않고 마지막 값만 보낸다(실제 서버만).
     const timer = setTimeout(() => {
@@ -59,11 +62,12 @@ export default function FarmerPage() {
       alive = false;
       clearTimeout(timer);
     };
-  }, [demo, attempt, setBusy]);
+  }, [demo, attempt, setBusy, CAGE_ID]);
 
   // 화면을 떠나면 재생이 멈춘 채로 남지 않게 푼다.
   useEffect(() => () => setBusy(false), [setBusy]);
 
+  if (CAGE_ID == null) return <div className="farmer-page"><FarmerTabs /><p>접근 가능한 가두리가 없습니다.</p></div>;
   if (error && (!status || !rec)) {
     return (
       <div className="farmer-page">
@@ -103,7 +107,7 @@ export default function FarmerPage() {
     ) : isProfit ? (
       <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />
     ) : null;
-  const moveRight = demo.scenario !== 'heatwave_typhoon';
+  const moveRight = user?.real ? false : demo.scenario !== 'heatwave_typhoon';
 
   return (
     <div className="farmer-page">
@@ -187,11 +191,14 @@ function Warmup({ status }) {
 
 // 근거 센서가 안 보여도 경보 단계는 유지된다(#61). 그 사실을 알려준다.
 function SourceNotice({ status }) {
-  if (!status.missing_sources?.length) return null;
-  const names = status.missing_sources.map((s) => SOURCE_LABELS[s] ?? s).join(', ');
+  const reset = { observation_gap: '관측 주기가 끊겨', conditions_changed: '판정 조건이 달라져', observed_normal: '정상 먹이 반응이 관측되어', hold_expired: '관측 유지 시간이 지나' }[status.feeding_reset_reason];
+  if (!status.missing_sources?.length && !Object.keys(status.last_seen ?? {}).length && !reset) return null;
+  const names = (status.missing_sources ?? []).map((s) => SOURCE_LABELS[s] ?? s).join(', ');
   return (
     <section className="notice" role="status">
-      {names} 신호가 지금 없습니다. 단계는 마지막으로 확인한 값({formatTime(status.ts)})을 유지하고 있습니다.
+      {names && <p>{names} 신호가 지금 없습니다. {status.level_held_due_to_missing ? '단계는 직전 관측을 기준으로 유지 중입니다.' : '현재 관측 상태를 확인해 주세요.'}</p>}
+      {Object.entries(status.last_seen ?? {}).map(([source, ts]) => <p key={source}>{SOURCE_LABELS[source] ?? source} 마지막 관측: {ts ? formatTime(ts) : '확인된 관측 없음'}</p>)}
+      {reset && <p>{reset} 이전 먹이 반응의 유지를 해제했습니다.</p>}
     </section>
   );
 }

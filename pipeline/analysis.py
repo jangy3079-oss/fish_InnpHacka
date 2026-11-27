@@ -155,10 +155,13 @@ def build_bundle(context, model, producer_id, species, snapshot, *, advisory_act
               'baseline_windows': last.baseline_windows, 'cause': cause.status_causes(),
               'level_held_due_to_missing': not warm and (last.score is None or getattr(last,'level_held_due_to_missing',False)),
               'last_observation_at': max((r.ts for r in records), default=None).isoformat() if records else None}
-    r7_evidence = next((c.evidence for c in cause.estimates if c.rule_id=='R7'),{})
-    status.update(r7_held_due_to_missing=r7_evidence.get('feeding_held_due_to_missing',False),
-                  feeding_last_observed_at=r7_evidence.get('feeding_last_observed_at'))
-    estimates = [c.to_dict() for c in cause.estimates] if state=='ready' else []
+    status.update(cause.metadata())
+    status['cause'] = cause.status_causes(include_metadata=True) if state=='ready' else []
+    if warm or last.level in (None,'정상') or cause.status_causes():
+        status['cause_pending'] = []
+    status['last_seen'] = {source:max((r.ts.isoformat() for r in records if r.source.value==source),default=None)
+                           for source in ('sonar','camera','env')}
+    estimates = [{**c.to_dict(),'evidence':{**c.evidence,'display':c.display}} for c in cause.estimates] if state=='ready' else []
     primary = cause.estimates[0] if estimates else None
     level_map = {'정상':'normal','주의':'caution','경고':'warning','위험':'danger'}
     economic_context = {**context,'species':species}

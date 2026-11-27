@@ -23,6 +23,20 @@ class Cause(Contract):
     name: str
     probability: Ratio
     rule_id: str
+    display: bool = True
+    cause_source: Literal['cause_engine'] | None = None
+
+
+class ObservationProgress(Contract):
+    done: Annotated[float, Field(ge=0)]
+    needed: Annotated[float, Field(gt=0)]
+    unit: Literal['hour']
+
+
+class CausePending(Contract):
+    rule_id: Literal['R5','R8']
+    reason: Literal['trend_waiting','observing','observation_gap','advisory_unknown']
+    progress: ObservationProgress | None = None
 
 
 class Evidence(Contract):
@@ -45,6 +59,10 @@ class CageStatus(Contract):
     level: Literal["정상", "주의", "경고", "위험"] | None
     baseline_status: Literal["ready", "warming_up"]
     cause: list[Cause]
+    cause_source: Literal['cause_engine'] | None = None
+    cause_pending: list[CausePending] = Field(default_factory=list)
+    last_seen: dict[Literal['sonar','camera','env'], AwareDatetime | None] = Field(default_factory=dict)
+    feeding_reset_reason: Literal['observation_gap','conditions_changed','observed_normal','hold_expired'] | None = None
     evidence: dict[str, float | None]
     camera_weight: Annotated[float, Field(ge=0, le=0.5)]
     missing_sources: list[Literal["sonar", "camera", "env"]]
@@ -204,6 +222,80 @@ class StockReceipt(Contract):
     received_count: int
     insured: bool
     stock: list[SavedStockItem]
+
+
+SafeId = Annotated[int, Field(strict=True, gt=0, le=9_007_199_254_740_991)]
+
+
+class AccessibleCage(Contract):
+    id: SafeId
+    name: str
+    farm_id: SafeId
+    sea_area_id: SafeId
+    can_write_stock: Annotated[bool, Field(strict=True)]
+    can_read_financial: Annotated[bool, Field(strict=True)]
+
+
+class UserAccess(Contract):
+    user_id: UUID
+    role: Literal['farmer','official','edge','analysis','admin','unassigned']
+    area_ids: list[SafeId]
+    cages: list[AccessibleCage]
+
+
+class StockViewItem(SavedStockItem):
+    count: Annotated[int, Field(strict=True, ge=0, le=9_007_199_254_740_991)]
+    insured: Annotated[bool, Field(strict=True)]
+
+
+class StockView(Contract):
+    cage_id: SafeId
+    insured: Annotated[bool, Field(strict=True)] | None
+    insured_mixed: Annotated[bool, Field(strict=True)]
+    stock: list[StockViewItem]
+
+
+class AreaGeometry(Contract):
+    type: Literal['Polygon']
+    coordinates: list[list[list[float]]]
+
+    @model_validator(mode='after')
+    def valid_wgs84(self):
+        if not self.coordinates or any(len(r)<4 or r[0]!=r[-1] or any(
+            len(p)!=2 or not -180<=p[0]<=180 or not -90<=p[1]<=90 for p in r) for r in self.coordinates):
+            raise ValueError('Invalid WGS84 polygon')
+        return self
+
+
+class AreaProperties(Contract):
+    area_id: SafeId
+    name: str
+    source: Annotated[str, Field(min_length=1)]
+    station_id: str | None
+
+
+class AreaFeature(Contract):
+    type: Literal['Feature']
+    geometry: AreaGeometry
+    properties: AreaProperties
+
+
+class AreaShapes(Contract):
+    type: Literal['FeatureCollection']
+    features: list[AreaFeature]
+    unverified_area_ids: list[SafeId]
+
+
+class CauseCount(Contract):
+    rule_id: Annotated[str, Field(pattern=r'^R[1-8]$')]
+    name: str
+    count: Annotated[int, Field(strict=True, ge=0, le=9_007_199_254_740_991)]
+
+
+class AreaCauseDistribution(Contract):
+    ts: AwareDatetime
+    config_revision: str
+    cause_distribution: list[CauseCount]
 
 
 class DiagnosisRequest(Contract):

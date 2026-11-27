@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FarmerTabs } from '../components/SiteChrome.jsx';
 import { api } from '../api/client.js';
 import { usePageTitle } from '../usePageTitle.js';
+import { useAuth } from '../auth/AuthContext.jsx';
+import { useDemo } from '../demo/DemoContext.jsx';
 
-const CAGE_ID = 3;
 const SIZES = [
   { id: 'fry', label: '치어', hint: '아주 작은 어린 물고기' },
   { id: 'mid', label: '중간 크기', hint: '자라는 중인 물고기' },
@@ -12,11 +13,38 @@ const SIZES = [
 
 // 손익 계산에 쓰이는 크기별 재고와 보험 가입 여부 입력 (FR-ADM-03). 어가 경영 정보라 본인에게만 보인다.
 export default function StockPage() {
+  const { cageId: CAGE_ID, user } = useAuth();
+  const { demo } = useDemo();
   const [rows, setRows] = useState(() => Object.fromEntries(SIZES.map((s) => [s.id, { count: '', weight: '' }])));
   const [insured, setInsured] = useState(null); // true | false | null(미선택)
   const [errors, setErrors] = useState({});
   usePageTitle('재고 입력');
   const [state, setState] = useState('idle'); // idle | sending | done | error
+  const [loaded, setLoaded] = useState(false);
+  const [mixed, setMixed] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  const generation = useRef(0);
+  const live = api.live() && !api.files(demo);
+  const writable = !live || user?.cages?.find((c) => c.id === CAGE_ID)?.can_write_stock;
+  useEffect(() => {
+    let active = true;
+    generation.current += 1;
+    setLoaded(false); setErrors({}); setState('idle'); setInsured(null); setMixed(false); setSavedAt(null);
+    setRows(Object.fromEntries(SIZES.map((s) => [s.id, { count: '', weight: '' }])));
+    if (CAGE_ID == null) return;
+    api.getStock(CAGE_ID, demo).then((r) => {
+      if (!active) return;
+      const next = Object.fromEntries(SIZES.map((s) => [s.id, { count: '', weight: '' }]));
+      for (const row of r.stock) {
+        if (!next[row.size_group] || !Number.isSafeInteger(row.count)) throw new Error('Invalid stock');
+        next[row.size_group] = { count: String(row.count), weight: String(row.avg_weight_kg) };
+      }
+      setRows(next); setInsured(r.insured); setMixed(r.insured_mixed);
+      setSavedAt(r.stock.map((s) => s.updated_at).filter(Boolean).sort().at(-1) ?? null); setLoaded(true);
+    }).catch(() => { if (active) setErrors({ form: '현재 재고를 읽지 못해 저장을 막았습니다. 다시 조회해 주세요.' }); });
+    return () => { active = false; generation.current += 1; };
+  }, [CAGE_ID, live, attempt]);
 
   const set = (id, key, value) => {
     setRows((r) => ({ ...r, [id]: { ...r[id], [key]: value } }));
@@ -31,8 +59,7 @@ export default function StockPage() {
       if (count === '' && weight === '') return;
       const c = Number(count);
       const w = Number(weight);
-      if (count === '' || !Number.isInteger(c) || c < 0) e[id] = '마릿수를 0 이상의 정수로 입력해 주세요';
-      else if (c === 0) return; // 0마리는 보내지 않는다
+      if (count === '' || !Number.isSafeInteger(c) || c < 0) e[id] = '마릿수를 정확한 0 이상의 정수로 입력해 주세요';
       else if (weight === '' || !(w > 0)) e[id] = '평균 무게를 0보다 크게 입력해 주세요';
       if (!e[id]) filled += 1;
     });
@@ -43,20 +70,26 @@ export default function StockPage() {
 
   const submit = async (ev) => {
     ev.preventDefault();
+    if (!loaded || !writable) return;
+    const started = generation.current;
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length) return;
-    const stock = SIZES.filter(({ id }) => Number(rows[id].count) > 0).map(({ id }) => ({
+    const stock = SIZES.filter(({ id }) => rows[id].count !== '' && !e[id]).map(({ id }) => ({
       size_group: id,
       count: Number(rows[id].count),
       avg_weight_kg: Number(rows[id].weight),
     }));
     setState('sending');
     try {
-      await api.putStock(CAGE_ID, { stock, insured });
-      setState('done');
+      if (live && !window.confirm('입력한 전체 재고로 교체합니다. 비운 크기 그룹은 삭제되고, 보험 선택은 모든 그룹에 적용됩니다. 계속할까요?')) { setState('idle'); return; }
+      const result = await api.putStock(CAGE_ID, { stock, insured }, demo);
+      if (started === generation.current) {
+        setState('done'); setMixed(false);
+        setSavedAt(result.stock?.map((s) => s.updated_at).filter(Boolean).sort().at(-1) ?? null);
+      }
     } catch {
-      setState('error');
+      if (started === generation.current) setState('error');
     }
   };
 
@@ -73,12 +106,17 @@ export default function StockPage() {
     <div className="stock-page">
       <FarmerTabs />
       <header className="page-head">
-        <h1>가두리 {CAGE_ID}번 재고 입력</h1>
+        <h1>{CAGE_ID == null ? '접근 가능한 가두리가 없습니다' : `가두리 ${CAGE_ID}번 재고 입력`}</h1>
         <p className="lead">크기별로 몇 마리가 있고 평균 무게가 얼마인지 알려 주세요. 대략적인 숫자여도 괜찮습니다.</p>
       </header>
+      <p className="hint">{live ? '실제 재고 · 마지막 저장이 우선하며 생략한 그룹은 삭제됩니다.' : '시연 입력이며 실제 재고로 저장하지 않습니다.'}</p>
+      {savedAt && <p className="hint">마지막 저장: {new Date(savedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}</p>}
+      {mixed && <p className="notice">그룹별 보험 상태가 다릅니다. 새 선택은 전체 그룹에 적용됩니다.</p>}
+      {!loaded && <button type="button" onClick={() => setAttempt((a) => a + 1)}>재고 다시 조회</button>}
 
       <div className="stock-grid">
         <form className="card stock" onSubmit={submit} noValidate>
+          <fieldset style={{ border: 0, padding: 0, minWidth: 0 }} disabled={!loaded || !writable || state === 'sending'}>
           <div className="stock-head" aria-hidden="true">
             <span>크기</span>
             <span>마릿수</span>
@@ -141,9 +179,10 @@ export default function StockPage() {
             <button className="primary" type="submit" disabled={state === 'sending'}>
               {state === 'sending' ? '저장 중…' : '저장하기'}
             </button>
-            {state === 'done' && <p className="done" role="status">✔ 저장했습니다.</p>}
+            {state === 'done' && <p className="done" role="status">{live ? '✔ 저장했습니다.' : '✔ 시연 입력을 확인했습니다. 실제로 저장하지 않습니다.'}</p>}
             {state === 'error' && <p className="error" role="alert">저장하지 못했습니다. 다시 눌러 주세요.</p>}
           </div>
+          </fieldset>
         </form>
 
         <aside className="card aside">

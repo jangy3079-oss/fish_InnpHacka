@@ -75,6 +75,7 @@ class FarmerDataStore:
                 raise ValueError
         except (TypeError, KeyError, ValueError, AttributeError):
             raise data_error(401, "invalid_user", "A registered Supabase user is required") from None
+        self.user = user
 
     def require_cage(self, cage_id: int):
         rows = self.request("GET", "/rest/v1/cage", params={"select": "id", "id": f"eq.{cage_id}", "limit": 1})

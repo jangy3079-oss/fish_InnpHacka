@@ -10,9 +10,9 @@ const PAD = { l: 40, r: 10, t: 14, b: 44 };
 const IW = W - PAD.l - PAD.r;
 const IH = H - PAD.t - PAD.b;
 
-const hourLabel = (iso) => `${String(new Date(iso).getHours()).padStart(2, '0')}시`;
-const dayLabel = (iso) => new Date(iso).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
-const dayKey = (iso) => new Date(iso).toDateString();
+const hourLabel = (iso) => new Date(iso).toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false });
+const dayLabel = (iso) => new Date(iso).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric' });
+const dayKey = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
 
 function makeScales(points, yMin, yMax) {
   const t0 = new Date(points[0].ts).getTime();
@@ -130,35 +130,35 @@ function Tip({ at, time, rows }) {
 const fmtTime = (iso) => `${dayLabel(iso)} ${hourLabel(iso)}`;
 
 // 선 그래프. series: [{label, color, points:[{ts, value:number}], fmt}]
-export function LineChart({ title, series, yMin, yMax, unit = '', alertAt }) {
-  const base = series[0]?.points;
+export function LineChart({ title, series, yMin, yMax, unit = '', alertAt, raw = false }) {
+  const base = [...new Map(series.flatMap((s) => s.points).map((p) => [p.ts, p])).values()].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
   const hasData = !!base?.length;
   const { x, y } = makeScales(hasData ? base : [{ ts: 0 }, { ts: 1 }], yMin, yMax);
   const { idx, handlers } = useHover(base ?? [], x);
   if (!hasData) return <p className="hint">{title}: 표시할 데이터가 없습니다.</p>;
   const at = idx != null ? x(base[idx].ts) : null;
-  const last = series.map((s) => `${s.label} ${s.fmt(s.points[s.points.length - 1].value)}`).join(', ');
+  const last = series.map((s) => `${s.label} ${s.points.length ? s.fmt(s.points.at(-1).value) : '자료 없음'}`).join(', ');
+  const selected = (s) => idx == null ? null : s.points.find((p) => p.ts === base[idx].ts);
   return (
     <figure className="chart">
       <figcaption>{title}</figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${title}. 가장 최근 값: ${last}. 좌우 화살표 키로 시점별 값을 볼 수 있습니다.`} {...handlers}>
         <Axes points={base} x={x} y={y} yMin={yMin} yMax={yMax} unit={unit} alertAt={alertAt} />
-        {series.map((s) => (
-          <polyline key={s.label} fill="none" stroke={s.color} strokeWidth="2.4" strokeLinejoin="round" points={s.points.map((p) => `${x(p.ts)},${y(p.value)}`).join(' ')} />
-        ))}
+        {series.map((s) => raw
+          ? <g key={s.label}>{s.points.map((p) => <circle key={p.ts} cx={x(p.ts)} cy={y(p.value)} r="2" fill={s.color} />)}</g>
+          : <polyline key={s.label} fill="none" stroke={s.color} strokeWidth="2.4" strokeLinejoin="round" points={s.points.map((p) => `${x(p.ts)},${y(p.value)}`).join(' ')} />)}
         {idx != null && (
           <g>
             <line x1={at} x2={at} y1={PAD.t} y2={PAD.t + IH} stroke="#14212b" strokeOpacity="0.45" />
-            {series.map((s) => (
-              <circle key={s.label} cx={at} cy={y(s.points[idx].value)} r="4" fill="#fff" stroke={s.color} strokeWidth="2.2" />
-            ))}
+            {series.map((s) => selected(s) && <circle key={s.label} cx={at} cy={y(selected(s).value)} r="4" fill="#fff" stroke={s.color} strokeWidth="2.2" />)}
           </g>
         )}
       </svg>
       <Tip
         at={at}
         time={idx != null ? fmtTime(base[idx].ts) : ''}
-        rows={idx != null ? series.map((s) => ({ label: s.label, color: s.color, value: s.fmt(s.points[idx].value) })) : []}
+        rows={idx != null ? series.map((s) => ({ label: s.label, color: s.color,
+          value: selected(s) ? `${s.fmt(selected(s).value)}${raw ? ` · ${selected(s).source}, 관측 신뢰도 ${selected(s).confidence ?? '미상'}` : ''}` : '자료 없음' })) : []}
       />
       {series.length > 1 && <Legend items={series} />}
     </figure>
@@ -173,7 +173,7 @@ const LAYERS = [
 const pct = (v) => `${Math.round(v * 100)}%`;
 
 // 수직 분포: 값은 [저층, 중층, 표층] 비율(합 1)을 쌓은 면 그래프
-export function VerticalDistChart({ points, alertAt }) {
+export function VerticalDistChart({ points, alertAt, raw = false }) {
   const hasData = !!points?.length;
   const { x, y } = makeScales(hasData ? points : [{ ts: 0 }, { ts: 1 }], 0, 1);
   const { idx, handlers } = useHover(points ?? [], x);
@@ -195,7 +195,8 @@ export function VerticalDistChart({ points, alertAt }) {
         aria-label={`물고기가 있는 깊이 비율. 가장 최근 값: 표층 ${pct(lastV[2])}, 중층 ${pct(lastV[1])}, 저층 ${pct(lastV[0])}. 좌우 화살표 키로 시점별 값을 볼 수 있습니다.`}
         {...handlers}
       >
-        {LAYERS.map((l, k) => (
+        {raw ? points.flatMap((p, i) => LAYERS.map((l, k) => <rect key={`${p.ts}-${k}`} x={x(p.ts) - 1} width="2"
+          y={y(cum[i][k])} height={y(k === 0 ? 0 : cum[i][k - 1]) - y(cum[i][k])} fill={l.color} />)) : LAYERS.map((l, k) => (
           <polygon key={l.label} points={area(k)} fill={l.color} opacity="0.88" />
         ))}
         <Axes points={points} x={x} y={y} yMin={0} yMax={1} unit="" alertAt={alertAt} fmt={pct} />
@@ -216,6 +217,7 @@ function useTimeseries(cageId, metric) {
   const [data, setData] = useState(null);
   useEffect(() => {
     let alive = true;
+    setData(null);
     api
       .getTimeseries(cageId, metric, { demo })
       .then((d) => alive && setData(d))
@@ -275,17 +277,20 @@ export default function EvidenceCharts({ cageId, alertAt }) {
   // 활동량은 정상일 때 1.0 안팎이라 축을 0~1로 고정하지 않고 데이터에 맞춘다.
   const activityMax = Math.max(1, Math.ceil(Math.max(...act.points.map((p) => p.value)) * 5) / 5);
   const temps = [...ts.points, ...tm.points].map((p) => p.value);
-  const tMin = Math.floor(Math.min(...temps)) - 1;
-  const tMax = Math.ceil(Math.max(...temps)) + 1;
+  const tMin = temps.length ? Math.floor(Math.min(...temps)) - 1 : 0;
+  const tMax = temps.length ? Math.ceil(Math.max(...temps)) + 1 : 1;
 
   return (
     <section className="card flat" id="evidence" ref={scrollToHash}>
       <h2>판단 근거 그래프</h2>
       <p className="hint">그래프에 마우스를 올리거나 누르면 그 시각의 값을 볼 수 있습니다.</p>
+      {[vd, act, ts, tm].some((d) => d.has_more) && <p className="notice">조회 한도로 일부 과거 기록이 생략되었습니다.</p>}
+      {vd.raw && <p className="hint">센서 원시 관측만 표시합니다. 누락을 보간하거나 센서를 평균하지 않습니다. 시각은 한국 시각입니다.</p>}
       <div className="chart-grid">
-        <VerticalDistChart points={vd.points} alertAt={alertAt} />
+        <VerticalDistChart points={vd.points} alertAt={alertAt} raw={vd.raw} />
         <LineChart
           title="움직임 (평소 대비)"
+          raw={act.raw}
           series={[{ label: '활동량', color: '#13243b', points: act.points, fmt: (v) => v.toFixed(2) }]}
           yMin={0}
           yMax={activityMax}
@@ -293,6 +298,7 @@ export default function EvidenceCharts({ cageId, alertAt }) {
         />
         <LineChart
           title="층별 수온"
+          raw={ts.raw}
           series={[
             { label: '표층', color: '#d9480f', points: ts.points, fmt: (v) => `${v.toFixed(1)}℃` },
             { label: '중층', color: '#1971c2', points: tm.points, fmt: (v) => `${v.toFixed(1)}℃` },
@@ -312,14 +318,22 @@ function Echogram({ cageId }) {
   const { demo } = useDemo();
   const [failed, setFailed] = useState(false);
   const ref = useRef(null);
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    let active = true, asset;
+    setUrl(null); setFailed(false);
+    api.getEchogram(cageId, { demo }).then((r) => {
+      if (!active) { r.revoke(); return; }
+      asset = r; setUrl(r.url);
+    }).catch((e) => { if (active) setFailed(e.code === 'echogram_range_empty' ? '선택한 기간의 관측이 없습니다.' : e.code === 'echogram_not_found' ? '이 가두리의 에코그램 자산이 없습니다.' : '이미지를 불러오지 못했습니다.'); });
+    return () => { active = false; asset?.revoke(); };
+  }, [cageId, demo]);
   return (
     <figure className="chart" ref={ref}>
       <figcaption>소나 에코그램</figcaption>
       {failed ? (
-        <p className="hint">이미지를 불러오지 못했습니다.</p>
-      ) : (
-        <img className="echogram" src={api.getEchogramUrl(cageId, { demo })} alt="시간에 따른 물고기 깊이 분포 에코그램" onError={() => setFailed(true)} />
-      )}
+        <p className="hint">{failed}</p>
+      ) : url ? <img className="echogram" src={url} alt="시간에 따른 물고기 깊이 분포 에코그램" onError={() => setFailed('이미지를 표시하지 못했습니다.')} /> : <p>이미지를 불러오는 중입니다.</p>}
     </figure>
   );
 }
