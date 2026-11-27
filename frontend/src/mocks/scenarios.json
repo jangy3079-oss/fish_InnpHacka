@@ -1,6 +1,10 @@
 {
  "heatwave_typhoon": {
   "label": "고수온·태풍",
+  "mock_warmup_frames": 2,
+  "meta": {
+   "default_t": 23
+  },
   "frames": [
    {
     "t": 0,
@@ -1543,6 +1547,7 @@
  },
  "turbidity_event": {
   "label": "탁도 급증",
+  "mock_warmup_frames": 2,
   "frames": [
    {
     "t": 0,
@@ -2876,6 +2881,7 @@
  },
  "disease_suspect": {
   "label": "질병 의심",
+  "mock_warmup_frames": 2,
   "frames": [
    {
     "t": 0,
@@ -4253,6 +4259,7 @@
  },
  "parasite_suspect": {
   "label": "기생충 의심",
+  "mock_warmup_frames": 2,
   "frames": [
    {
     "t": 0,

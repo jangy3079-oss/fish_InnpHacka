@@ -1,20 +1,21 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { DEFAULT_DEMO, MAX_T } from '../mocks/demo.js';
+import { DEFAULT_DEMO, maxTOf } from '../mocks/demo.js';
 
 const DemoContext = createContext(null);
-const STEP_MS = 1000; // 재생 중 1초에 1시간씩 진행
+const STEP_MS = 1000; // 재생 중 1초에 한 프레임씩 진행
 
-// 어민 화면·대시보드·알림이 같은 시나리오와 시각(t)을 따라가게 하는 공유 상태.
+// 어민 화면·대시보드·알림이 같은 시나리오와 시각(t, 프레임 번호)을 따라가게 하는 공유 상태.
 export function DemoProvider({ children }) {
   const [scenario, setScenario] = useState(DEFAULT_DEMO.scenario);
   const [t, setT] = useState(DEFAULT_DEMO.t);
   const [playing, setPlaying] = useState(false);
+  const maxT = maxTOf(scenario); // 시나리오마다 프레임 수가 다를 수 있다
 
   useEffect(() => {
     if (!playing) return undefined;
     const id = setInterval(() => {
       setT((cur) => {
-        if (cur >= MAX_T) {
+        if (cur >= maxT) {
           setPlaying(false);
           return cur;
         }
@@ -22,11 +23,12 @@ export function DemoProvider({ children }) {
       });
     }, STEP_MS);
     return () => clearInterval(id);
-  }, [playing]);
+  }, [playing, maxT]);
 
   const value = useMemo(
     () => ({
       demo: { scenario, t },
+      maxT,
       playing,
       selectScenario: (s) => {
         setScenario(s);
@@ -38,11 +40,11 @@ export function DemoProvider({ children }) {
         setPlaying(false);
       },
       togglePlay: () => {
-        if (t >= MAX_T) setT(0);
+        if (t >= maxT) setT(0);
         setPlaying((p) => !p);
       },
     }),
-    [scenario, t, playing],
+    [scenario, t, playing, maxT],
   );
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 }
