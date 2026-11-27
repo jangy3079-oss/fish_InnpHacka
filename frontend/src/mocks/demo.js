@@ -82,10 +82,34 @@ function withDeadlines(rec, level) {
   return { ...rec, deadline: times[0] ?? null, deadline_expired: false, deadlines };
 }
 
+// 목업 손익 선택지에 서버의 calculation 모양을 붙인다(결과 금액과 맞는 가정값. 경제 산식이 아니라 표시용 목업이다).
+function withCalculation(rec) {
+  const STOCK_VALUE = 3000000; // 중간어 1000마리 x 0.3kg x 10,000원
+  const options = rec.options.map((o) => {
+    if (o.estimated_loss_krw == null || !o.available) return o;
+    const cost = ['keep', 'stop_feed', 'reduce_feed'].includes(o.id) ? 0 : Math.round((o.estimated_loss_krw * 0.2) / 1000) * 1000;
+    const stock = o.estimated_loss_krw - cost;
+    return {
+      ...o,
+      calculation: {
+        hypothetical: false,
+        groups: [{ size_group: 'mid', count: 1000, price_per_kg: '10000.0', avg_weight_kg: '0.3', insured: false, price_source: 'config_assumption', weight_source: 'stock_input', stock_value_krw: `${STOCK_VALUE}.00`, loss_rate: (stock / STOCK_VALUE).toFixed(4), loss_krw: `${stock}.000` }],
+        stock_loss_krw: `${stock}.000`,
+        action_cost_krw: `${cost}.0`,
+        insurance_krw: '0',
+        subsidy_krw: '0',
+        exact_loss_krw: `${o.estimated_loss_krw}.000`,
+        insurance_confirmed: false,
+      },
+    };
+  });
+  return { ...rec, options, config_revision: '16241d793c95c4230d7639bca7a9c76f68b2675d331ca8fb1be2e501434d15a5' };
+}
+
 export function recommendationAt(cageId, demo) {
   const f = frameAt(demo);
   const rec = buildRecommendation(cageId, f);
-  return rec.kind === 'none' ? rec : withDeadlines(rec, f.level);
+  return rec.kind === 'none' ? rec : withDeadlines(rec.kind === 'profit' ? withCalculation(rec) : rec, f.level);
 }
 
 function buildRecommendation(cageId, f) {

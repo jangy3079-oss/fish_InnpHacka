@@ -50,6 +50,16 @@ function choiceKey(recId, optionId) {
   return key;
 }
 
+function diagnosisKey(cageId) {
+  const name = `diag-key:${cageId}`;
+  let key = sessionStorage.getItem(name);
+  if (!key) {
+    key = crypto.randomUUID();
+    sessionStorage.setItem(name, key);
+  }
+  return key;
+}
+
 // 시연 응답(POST /demo/scenario)은 한 번의 계산으로 status·recommendation·timeseries를 함께 준다.
 // 같은 시각의 요청은 한 번만 보내고, 세 호출이 같은 응답을 나눠 쓴다. 준비 중(503)이면 몇 번 다시 시도한다.
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -147,13 +157,23 @@ export const api = {
       });
   },
 
-  requestDiagnosis: (cageId, note = '') =>
+  // 본문은 request_key뿐이다(자유 문구 note는 지원하지 않는다). 키는 성공이나 확정 오류가 나올 때까지 같은 값으로 다시 보낸다.
+  requestDiagnosis: (cageId) =>
     USE_MOCK
       ? delay({ mock: true, persisted: false })
       : http(`/cages/${cageId}/diagnosis-request`, {
           method: 'POST',
-          body: JSON.stringify({ note }),
-        }),
+          body: JSON.stringify({ request_key: diagnosisKey(cageId) }),
+        }).then(
+          (r) => {
+            sessionStorage.removeItem(`diag-key:${cageId}`);
+            return r;
+          },
+          (e) => {
+            if ([403, 409, 422].includes(e.status)) sessionStorage.removeItem(`diag-key:${cageId}`);
+            throw e;
+          },
+        ),
 
   // 합성 추천(id=0)은 표시 전용이라 저장 API로 보내지 않는다.
   chooseOption: (recommendationId, optionId) =>
