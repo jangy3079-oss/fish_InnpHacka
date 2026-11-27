@@ -1,0 +1,32 @@
+{
+  "scenario": "disease_suspect",
+  "cage_id": "cage-003",
+  "start": "2026-08-04T15:00:00Z",
+  "end": "2026-08-10T15:00:00Z",
+  "cycle_minutes": 5,
+  "expected_causes": [
+    "disease_suspect"
+  ],
+  "false_alarm_check": false,
+  "intervals": [
+    {
+      "start": "2026-08-04T15:00:00Z",
+      "end": "2026-08-07T09:00:00Z",
+      "cause": "normal",
+      "cause_ko": "정상",
+      "rule_id": null,
+      "alert_expected": false
+    },
+    {
+      "start": "2026-08-07T09:00:00Z",
+      "end": "2026-08-10T15:00:00Z",
+      "cause": "disease_suspect",
+      "cause_ko": "질병 의심",
+      "rule_id": "R5",
+      "alert_expected": true
+    }
+  ],
+  "markers": {
+    "disease_start": "2026-08-06T03:00:00Z"
+  }
+}

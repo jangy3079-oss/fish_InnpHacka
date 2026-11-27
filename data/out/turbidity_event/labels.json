@@ -1,0 +1,38 @@
+{
+  "scenario": "turbidity_event",
+  "cage_id": "cage-003",
+  "start": "2026-08-04T15:00:00Z",
+  "end": "2026-08-07T15:00:00Z",
+  "cycle_minutes": 5,
+  "expected_causes": [],
+  "false_alarm_check": true,
+  "intervals": [
+    {
+      "start": "2026-08-04T15:00:00Z",
+      "end": "2026-08-05T16:05:00Z",
+      "cause": "normal",
+      "cause_ko": "정상",
+      "rule_id": null,
+      "alert_expected": false
+    },
+    {
+      "start": "2026-08-05T16:05:00Z",
+      "end": "2026-08-06T12:00:00Z",
+      "cause": "turbidity",
+      "cause_ko": "탁도 상승(카메라만)",
+      "rule_id": null,
+      "alert_expected": false
+    },
+    {
+      "start": "2026-08-06T12:00:00Z",
+      "end": "2026-08-07T15:00:00Z",
+      "cause": "normal",
+      "cause_ko": "정상",
+      "rule_id": null,
+      "alert_expected": false
+    }
+  ],
+  "markers": {
+    "turbidity_start": "2026-08-05T15:00:00Z"
+  }
+}

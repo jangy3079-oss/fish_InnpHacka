@@ -1,0 +1,32 @@
+{
+  "scenario": "parasite_suspect",
+  "cage_id": "cage-003",
+  "start": "2026-08-04T15:00:00Z",
+  "end": "2026-08-08T15:00:00Z",
+  "cycle_minutes": 5,
+  "expected_causes": [
+    "parasite_suspect"
+  ],
+  "false_alarm_check": false,
+  "intervals": [
+    {
+      "start": "2026-08-04T15:00:00Z",
+      "end": "2026-08-05T22:00:00Z",
+      "cause": "normal",
+      "cause_ko": "정상",
+      "rule_id": null,
+      "alert_expected": false
+    },
+    {
+      "start": "2026-08-05T22:00:00Z",
+      "end": "2026-08-08T15:00:00Z",
+      "cause": "parasite_suspect",
+      "cause_ko": "기생충 의심",
+      "rule_id": "R8",
+      "alert_expected": true
+    }
+  ],
+  "markers": {
+    "parasite_start": "2026-08-05T21:00:00Z"
+  }
+}
