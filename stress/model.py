@@ -16,6 +16,11 @@
      학습 범위 안(≤ 99백분위)   : 0.4 × 백분위          → 0~39 (정상)
      학습 범위 밖(> 99백분위)   : 40 + 60 × ((s − s99)/(s_ext − s99))^1.6
        s_ext = 학습 범위에서 아주 멀리 떨어진 점의 점수 (Isolation Forest 점수 상한 근사)
+   학습 범위 밖 보정 (#110): Isolation Forest는 학습 범위 밖의 점을 범위 끝 점과 같은 깊이에서
+   격리해, 아무리 멀리 벗어나도 '범위 끝 점'만큼만 이상하다고 본다 (특히 1차원 묶음).
+   그래서 특징별 학습 범위를 OUT_MARGIN_IQR(0.5 IQR) 넘게 벗어나면
+     범위 점수 = 40 + 60 × ((초과 IQR − 0.5) / 2.5)^1.6   (3 IQR 벗어나면 100)
+   를 따로 계산해 Isolation Forest 점수와 큰 값을 쓴다.
 4. 콜드 스타트: 기준선 윈도우가 168개(7일치) 미만이면 warming_up, 점수 없음.
 5. model_version: 'm5-iforest-<버전>+<가두리>.<학습 종료일>.<학습 데이터 해시 8자리>'
 
@@ -37,7 +42,10 @@ from pyod.models.iforest import IForest
 from common.config import get as cfg_get
 from fusion.fuse import FusedFeatures
 
-MODEL_VERSION = "m5-iforest-1.0"
+MODEL_VERSION = "m5-iforest-1.1"   # 1.1: 학습 범위 밖 보정 (#110)
+OUT_MARGIN_IQR = 0.5           # 학습 범위를 이만큼(IQR 단위) 넘게 벗어나야 범위 점수 시작 (40)
+OUT_FULL_IQR = 3.0             # 이만큼 벗어나면 범위 점수 100
+RANGE_FEATURE_SETS = {("rubbing_rate",), ("still_ratio",)}   # 범위 밖 보정을 쓰는 묶음 (1차원 행동 이벤트). 다묶음에 쓰면 급이 저하·탁도에서 거짓 경보
 SCORE_GAMMA = 1.6               # 학습 범위 밖 점수 곡선 (1보다 크면 아주 멀리 벗어나야 80 이상)
 
 
@@ -172,15 +180,32 @@ class _Detector:
     s99: float
     s_ext: float
     train_scores: np.ndarray
+    lo: Optional[np.ndarray] = None      # 특징별 학습 최솟값·최댓값·IQR (학습 범위 밖 보정)
+    hi: Optional[np.ndarray] = None
+    iqr: Optional[np.ndarray] = None
 
-    def score(self, X: np.ndarray) -> np.ndarray:
-        """특징 행렬 (n, d) → 0~100 점수 배열."""
+    def iforest_score(self, X: np.ndarray) -> np.ndarray:
         raw = self.clf.decision_function(np.atleast_2d(X))
         pct = 100.0 * np.searchsorted(self.train_scores, raw, side="right") / self.train_scores.size
         inside = np.minimum(0.4 * pct, 39.0)
         span = max(self.s_ext - self.s99, 1e-6)
         outside = 40.0 + 60.0 * np.clip((raw - self.s99) / span, 0.0, 1.0) ** SCORE_GAMMA
         return np.where(raw <= self.s99, inside, outside)
+
+    def range_score(self, X: np.ndarray) -> np.ndarray:
+        """학습 범위를 벗어난 정도 → 0(범위 안·여유 안) 또는 40~100."""
+        X = np.atleast_2d(X)
+        if self.lo is None or tuple(self.features) not in RANGE_FEATURE_SETS:
+            return np.zeros(len(X))
+        excess = np.maximum(X - self.hi, self.lo - X) / self.iqr        # 범위 밖 거리 (IQR 단위)
+        e = np.max(np.maximum(excess, 0.0), axis=1)
+        over = e > OUT_MARGIN_IQR
+        val = 40.0 + 60.0 * np.clip((e - OUT_MARGIN_IQR) / (OUT_FULL_IQR - OUT_MARGIN_IQR), 0, 1) ** SCORE_GAMMA
+        return np.where(over, val, 0.0)
+
+    def score(self, X: np.ndarray) -> np.ndarray:
+        """특징 행렬 (n, d) → 0~100 점수 배열."""
+        return np.maximum(self.iforest_score(X), self.range_score(X))
 
 
 def _extreme_score(clf: IForest, X: np.ndarray) -> float:
@@ -228,8 +253,11 @@ class StressModel:
                               contamination=0.01, random_state=self.seed)
                 clf.fit(X)
                 tr = np.sort(clf.decision_scores_)
+                q1, q3 = np.percentile(X, [25, 75], axis=0)
+                spread = np.maximum(q3 - q1, np.maximum((X.max(0) - X.min(0)) / 4, 1e-6))
                 self.detectors[(part, fs)] = _Detector(names, clf, float(np.percentile(tr, 99)),
-                                                       _extreme_score(clf, X), tr)
+                                                       _extreme_score(clf, X), tr,
+                                                       X.min(0), X.max(0), spread)
         h = hashlib.sha1(np.round(np.array([[f[k] for k in SONAR_FEATURES] for _, f in wins]), 5).tobytes()).hexdigest()[:8]
         end = wins[-1][0].strftime("%Y%m%d") if wins else "none"
         self.model_version = f"{MODEL_VERSION}+{self.cage_id}.{end}.{h}"
