@@ -65,8 +65,10 @@ class TemporalRules:
                             for a, b in zip(means, means[1:])))
         duration, began, paused = self.rubbing.get(cage, (timedelta(), None, timedelta()))
         gap = cage in self.last and ts - self.last[cage] != cycle
+        reset_reason = None
         if not eligible or gap:
             duration, began, paused = timedelta(), None, timedelta()
+            reset_reason = 'observation_gap' if gap else 'context_unavailable'
         observed = (eligible and quality is not None and quality >= thresholds["quality"]["rubbing_min"]
                     and rubbing is not None)
         if observed:
@@ -77,12 +79,14 @@ class TemporalRules:
                 duration += cycle
             else:
                 duration, began = timedelta(), None
+                reset_reason = 'observed_normal'
         elif eligible and began is not None:
             # Count only unobserved cycle intervals. A resumed valid observation
             # is not another paused interval; exactly max_pause_hours is allowed.
             paused += cycle
             if paused > timedelta(hours=rules["R8"]["behavior"]["max_pause_hours"]):
                 duration, began, paused = timedelta(), None, timedelta()
+                reset_reason = 'pause_expired'
         self.rubbing[cage] = duration, began, paused
         self.last[cage] = ts
         return {"R5": bool(eligible and trend_ok),
@@ -92,7 +96,10 @@ class TemporalRules:
                             "trend_window_complete": complete, "rubbing_observed_hours": duration.total_seconds() / 3600,
                             "rubbing_window_start": None if began is None else began.isoformat(),
                             "rubbing_pause_hours": paused.total_seconds() / 3600,
-                            "rubbing_current_observed": observed}}
+                            "rubbing_current_observed": observed,
+                            "rubbing_reset_reason": reset_reason,
+                            "trend_observed_hours": sum(coverage)*24,
+                            "trend_needed_hours": days*24}}
 
 
 class WorkRules:

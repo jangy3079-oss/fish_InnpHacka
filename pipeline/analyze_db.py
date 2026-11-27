@@ -40,7 +40,7 @@ def main(argv=None):
     loader = ConfigLoader()
     end = parse_time(args.to) if args.to else _bucket(datetime.now(timezone.utc),int(loader.snapshot()['thresholds']['cycle_minutes']))
     start = end-timedelta(hours=args.hours)
-    model = StressModel.load(args.model)
+    model = StressModel.load(args.model, snapshot=loader.snapshot())
     with httpx.Client(timeout=60,follow_redirects=False) as client:
         receipt = run(AnalysisStore.from_env(client),model,args.cage_id,args.producer_id,args.species,start,end,loader,
                       {'unknown':None,'clear':False,'active':True}[args.advisory_state])

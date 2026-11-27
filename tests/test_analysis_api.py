@@ -31,7 +31,7 @@ class StubModel:
     def __init__(self,warm=False):
         self.warm=warm
 
-    def score_series(self,fused):
+    def score_series(self,fused, *, snapshot=None):
         return [StressScore(self.cage_id,f.ts+timedelta(minutes=5),None if self.warm else 70,
             'warming_up' if self.warm else 'ready','m5-iforest-1.1+cage-003.20260804.123ccdef',
             evidence={'lower_layers_ratio_x':1.8,'activity_change':-0.3,'cohesion_change':0},

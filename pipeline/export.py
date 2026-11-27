@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from bisect import bisect_left
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
@@ -38,7 +39,7 @@ def _hours(t: datetime, start: datetime) -> float:
     return round((t - start).total_seconds() / 3600, 4)
 
 
-def status_rows(scores: Sequence, fused: Sequence, start: datetime, causes: Optional[Sequence] = None) -> List[dict]:
+def status_rows(scores: Sequence, fused: Sequence, start: datetime, causes: Optional[Sequence] = None, *, records=None) -> List[dict]:
     """StressScore + FusedFeatures(같은 순서·같은 주기) → status 응답 모양 목록."""
     if len(scores) != len(fused):
         raise ValueError("scores와 fused는 같은 주기 목록이어야 함")
@@ -46,8 +47,23 @@ def status_rows(scores: Sequence, fused: Sequence, start: datetime, causes: Opti
             (c.cage_id, c.ts) != (s.cage_id, s.ts) for c, s in zip(causes, scores))):
         raise ValueError("cause 결과는 점수와 동일한 가두리·시각이어야 함")
     rows = []
+    # Last seen comes only from raw observations, never from the analysis clock.
+    raw = defaultdict(list)
+    for record in sorted(records or (), key=lambda r: r.ts):
+        raw[(record.cage_id, record.source.value)].append(record.ts)
     for i, (s, f) in enumerate(zip(scores, fused)):
         warm = s.baseline_status == "warming_up"
+        last_seen = {}
+        for source in ('sonar', 'camera', 'env'):
+            observations = raw[(s.cage_id, source)]
+            cursor = bisect_left(observations, s.ts)-1
+            last_seen[source] = _iso(observations[cursor]) if cursor>=0 else None
+        metadata = causes[i].metadata() if causes is not None else {}
+        # UI-facing pending notes describe unexplained alerts, not a disease
+        # waiting state on healthy/R7 management frames or an already named cause.
+        if warm or s.level in (None, '정상') or (causes is not None and causes[i].status_causes()):
+            metadata['cause_pending'] = []
+
         evidence = dict(s.evidence or {})
         for k in STATUS_ENV_KEYS:
             v = f.env.get(k)
@@ -61,7 +77,7 @@ def status_rows(scores: Sequence, fused: Sequence, start: datetime, causes: Opti
             "level": None if warm else s.level,
             "baseline_status": s.baseline_status,
             "baseline_windows": s.baseline_windows,
-            "cause": [] if causes is None else causes[i].status_causes(),
+            "cause": [] if causes is None else causes[i].status_causes(include_metadata=True),
             "cause_config_revision": None if causes is None else causes[i].config_revision,
             "cause_suppression": None if causes is None else causes[i].suppression,
             "r2_triggered": False if causes is None else causes[i].r2_triggered,
@@ -70,8 +86,11 @@ def status_rows(scores: Sequence, fused: Sequence, start: datetime, causes: Opti
             "missing_sources": list(f.missing_sources),
             "components": dict(s.components or {}),
             "model_version": s.model_version,
-            "r7_held_due_to_missing": any(c.rule_id=='R7' and c.evidence['feeding_held_due_to_missing'] for c in causes[i].estimates) if causes is not None else False,
-            "feeding_last_observed_at": next((c.evidence['feeding_last_observed_at'] for c in causes[i].estimates if c.rule_id=='R7'),None) if causes is not None else None,
+            "data_status": 'warming_up' if warm else 'insufficient_data' if s.score is None else 'ready',
+            "level_held_due_to_missing": getattr(s, 'level_held_due_to_missing', False),
+            "last_seen": last_seen,
+            "last_observation_at": max((v for v in last_seen.values() if v is not None), default=None),
+            **metadata,
         })
     return rows
 
