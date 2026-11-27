@@ -41,8 +41,8 @@ FirstAidCard 진입에는 GET만 호출한다. 조회 실패에는 신규 접수
 화면 변경 시 늦은 응답을 무시한다. 실제 Supabase 세션/Bearer 연결은 #200/#207이며 시연 로그인이 이를 대체하지 않는다.
 
 onset/censored·source/confidence·잘림·official 필터는 유지한다.
-PR #156의 두 문구 수정안은 임시 설정에서 현재 스키마·출처·금칙어 검증으로 검토한다.
-이 작업이 PR #156 병합을 뜻하지 않는다. source snapshot/config_revision은 유지하지만 당시 rendered 문구/archive는 저장하지 않는다.
+PR #156의 두 문구 수정안을 임시 설정에서 스키마·출처·금칙어 검증으로 검토했고, 이후 main에 병합된 문구도 반영했다.
+이 작업에서 별도로 PR #156을 병합하지 않았다. source snapshot/config_revision은 유지하지만 당시 rendered 문구/archive는 저장하지 않는다.
 완전한 당시 문구 재현·보관/삭제·수신기관·dispatcher는 #207 및 운영 후속이다.
 
 ## 배포·검증
@@ -56,6 +56,7 @@ python -m unittest tests.test_diagnosis -q
 python -m unittest discover -s tests -q
 npm test --prefix supabase/tests
 npm run build --prefix frontend
+node --test frontend/tests/diagnosis-client.test.mjs
 docker run --name fish203-pg -e POSTGRES_HOST_AUTH_METHOD=trust -d postgres:17-alpine
 python supabase/tests/diagnosis_concurrency.py --container fish203-pg
 docker rm -f fish203-pg
