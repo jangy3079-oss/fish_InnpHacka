@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="200" viewBox="0 0 480 200">
+  <defs>
+    <linearGradient id="w" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d4e7a"/>
+      <stop offset="1" stop-color="#0b1a2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="480" height="200" fill="url(#w)"/>
+  <!-- 어군: 시간이 지날수록 표층에서 중층으로 내려감 (합성 예시) -->
+  <path d="M0 40 C120 45 200 50 260 80 S400 110 480 112 L480 140 C400 142 300 135 240 110 S110 72 0 70 Z" fill="#35bfc0" opacity=".75"/>
+  <path d="M0 150 C160 150 320 148 480 150" stroke="#6fb6ff" stroke-width="1" opacity=".5" fill="none"/>
+  <text x="8" y="14" fill="#fff" font-size="11" font-family="sans-serif">표층</text>
+  <text x="8" y="106" fill="#fff" font-size="11" font-family="sans-serif">중층</text>
+  <text x="8" y="192" fill="#fff" font-size="11" font-family="sans-serif">저층</text>
+  <text x="400" y="192" fill="#fff" font-size="10" font-family="sans-serif" opacity=".8">합성 예시 이미지</text>
+</svg>

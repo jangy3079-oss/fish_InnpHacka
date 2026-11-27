@@ -1,0 +1,38 @@
+# 긴급방류 요건 (이슈 #17)
+# 근거: 「적조현상 또는 이상수온 발생해역 양식어류 긴급방류에 관한 고시」, SRS C-03, DR-07, SDD 6.4
+#
+# 하나라도 어긋나면 방류 선택지를 "불가"로 표시하고 이유를 보여준다 (SDD 6.4).
+# 방류는 추천만 하고 최종 결정은 어민이 한다 (C-02).
+
+species:
+  allowed: [조피볼락]
+  reason_if_not: "긴급방류 대상 품종이 아닙니다 (조피볼락만 가능)."
+
+# 크기 그룹은 DB stock.size_group 값과 같다 (fry / mid / market)
+size_groups:
+  fry:
+    label: 치어
+    release_allowed: true
+  mid:
+    label: 중간어
+    release_allowed: true
+  market:
+    label: 출하 크기
+    release_allowed: false
+    reason_if_not: "출하 크기는 방류 대상이 아닙니다. 출하를 검토하세요."
+
+# 동일 해역에서 한 번에 방류할 수 있는 수량 (조피볼락)
+simultaneous_limit:
+  max_count: 100000
+  # 넘을 때의 안내: 1주 간격 순차 방류 또는 1km 이격 분산
+  if_exceeded:
+    - {type: sequential, interval_days: 7}
+    - {type: spread, min_distance_km: 1}
+  reason_if_not: "동일 해역 일시 방류 한도(10만 마리)를 넘습니다. 1주 간격으로 나눠 방류하거나 1km 이상 떨어뜨려 방류해야 합니다."
+
+# 지원금 (S(a), SDD 6.4)
+# [확인] 어가당 상한과 마리당 금액은 지자체 공고를 확인한 뒤 입력한다.
+#        0 은 "아직 반영하지 않음"이다.
+subsidy:
+  cap_per_farm_krw: 0
+  per_fish_krw: 0
