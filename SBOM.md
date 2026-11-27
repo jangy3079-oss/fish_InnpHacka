@@ -38,6 +38,9 @@
 | 모듈 | 패키지 | 라이선스·근거 | 확인일 | 사용·검증 |
 | --- | --- | --- | --- | --- |
 | common/config_loader | [PyYAML](https://github.com/yaml/pyyaml) | MIT, [LICENSE](https://github.com/yaml/pyyaml/blob/main/LICENSE) | 2026-11-27 | 설정 YAML 파싱. requirements.txt: `PyYAML>=6.0,<7`, 검증 버전 6.0.4 |
+| api/farmer_data (#29) | [httpx](https://github.com/encode/httpx) | BSD-3-Clause, [LICENSE](https://github.com/encode/httpx/blob/master/LICENSE.md) | 2026-11-27 | Supabase Auth/PostgREST 요청. 검증 0.29.0 |
+| api/echogram (#29) | [NumPy](https://github.com/numpy/numpy) | BSD-3-Clause, [LICENSE](https://github.com/numpy/numpy/blob/main/LICENSE.txt) | 2026-11-27 | NPZ 읽기·선형 강도 축소. 검증 2.5.5 |
+| api/echogram (#29) | [Matplotlib](https://github.com/matplotlib/matplotlib) | PSF 기반 Matplotlib license, [공식 라이선스](https://matplotlib.org/stable/project/license.html) | 2026-11-27 | Agg PNG 미리보기. 검증 3.11.2 |
 
 ### 카메라 실행 조합 (#18)
 
