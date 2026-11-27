@@ -1,6 +1,7 @@
 """Upload producer metrics.jsonl or the shared JSON fixture without rewriting it."""
 
 import argparse
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -59,6 +60,20 @@ def upload_counts(records: list[MetricRecord], client: httpx.Client, base_url: s
         for key in counts:
             counts[key] += values[key]
     return counts
+
+
+@dataclass(frozen=True)
+class UploadReport:
+    confirmed_count: int
+    inserted_count: int
+    duplicate_count: int
+
+
+def upload_report(records: list[MetricRecord], client: httpx.Client, base_url: str, token: str,
+                  batch_size: int = 500) -> UploadReport:
+    """Typed data-client view of the canonical #219 acknowledgement counters."""
+    counts = upload_counts(records, client, base_url, token, batch_size)
+    return UploadReport(counts['received_count'], counts['inserted_count'], counts['duplicate_count'])
 
 
 def main(argv=None) -> int:

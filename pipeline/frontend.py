@@ -37,6 +37,9 @@ LABELS = {
 }
 FRONT_KEYS = ("ts", "stress_score", "level", "baseline_status", "cause", "evidence", "camera_weight",
               "missing_sources")
+DERIVED_KEYS = ('baseline_windows', 'model_version', 'data_status', 'level_held_due_to_missing',
+                'r7_held_due_to_missing', 'feeding_last_observed_at', 'feeding_reset_reason',
+                'last_seen', 'last_observation_at', 'cause_pending', 'cause_config_revision')
 SERIES = ("vertical_dist", "activity", "temp_surface", "temp_mid", "cohesion", "stress_score")
 
 
@@ -69,6 +72,8 @@ def scenario_frames(tl: Timeline, n_frames: int, label_causes: bool = True) -> d
         t = max(first_scored, (i + 1) * step - tl.meta["t_step_h"])     # 각 구간의 끝 시점
         row = tl.status_at(t)
         f = {"t": i, **{k: row[k] for k in FRONT_KEYS}, "scenario_t_h": row["t"]}
+        f.update({k: row[k] for k in DERIVED_KEYS if k in row})
+        f['cause'] = [c for c in f['cause'] if c.get('display', True)]
         # 원인 대기 사유 (#127): warming_up / missing_score / low_stress, 없으면 None
         f["cause_suppression"] = row.get("cause_suppression")
         f["r2_triggered"] = bool(row.get("r2_triggered", False))
@@ -95,6 +100,7 @@ def build(names: Optional[List[str]] = None, out_dir=DEFAULT_OUT, n_frames: int 
                      "meta": {"scenario": name, "start": tl.meta["start"], "duration_h": tl.duration_h,
                               "frame_step_h": sf["frame_step_h"], "markers": tl.meta["markers"],
                               "model_version": tl.meta["model_version"],
+                              **{k: tl.meta[k] for k in ('config_revision', 'scenario_revision', 'training_revision') if k in tl.meta},
                               "cause_source": "cause_engine, 엔진이 비운 경보 구간은 scenario_label(임시)" if label_causes else "cause_engine"}}
     return out
 

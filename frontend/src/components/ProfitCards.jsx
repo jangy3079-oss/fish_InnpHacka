@@ -150,7 +150,7 @@ function CalculationDetail({ option, revision }) {
 }
 
 // 질병·기생충 의심: 손익 대신 공통 1차 조치와 진단 요청.
-export function FirstAidCard({ rec }) {
+export function FirstAidCard({ rec, rule }) {
   const [state, setState] = useState('idle'); // idle | sending | done | error
   const [error, setError] = useState('');
   const simulated = rec.simulated || rec.id === 0;
@@ -200,7 +200,7 @@ export function FirstAidCard({ rec }) {
   };
   return (
     <section className="card key">
-      <h2>질병이 의심됩니다</h2>
+      <h2>{rule === 'R8' ? '기생충이 의심됩니다' : '질병이 의심됩니다'}</h2>
       <p>원인을 확정하지 못했습니다. 먼저 아래 조치를 해 주세요.</p>
       <RecommendationDeadlines rec={rec} />
       {receipt && <p role="status">최근 접수: {new Date(receipt.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })} · 전달 대기 중입니다. 현재 원인의 신규 접수 가능 여부와는 별개입니다.</p>}

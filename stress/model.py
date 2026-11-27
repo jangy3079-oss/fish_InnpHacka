@@ -29,8 +29,14 @@
 
 from __future__ import annotations
 
+import copy
+import re
 import hashlib
 import pickle
+import json
+import os
+import tempfile
+from threading import RLock
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -39,8 +45,9 @@ from typing import Dict, List, Optional, Sequence
 import numpy as np
 from pyod.models.iforest import IForest
 
-from common.config import get as cfg_get
-from fusion.fuse import FusedFeatures
+from common.config_loader import ConfigError
+from common.data_config import snapshot_or_current, fusion_parameters
+from fusion.fuse import FusedFeatures, configuration_signature
 
 MODEL_VERSION = "m5-iforest-1.1"   # 1.1: 학습 범위 밖 보정 (#110)
 OUT_MARGIN_IQR = 0.5           # 학습 범위를 이만큼(IQR 단위) 넘게 벗어나야 범위 점수 시작 (40)
@@ -49,26 +56,41 @@ RANGE_FEATURE_SETS = {("rubbing_rate",), ("still_ratio",)}   # 범위 밖 보정
 SCORE_GAMMA = 1.6               # 학습 범위 밖 점수 곡선 (1보다 크면 아주 멀리 벗어나야 80 이상)
 
 
-def _hour(v, default: float) -> float:
-    """'06:00' / 6 → 6.0"""
-    try:
-        if isinstance(v, str):
-            h, _, m = v.partition(":")
-            return int(h) + (int(m) if m else 0) / 60
-        return float(v)
-    except (TypeError, ValueError):
-        return default
+def _hour(value):
+    h, m = value.split(':')
+    return int(h) + int(m) / 60
 
 
-# config/thresholds.yaml 의 cycle_minutes, baseline.* 를 읽는다 (#77). 없으면 SDD 기본값.
-CYCLE_MINUTES = int(cfg_get("thresholds", "cycle_minutes", 5))
-WINDOW_HOURS = float(cfg_get("thresholds", "baseline.window_hours", 1))
-MIN_BASELINE_WINDOWS = int(cfg_get("thresholds", "baseline.min_windows", 168))   # 7일 × 24 (가정값)
-MIN_DAYPART_WINDOWS = 24         # 낮·밤 각각 이 이상이어야 그 기준선 모델을 만든다
-WINDOW_CYCLES = max(1, int(round(WINDOW_HOURS * 60 / CYCLE_MINUTES)))   # 5분 × 12 = 1시간
-MIN_CYCLES_IN_WINDOW = max(1, WINDOW_CYCLES // 2)   # 윈도우 안 유효 주기가 이보다 적으면 점수 안 냄
-DAY_START = _hour(cfg_get("thresholds", "baseline.day_start", 6), 6.0)    # KST
-DAY_END = _hour(cfg_get("thresholds", "baseline.day_end", 18), 18.0)
+# Initialize on first data use, not module import: raw collection/admin recovery
+# must still start when the analysis bundle is missing or invalid.
+_PROCESS = None
+_settings_lock = RLock()
+_PROCESS_NAMES = {'CYCLE_MINUTES','WINDOW_HOURS','MIN_BASELINE_WINDOWS',
+                  'WINDOW_CYCLES','MIN_CYCLES_IN_WINDOW','DAY_START','DAY_END'}
+MIN_DAYPART_WINDOWS = 24
+
+
+def _initialize_process(snapshot=None):
+    global _PROCESS
+    with _settings_lock:
+        if _PROCESS is not None:
+            return
+        t = snapshot_or_current(snapshot)['thresholds']
+        cycles = max(1, int(round(t['baseline']['window_hours']*60/t['cycle_minutes'])))
+        globals().update(CYCLE_MINUTES=float(t['cycle_minutes']),
+            WINDOW_HOURS=float(t['baseline']['window_hours']), MIN_BASELINE_WINDOWS=t['baseline']['min_windows'],
+            WINDOW_CYCLES=cycles, MIN_CYCLES_IN_WINDOW=max(1,cycles//2),
+            DAY_START=_hour(t['baseline']['day_start']), DAY_END=_hour(t['baseline']['day_end']))
+        _PROCESS = t
+
+
+def __getattr__(name):
+    if name in _PROCESS_NAMES:
+        _initialize_process()
+        return globals()[name]
+    raise AttributeError(name)
+
+
 KST = timezone(timedelta(hours=9))
 
 SONAR_FEATURES = ["p_bottom", "p_mid", "p_surface", "act_mean", "act_std", "cohesion"]
@@ -77,6 +99,22 @@ FULL_FEATURES = SONAR_FEATURES + CAMERA_FEATURES
 FEATURE_SETS = {"sonar": SONAR_FEATURES, "camera": CAMERA_FEATURES,
                 "rubbing": ["rubbing_rate"], "still": ["still_ratio"]}
 COMPONENT_CAP = {"rubbing": 79, "still": 79}   # 보조 지표 단독으로는 '위험'을 만들지 않음
+
+
+def training_settings(snapshot):
+    t = snapshot.to_dict()['thresholds']
+    return {'schema': 1, 'algorithm': MODEL_VERSION, 'cycle_minutes': t['cycle_minutes'],
+            'baseline': {k: t['baseline'][k] for k in ('window_hours', 'day_start', 'day_end')},
+            'fusion': t['fusion'], 'quality': t['quality'], 'feature_sets': copy.deepcopy(FEATURE_SETS)}
+
+
+def require_process_settings(snapshot):
+    _initialize_process(snapshot)
+    t = snapshot['thresholds']
+    actual = (t['cycle_minutes'], t['baseline']['window_hours'], t['baseline']['min_windows'],
+              _hour(t['baseline']['day_start']), _hour(t['baseline']['day_end']))
+    if actual != (CYCLE_MINUTES, WINDOW_HOURS, MIN_BASELINE_WINDOWS, DAY_START, DAY_END):
+        raise ConfigError('M5 feature settings changed; restart and retrain when training features change')
 
 
 # ---------------------------------------------------------------- 특징
@@ -99,6 +137,7 @@ def cycle_matrix(fused: Sequence[FusedFeatures]) -> tuple:
 
 def window_features(Xw: np.ndarray) -> Dict[str, float]:
     """한 윈도우(주기×원시 지표) → 특징 dict. 소나 특징이 모자라면 빈 dict."""
+    _initialize_process()
     act = Xw[:, 3]
     ok = ~np.isnan(act)
     if ok.sum() < MIN_CYCLES_IN_WINDOW:
@@ -115,13 +154,15 @@ def window_features(Xw: np.ndarray) -> Dict[str, float]:
 
 
 def is_day(ts: datetime) -> bool:
+    _initialize_process()
     t = ts.astimezone(KST)
     h = t.hour + t.minute / 60
-    return DAY_START <= h < DAY_END
+    return DAY_START <= h < DAY_END if DAY_START < DAY_END else h >= DAY_START or h < DAY_END
 
 
 def hourly_windows(fused: Sequence[FusedFeatures]) -> List[tuple]:
     """학습용: 정시 기준으로 겹치지 않는 1시간 윈도우 → [(윈도우 시작, 특징 dict)]."""
+    _initialize_process()
     ts, X = cycle_matrix(fused)
     if not len(ts):
         return []
@@ -151,6 +192,7 @@ class StressScore:
     baseline_windows: int = 0
     evidence: Dict[str, float] = field(default_factory=dict)
     features: Dict[str, float] = field(default_factory=dict)
+    level_held_due_to_missing: bool = False
     level: Optional[str] = None          # #24 경보 단계 판정 후 채움
 
     @property
@@ -230,12 +272,20 @@ class StressModel:
         self.baseline: Dict[str, Dict[str, float]] = {}  # daypart → 특징 중앙값
         self.n_windows = 0
         self.model_version: Optional[str] = None
+        self.training_settings = None
+        self.training_revision = None
 
     @property
     def status(self) -> str:
+        _initialize_process()
         return "ready" if self.n_windows >= MIN_BASELINE_WINDOWS and self.detectors else "warming_up"
 
-    def fit(self, fused: Sequence[FusedFeatures]) -> "StressModel":
+    def fit(self, fused: Sequence[FusedFeatures], *, snapshot=None) -> "StressModel":
+        snapshot = snapshot_or_current(snapshot)
+        require_process_settings(snapshot)
+        self._require_fusion(fused, snapshot)
+        self.training_settings = training_settings(snapshot)
+        self.training_revision = snapshot.revision
         wins = [(t, f) for t, f in hourly_windows([x for x in fused if x.cage_id == self.cage_id])]
         self.n_windows = len(wins)
         self.detectors.clear()
@@ -258,10 +308,28 @@ class StressModel:
                 self.detectors[(part, fs)] = _Detector(names, clf, float(np.percentile(tr, 99)),
                                                        _extreme_score(clf, X), tr,
                                                        X.min(0), X.max(0), spread)
-        h = hashlib.sha1(np.round(np.array([[f[k] for k in SONAR_FEATURES] for _, f in wins]), 5).tobytes()).hexdigest()[:8]
+        identity = {'windows': [(t.isoformat(), {k: None if np.isnan(v) else v for k,v in f.items()}) for t,f in wins],
+                    'seed': self.seed, 'n_estimators': self.n_estimators}
+        h = hashlib.sha256(json.dumps(identity,sort_keys=True,allow_nan=False).encode()).hexdigest()[:8]
         end = wins[-1][0].strftime("%Y%m%d") if wins else "none"
-        self.model_version = f"{MODEL_VERSION}+{self.cage_id}.{end}.{h}"
+        settings_hash = hashlib.sha256(json.dumps(self.training_settings, sort_keys=True).encode()).hexdigest()[:8]
+        self.model_version = f"{MODEL_VERSION}+{self.cage_id}.{end}.{h}.{settings_hash}"
         return self
+
+    def validate_configuration(self, snapshot=None):
+        snapshot = snapshot_or_current(snapshot)
+        require_process_settings(snapshot)
+        if (getattr(self, 'training_settings', None) != training_settings(snapshot)
+                or not isinstance(getattr(self, 'training_revision', None), str)
+                or re.fullmatch('[a-f0-9]{64}', self.training_revision) is None):
+            raise ConfigError('Missing or incompatible model training metadata; retrain with current settings')
+        return snapshot
+
+    @staticmethod
+    def _require_fusion(fused, snapshot):
+        signature = configuration_signature(fusion_parameters(snapshot))
+        if any(getattr(f,'fusion_signature',None) != signature for f in fused):
+            raise ConfigError('Fused features do not match the model training configuration')
 
     # -------------------------------------------------------- 근거 지표
     def evidence(self, f: Dict[str, float], part: str) -> Dict[str, float]:
@@ -309,8 +377,9 @@ class StressModel:
         s.components = {k: int(round(min(v, COMPONENT_CAP.get(k, 100)))) for k, v in comps.items()}
         s.score = max(s.components.values())
 
-    def score_window(self, ts: datetime, f: Dict[str, float]) -> StressScore:
+    def score_window(self, ts: datetime, f: Dict[str, float], *, snapshot=None) -> StressScore:
         """윈도우 하나의 점수 (ts = 윈도우 끝 시각)."""
+        self.validate_configuration(snapshot)
         s, keys = self._pick(ts, f)
         if keys:
             comps = {}
@@ -320,9 +389,11 @@ class StressModel:
             self._finish(s, comps)
         return s
 
-    def score_series(self, fused: Sequence[FusedFeatures]) -> List[StressScore]:
+    def score_series(self, fused: Sequence[FusedFeatures], *, snapshot=None) -> List[StressScore]:
         """주기마다 직전 1시간(12주기) 윈도우로 점수를 낸다. 같은 모델끼리 묶어 한 번에 계산."""
+        snapshot = self.validate_configuration(snapshot)
         fused = [x for x in fused if x.cage_id == self.cage_id]
+        self._require_fusion(fused, snapshot)
         ts, X = cycle_matrix(fused)
         out: List[StressScore] = []
         batch: Dict[tuple, list] = {}
@@ -351,11 +422,25 @@ class StressModel:
     def save(self, path) -> Path:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("wb") as f:
-            pickle.dump(self, f)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='wb', dir=path.parent, prefix='.model-', delete=False) as f:
+                temporary = Path(f.name)
+                pickle.dump(self, f)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temporary, path)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
         return path
 
     @staticmethod
-    def load(path) -> "StressModel":
+    def load(path, *, snapshot=None) -> "StressModel":
+        # Only load our trusted artifacts: pickle is executable, not a safe upload format.
         with Path(path).open("rb") as f:
-            return pickle.load(f)
+            model = pickle.load(f)
+        if not isinstance(model, StressModel):
+            raise ConfigError('Invalid stress model artifact')
+        model.validate_configuration(snapshot)
+        return model
