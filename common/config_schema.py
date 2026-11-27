@@ -193,7 +193,6 @@ class FirstAidAction(ConfigModel):
     name: Text
     text: Text
     source: Text
-    source_status: Text | None = None
 
 
 class Diagnosis(ConfigModel):

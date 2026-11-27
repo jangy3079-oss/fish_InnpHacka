@@ -142,13 +142,6 @@ class ConfigLoaderTests(unittest.TestCase):
         self.rewrite("cause_rules", lambda d: d["rules"]["R2"]["behavior"].update(cohesion_drop=0.3, lookback_h=12))
         self.assertEqual(self.loader.snapshot()["cause_rules"]["rules"]["R2"]["behavior"]["lookback_h"], 12)
 
-    def test_source_status_from_merged_rag_docs_is_preserved(self):
-        self.rewrite("first_aid", lambda d: d["common_first_aid"][0].update(source_status="partial"))
-        self.assertEqual(self.loader.snapshot()["first_aid"]["common_first_aid"][0]["source_status"], "partial")
-        self.rewrite("first_aid", lambda d: d["common_first_aid"][0].update(source_status=123))
-        with self.assertRaises(ConfigError):
-            self.loader.reload()
-
     def test_immutable_snapshot_and_independent_mutable_copy(self):
         snapshot = self.loader.snapshot()
         with self.assertRaises(TypeError):

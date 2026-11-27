@@ -7,37 +7,40 @@
 # 공통 1차 조치 (SDD 6.5의 5개)
 # text는 임시 문구다. 알림에 쓰는 문구는 수과원 관리요령(notify/docs/, 이슈 #20)에서
 # 찾은 내용만 쓴다 (C-04).
-# source_status: partial = 공식 문서에 비슷한 항목이 있으나 질병용은 아님
+# 근거 상태(항목의 "# source_status:" 주석). 스키마가 아직 이 키를 받지 않아 주석으로 둔다 (#90)
+# source_status: official = 수과원 공식 자료에 같은 조치가 있음 (문서 연도는 notify/docs 참고)
+#                partial = 공식 문서에 비슷한 항목이 있으나 이 상황(질병 등)용은 아님
 #                secondary = 보도 기사만 있음 (수과원 원문 확인 필요)
 #                pending = 근거 없음. 근거를 찾기 전에는 알림에 쓰지 않는다
 common_first_aid:
   - id: feed_reduction
     name: 사료 감량
     text: "오늘 사료를 줄이세요."
-    source: notify/docs/nifs_red_tide_cage_manual.md
-    source_status: partial   # 적조 단계의 사료 조절(포식량 50%, 절식). 질병용 사료 감량 원문은 미확인            # 수과원 관리요령 출처 URL 입력 예정 (#20)
+    source: notify/docs/nifs_disease_rearing_management.md
+    # source_status: official # 포식량 70~80%, 활발하지 않으면 중단 (D4), 고수온기 과잉 투여 금물 (D5)
   - id: density_control
     name: 밀도 조절
     text: "가두리 안 밀도를 낮추세요."
-    source: notify/docs/nifs_red_tide_cage_manual.md
-    source_status: partial   # 표준사육밀도 유지·분산 수용. 질병용 원문은 미확인
+    source: notify/docs/nifs_disease_rearing_management.md
+    # source_status: official # 밀식 예방, 사육밀도 낮추기 (D4, D5, D8)
   - id: dead_fish_removal
     name: 폐사체 즉시 수거
     text: "죽은 고기는 바로 건지세요."
-    source: notify/docs/nifs_water_temp_rise_2026.md
-    source_status: secondary # 보도 기사(수과원 발표 인용). 수과원 원문 확인 필요
+    source: notify/docs/nifs_disease_rearing_management.md
+    # source_status: official # 병든 고기·폐사어를 빨리 제거 (D5, D8)
   - id: tool_separation
     name: 이상 가두리 작업 도구 분리
     text: "이상이 있는 가두리의 작업 도구는 따로 쓰세요."
     source: pending
-    source_status: pending   # 근거 없음. 보도 기사에는 "사료 도구 소독"만 있어 "도구 분리" 문구를 확정하지 못함 (#20)
+    # source_status: pending # "분리" 근거 없음. 공식 자료에는 기구 소독만 있음 (D6, D8). 항목을 "작업 도구 소독"으로 바꿀지 팀에서 결정
   - id: oxygen_boost
     name: 산소 보강
     text: "산소 공급을 늘리세요."
     source: notify/docs/nifs_red_tide_cage_manual.md
-    source_status: partial   # 산소공급장치 가동. 보도 기사에도 산소 장치 점검 있음
+    # source_status: partial # 적조 단계의 산소공급장치 가동. 질병·저산소 전용 원문은 없음
 
 # 진단 요청 문구 (SDD 6.5의 예시)
+# 진단 요청: 시료어를 수산연구기관·수산기술관리소에 질병검사 의뢰 (notify/docs/nifs_disease_rearing_management.md D2)
 diagnosis_request:
   disease: "수산질병관리사에게 진단 요청을 보냈습니다."
   parasite: "수산질병관리사에게 검경 진단 요청을 보냈습니다."

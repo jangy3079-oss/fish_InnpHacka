@@ -128,3 +128,8 @@ table.areas tr.selected { background: #f1f7ff; }
 .demand-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #2f6fdc; border-radius: 6px; min-width: 2px; }
 .demand-fill.over { background: #b3261e; }
 .demand-base { position: absolute; top: -4px; bottom: -4px; border-left: 2px dashed #13243b; }
+
+/* 기준선 학습 진행률 */
+.warmup { margin-top: 8px; font-size: 16px; }
+.warmup p { margin: 0 0 4px; }
+.warmup progress { width: 100%; height: 12px; }

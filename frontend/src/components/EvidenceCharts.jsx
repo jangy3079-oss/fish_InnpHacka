@@ -158,6 +158,8 @@ export default function EvidenceCharts({ cageId, alertAt }) {
       </section>
     );
 
+  // 활동량은 정상일 때 1.0 안팎이라 축을 0~1로 고정하지 않고 데이터에 맞춘다.
+  const activityMax = Math.max(1, Math.ceil(Math.max(...act.points.map((p) => p.value)) * 5) / 5);
   const temps = [...ts.points, ...tm.points].map((p) => p.value);
   const tMin = Math.floor(Math.min(...temps)) - 1;
   const tMax = Math.ceil(Math.max(...temps)) + 1;
@@ -166,7 +168,7 @@ export default function EvidenceCharts({ cageId, alertAt }) {
     <section className="card" id="evidence" ref={scrollToHash}>
       <h2>왜 이렇게 판단했나요?</h2>
       <VerticalDistChart points={vd.points} alertAt={alertAt} />
-      <LineChart title="움직임 (평소 대비 활발한 정도)" series={[{ label: '활동량', color: '#13243b', points: act.points }]} yMin={0} yMax={1} alertAt={alertAt} />
+      <LineChart title="움직임 (평소 대비 활발한 정도)" series={[{ label: '활동량', color: '#13243b', points: act.points }]} yMin={0} yMax={activityMax} alertAt={alertAt} />
       <LineChart
         title="층별 수온 (℃)"
         series={[
