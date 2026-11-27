@@ -1,0 +1,44 @@
+{
+  "ts": "2026-08-12T05:00:00Z",
+  "areas": [
+    {
+      "area_id": 1,
+      "name": "시연 해역 A",
+      "level": "경고",
+      "stress_score": 64,
+      "cage_count": 12
+    },
+    {
+      "area_id": 2,
+      "name": "시연 해역 B",
+      "level": "주의",
+      "stress_score": 41,
+      "cage_count": 8
+    },
+    {
+      "area_id": 3,
+      "name": "시연 해역 C",
+      "level": "정상",
+      "stress_score": 18,
+      "cage_count": 15
+    }
+  ],
+  "cause_distribution": [
+    {
+      "name": "고수온",
+      "count": 12
+    },
+    {
+      "name": "저산소",
+      "count": 5
+    },
+    {
+      "name": "탁도",
+      "count": 2
+    },
+    {
+      "name": "질병 의심",
+      "count": 1
+    }
+  ]
+}

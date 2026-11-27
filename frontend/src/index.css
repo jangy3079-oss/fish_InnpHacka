@@ -1,0 +1,79 @@
+:root { font-family: system-ui, 'Noto Sans KR', sans-serif; color: #1b2733; }
+body { margin: 0; background: #f4f7fa; }
+.topbar { display: flex; gap: 24px; align-items: center; padding: 12px 20px; background: #13243b; color: #fff; }
+.topbar nav { display: flex; gap: 16px; }
+.topbar a { color: #9fb4cc; text-decoration: none; }
+.topbar a.active { color: #fff; font-weight: 600; }
+main { max-width: 960px; margin: 0 auto; padding: 20px; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { padding: 8px 12px; border-bottom: 1px solid #e1e8ef; text-align: left; }
+.disabled { color: #8a97a5; }
+.error { color: #b3261e; }
+
+/* 어민 화면: 모바일 우선, 큰 글자 */
+.farmer { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; font-size: 18px; line-height: 1.5; }
+.farmer h1 { margin: 0; font-size: 18px; font-weight: 600; }
+.farmer h2 { margin: 0 0 8px; font-size: 18px; }
+.farmer p { margin: 4px 0; }
+.card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.level { text-align: center; }
+.level-name { font-size: 44px; font-weight: 800; margin: 4px 0; }
+.score { font-size: 18px; }
+.time { font-size: 14px; opacity: .8; }
+.notice { background: #eef4ff; border-left: 5px solid #2f6fdc; border-radius: 8px; padding: 12px 14px; font-size: 16px; }
+.causes { list-style: none; margin: 0; padding: 0; }
+.causes li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eef1f4; }
+.causes em { font-style: normal; font-size: 14px; color: #6b7785; margin-left: 4px; }
+.hint { font-size: 14px; color: #6b7785; }
+.rec-title { font-size: 28px; font-weight: 800; margin: 0 0 4px; }
+button.primary { width: 100%; margin-top: 12px; padding: 18px; font-size: 22px; font-weight: 700; color: #fff; background: #13243b; border: 0; border-radius: 12px; cursor: pointer; }
+button.primary:disabled { background: #9aa6b3; cursor: default; }
+.done { color: #1f8a4c; font-weight: 700; margin-top: 12px; }
+details { margin-top: 14px; }
+summary { cursor: pointer; padding: 8px 0; font-size: 16px; color: #2f6fdc; }
+.others { padding-left: 18px; font-size: 16px; }
+.big { font-size: 20px; text-align: center; padding: 40px 0; }
+
+/* 근거 그래프 */
+.chart { margin: 14px 0 0; }
+.chart figcaption { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.chart svg { width: 100%; height: auto; display: block; background: #fff; }
+.echogram { width: 100%; height: auto; border-radius: 8px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; }
+
+/* 지자체 대시보드 */
+.dash { display: flex; flex-direction: column; gap: 14px; }
+.dash h1 { margin: 0; font-size: 24px; }
+.dash h2 { margin: 0 0 8px; font-size: 18px; }
+.dash .hint { margin: 0; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.summary li { padding: 8px 16px; border-radius: 20px; font-weight: 600; }
+.dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+@media (max-width: 760px) { .dash-grid { grid-template-columns: 1fr; } }
+.area-map { height: 360px; border-radius: 8px; overflow: hidden; }
+table.areas tr { cursor: pointer; }
+table.areas tr.selected { background: #f1f7ff; }
+.bars { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bars li { display: grid; grid-template-columns: 90px 1fr 50px; gap: 8px; align-items: center; }
+.bar-track { background: #eef1f4; border-radius: 6px; height: 18px; }
+.bar-fill { display: block; height: 100%; background: #2f6fdc; border-radius: 6px; }
+.bar-n { text-align: right; font-weight: 700; }
+/* 손익 비교 카드 */
+.options { list-style: none; margin: 8px 0 0; padding: 0; }
+.option { padding: 12px 0; border-bottom: 1px solid #eef1f4; }
+.option.recommended { background: #f1f7ff; margin: 0 -8px; padding: 12px 8px; border-radius: 8px; }
+.option.blocked { color: #6b7785; }
+.option-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.loss { font-size: 20px; font-weight: 800; white-space: nowrap; }
+.blocked .loss { font-size: 16px; }
+.badge { margin-left: 8px; padding: 2px 8px; font-size: 13px; color: #fff; background: #2f6fdc; border-radius: 10px; vertical-align: 2px; }
+.reason { font-size: 16px; margin: 4px 0 0; }
+.why-not { color: #b3261e; }
+.formula { font-size: 15px; background: #f4f7fa; border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+.inputs { margin: 0; font-size: 15px; }
+.inputs div { display: flex; justify-content: space-between; padding: 3px 0; }
+.inputs dt { color: #6b7785; }
+.inputs dd { margin: 0; font-weight: 600; }
+.steps { padding-left: 22px; margin: 8px 0; }
+.steps li { padding: 4px 0; }
