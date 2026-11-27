@@ -79,8 +79,24 @@ export default function DashboardPage() {
             </thead>
             <tbody>
               {map.areas.map((a) => (
-                <tr key={a.area_id} className={a.area_id === selected ? 'selected' : ''} onClick={() => setSelected(a.area_id)}>
-                  <td>{a.name}</td>
+                <tr
+                  key={a.area_id}
+                  className={a.area_id === selected ? 'selected' : ''}
+                  aria-current={a.area_id === selected ? 'true' : undefined}
+                  onClick={() => setSelected((cur) => (cur === a.area_id ? null : a.area_id))}
+                >
+                  <td>
+                    <button
+                      type="button"
+                      className="row-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelected((cur) => (cur === a.area_id ? null : a.area_id));
+                      }}
+                    >
+                      {a.name}
+                    </button>
+                  </td>
                   <td style={{ color: LEVELS[a.level].color, fontWeight: 700 }}>
                     {LEVELS[a.level].icon} {a.level}
                   </td>
