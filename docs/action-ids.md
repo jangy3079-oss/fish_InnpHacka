@@ -9,9 +9,9 @@
 | --- | --- | --- | --- | --- |
 | 유지 | `keep` | `keep` | — | — |
 | 사료 중단 | `stop_feed` | `feed_stop` | `stop_feeding` (R1, R4) | — |
-| 사료 감량 | `reduce_feed` (choice 예시) | — | `feed_reduction` (R7), `feeding_adjust` (R6 급이 조절) | `feed_reduction` |
+| 사료 감량 | `reduce_feed` (choice 예시) | `feed_reduction` (#27 가정값) | `feed_reduction` (R7), `feeding_adjust` (R6 급이 조절) | `feed_reduction` |
 | 산소 강화 | `oxygen` | `oxygen_boost` | `oxygen_boost` (R1), `oxygen_supply` (R3) | `oxygen_boost` |
-| 밀도 조절 | — | — | `density_control` (R3) | `density_control` |
+| 밀도 조절 | `density_control` (#27) | `density_control` (#27 가정값) | `density_control` (R3) | `density_control` |
 | 그물 수심 조정 | `net_depth` | `net_depth_adjust` | `net_depth_adjust` | — |
 | 월하장 이동 | `wintering` | `overwinter_move` | `overwinter_move` | — |
 | 조기 출하 | `harvest` | `early_harvest` | `early_harvest` | — |
@@ -29,6 +29,9 @@
 - 산소: `cause_rules`의 R1은 `oxygen_boost`, R3은 `oxygen_supply`로 서로 다름
 
 ## 제안
+
+#27의 `decision.actions`가 이 표에 따른 단일 alias 변환을 구현한다. 기존 YAML/프론트 ID를 일괄 변경하지 않고
+손익 출력은 API ID를 사용한다. 최종 표준 ID와 운영/프론트 연결은 별도 팀 합의 대상이다.
 
 1. **사용자에게 보이는 ID는 API·프론트 쪽(`keep`, `stop_feed`, `oxygen`, `net_depth`, `wintering`, `harvest`, `release`, `reduce_feed`)을 기준**으로 한다. 이미 #4 계약과 목업에 쓰이고 있어 바꾸는 비용이 가장 크다.
 2. config 안에서는 한 대응에 한 이름만 쓴다. `costs`와 `cause_rules`의 이름을 맞추는 일은 #25·#27이 소비 코드를 쓰기 전에 하는 것이 싸다.

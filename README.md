@@ -8,6 +8,9 @@
 
 ## 실행 방법
 
+그룹별 손익과 긴급방류 요건은 [손익 계산기 안내](docs/loss-calculator.md)를 확인하세요.
+`python -m decision --input scenarios/loss_request.example.json`으로 합성 입력의 계산 근거를 조회할 수 있습니다.
+
 R1·R2·R3·R5·R8 원인 추정과 #60의 피난처 소실 판정, 파이프라인 결과·설정·검증 방법은
 [원인 엔진 안내](docs/cause-engine.md)를 확인하세요.
 
