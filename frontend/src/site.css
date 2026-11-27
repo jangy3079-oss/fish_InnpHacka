@@ -333,7 +333,7 @@ button.primary { background: var(--ink); font-size: 20px; padding: 16px; }
 .loss-bar { height: 6px; }
 .cause-bar { height: 6px; }
 .bar-track, .demand-track { background: #e4eaed; }
-.loss-row.recommended { background: none; margin: 0; padding: 12px 0; border-left: 3px solid var(--accent); padding-left: 10px; margin-left: -13px; }
+.loss-row.recommended { background: none; margin: 0; padding: 12px 0; border-radius: 0; border-bottom-color: var(--line); }
 .loss-row.recommended .loss-fill { background: var(--accent); }
 .loss-fill { background: #9db0bb; }
 .bar-fill, .demand-fill, .cause-bar i { background: var(--accent); }
