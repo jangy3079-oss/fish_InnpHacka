@@ -53,7 +53,7 @@ export default function FarmerPage() {
           setBusy(false);
           setError(e.message);
         });
-    }, api.debounceMs);
+    }, api.debounceFor(demo));
     return () => {
       alive = false;
       clearTimeout(timer);
