@@ -362,3 +362,19 @@ input, progress { accent-color: var(--accent); }
 .recommendation-deadlines dt { font-weight: 600; }
 .recommendation-deadlines dd { margin: .2rem 0 0; overflow-wrap: anywhere; }
 .deadline-source { display: block; font-size: .8rem; color: #52606d; }
+
+/* 시연용 로그인과 헤더 계정 영역 */
+.site-header-inner nav { flex: 1; }
+.account { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--ink-soft); white-space: nowrap; }
+.account strong { color: var(--ink); }
+.account a, .account button { font: inherit; font-weight: 600; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; text-decoration: none; }
+.login { max-width: 560px; }
+.login h1 { margin: 0 0 8px; font-size: 30px; font-weight: 700; }
+.login .lead { margin: 0 0 20px; font-size: 17px; color: var(--ink-soft); }
+.login .notice { margin: 0 0 14px; }
+.accounts { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+.accounts li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.accounts li div { display: flex; flex-direction: column; gap: 2px; }
+.accounts strong { font-size: 19px; }
+.accounts span { font-size: 15px; color: var(--ink-soft); }
+.accounts .btn { border: 0; cursor: pointer; font: inherit; font-weight: 700; font-size: 16px; }
