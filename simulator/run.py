@@ -86,7 +86,7 @@ def simulate(sc: Scenario) -> SimulationResult:
     positions = np.empty((n_pings, sc.n_fish), dtype=np.float32)
 
     keys = ["temp_surface", "temp_mid", "do", "day", "activity", "still", "feeding",
-            "rubbing_rate", "disorder", "disease", "parasite", "quality", "typhoon"]
+            "rubbing_rate", "disorder", "disease", "parasite", "turbid", "quality", "typhoon"]
     truth = {k: np.empty(n_cycles) for k in keys}
     truth["vertical_dist"] = np.empty((n_cycles, 3))
 
@@ -117,7 +117,7 @@ def simulate(sc: Scenario) -> SimulationResult:
         vals = dict(temp_surface=dr.temp_surface, temp_mid=dr.temp_mid, do=dr.do, day=dr.day,
                     activity=b.activity, still=b.still, feeding=last_feeding,
                     rubbing_rate=rub_base * b.rubbing_mult, disorder=b.disorder,
-                    disease=dr.disease, parasite=dr.parasite, quality=q, typhoon=env.typhoon[i0])
+                    disease=dr.disease, parasite=dr.parasite, turbid=ev["turbid"][i0], quality=q, typhoon=env.typhoon[i0])
         for k, v in vals.items():
             truth[k][c] = v
         truth["vertical_dist"][c] = layer_fractions(positions[i0:i0 + ppc], sc.depth_m)
