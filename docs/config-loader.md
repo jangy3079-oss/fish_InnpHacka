@@ -103,8 +103,7 @@ except ConfigError:
    다중 worker 배포·rollback 및 재현용 revision 저장 위치.
 4. **문서·기획 + 백엔드·데이터:** 정식 설정 스키마/버전과 확장 key 관리.
    R2의 cohesion_drop/lookback_h 등 #60 결정은 아직 YAML 값을 바꾸지 않았다.
-5. **문서·기획 + 백엔드:** `stop_feeding`/`feed_stop`, `emergency_release`/`release` 등
-   cause_rules와 costs의 action ID를 연결할 표준 이름/매핑은 #25·#27과 합의한다.
+5. **문서·기획 + 백엔드:** action ID는 `docs/action-ids.md`의 기준 이름으로 통일했다 (#90).
 6. **백엔드 + 프론트·운영:** 관리자 설정 수정·재로드 API, 인증·권한·감사 이력은 #36 범위다.
    이번에는 웹에서 설정을 수정하는 기능을 추가하지 않는다.
 
