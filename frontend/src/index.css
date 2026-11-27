@@ -14,20 +14,20 @@ th, td { padding: 8px 12px; border-bottom: 1px solid #e1e8ef; text-align: left; 
 .level-name { font-size: 44px; font-weight: 800; margin: 4px 0; }
 .score { font-size: 18px; }
 .time { font-size: 14px; opacity: .8; }
-.notice { background: #eef4ff; border-left: 5px solid #2f6fdc; border-radius: 8px; padding: 12px 14px; font-size: 16px; }
+.notice { background: #eef4ff; border-left: 5px solid var(--accent); border-radius: 8px; padding: 12px 14px; font-size: 16px; }
 .causes { list-style: none; margin: 0; padding: 0; }
 .causes li { padding: 8px 0; border-bottom: 1px solid #eef1f4; }
 .cause-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .cause-bar { height: 8px; margin-top: 6px; background: #eef1f4; border-radius: 4px; overflow: hidden; }
-.cause-bar i { display: block; height: 100%; background: #2f6fdc; border-radius: 4px; }
+.cause-bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
 .causes em { font-style: normal; font-size: 14px; color: #6b7785; margin-left: 4px; }
 .hint { font-size: 14px; color: #6b7785; }
 .rec-title { font-size: 28px; font-weight: 800; margin: 0 0 4px; }
-button.primary { width: 100%; margin-top: 12px; padding: 18px; font-size: 22px; font-weight: 700; color: #fff; background: #13243b; border: 0; border-radius: 12px; cursor: pointer; }
+button.primary { width: 100%; margin-top: 12px; padding: 18px; font-size: 22px; font-weight: 700; color: #fff; background: var(--ink); border: 0; border-radius: 12px; cursor: pointer; }
 button.primary:disabled { background: #9aa6b3; cursor: default; }
 .done { color: #1f8a4c; font-weight: 700; margin-top: 12px; }
 details { margin-top: 14px; }
-summary { cursor: pointer; padding: 8px 0; font-size: 16px; color: #2f6fdc; }
+summary { cursor: pointer; padding: 8px 0; font-size: 16px; color: var(--accent); }
 .others { padding-left: 18px; font-size: 16px; }
 .big { font-size: 20px; text-align: center; padding: 40px 0; }
 
@@ -42,7 +42,7 @@ summary { cursor: pointer; padding: 8px 0; font-size: 16px; color: #2f6fdc; }
 .toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); width: min(440px, calc(100% - 24px)); background: #fff; border: 2px solid; border-radius: 12px; padding: 12px 16px; box-shadow: 0 6px 20px rgba(0,0,0,.2); z-index: 10; }
 .toast p { margin: 4px 0; }
 .toast-actions { display: flex; gap: 16px; align-items: center; }
-.toast-actions a { color: #2f6fdc; font-weight: 600; }
+.toast-actions a { color: var(--accent); font-weight: 600; }
 .toast-actions button { margin-left: auto; border: 0; background: none; color: #6b7785; cursor: pointer; font-size: 16px; }
 
 /* 지자체 대시보드 */
@@ -60,7 +60,7 @@ table.areas tr.selected { background: #f1f7ff; }
 .bars { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .bars li { display: grid; grid-template-columns: 90px 1fr 50px; gap: 8px; align-items: center; }
 .bar-track { background: #eef1f4; border-radius: 6px; height: 18px; }
-.bar-fill { display: block; height: 100%; background: #2f6fdc; border-radius: 6px; }
+.bar-fill { display: block; height: 100%; background: var(--accent); border-radius: 6px; }
 .bar-n { text-align: right; font-weight: 700; }
 /* 손익 비교 카드(공통) */
 .formula { font-size: 15px; background: #f4f7fa; border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
@@ -76,9 +76,9 @@ table.areas tr.selected { background: #f1f7ff; }
 .demand-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .demand .over { color: #b3261e; font-weight: 700; }
 .demand-track { position: relative; height: 22px; background: #eef1f4; border-radius: 6px; }
-.demand-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #2f6fdc; border-radius: 6px; min-width: 2px; }
+.demand-fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 6px; min-width: 2px; }
 .demand-fill.over { background: #b3261e; }
-.demand-base { position: absolute; top: -4px; bottom: -4px; border-left: 2px dashed #13243b; }
+.demand-base { position: absolute; top: -4px; bottom: -4px; border-left: 2px dashed var(--ink); }
 
 /* 기준선 학습 진행률 */
 .warmup { margin-top: 8px; font-size: 16px; }

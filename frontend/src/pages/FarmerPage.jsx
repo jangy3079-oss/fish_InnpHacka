@@ -109,22 +109,27 @@ function LevelCard({ status }) {
       </section>
     );
   }
+  const hasScore = !warming && status.stress_score != null;
   return (
     <section className="card level" style={{ background: lv.bg, color: lv.color }}>
       <h1>가두리 {status.cage_id}번</h1>
-      <p className="level-name">
-        <span aria-hidden="true">{lv.icon}</span> {status.level}
-      </p>
+      <div className="level-main">
+        {hasScore && (
+          <p className="level-score" aria-label={`스트레스 지수 ${Math.round(status.stress_score)} / 100`}>
+            <strong>{Math.round(status.stress_score)}</strong>
+            <span>/ 100</span>
+          </p>
+        )}
+        <p className="level-name">
+          <span aria-hidden="true">{lv.icon}</span> {status.level}
+        </p>
+      </div>
       <p>{lv.message}</p>
-      {warming || status.stress_score == null ? (
+      {!hasScore && (
         <>
           <p className="score">스트레스 지수는 평소 상태를 파악한 뒤에 나옵니다.</p>
           <Warmup status={status} />
         </>
-      ) : (
-        <p className="score">
-          스트레스 지수 <strong>{Math.round(status.stress_score)}</strong> / 100
-        </p>
       )}
       <p className="time">{formatTime(status.ts)} 기준</p>
     </section>
