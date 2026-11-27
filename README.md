@@ -1,10 +1,17 @@
-# Rockfish Guard — 조피볼락 가두리 관리 플랫폼
+# 조피볼락 상태 진단 멀티센서 AI 가두리 관리 플랫폼
+
+경남 남해안 해상가두리 조피볼락의 행동을 소나·카메라로 측정해 **스트레스 지수**를 만들고, **의심 원인**을 추정해 **대응 선택지와 손익**을 비교해 주는 시스템입니다. 최종 결정은 어민이 합니다.
+
+> 해커톤 MVP 목표: **고수온 → 태풍(피난처 소실) 시나리오 하나를 처음부터 끝까지** 돌린다. (마감 2026-11-28 12:00)
+
+설계 근거는 SRS(요구사항)·SDD(설계) 문서와 [이슈](../../issues)에 있습니다.
+
+## 실행 방법
+
+### API 로컬 실행
 
 현재 API는 프론트 연동을 위한 **목업**입니다. DB·인증·분석·저장·발송은 연결하지 않습니다.
 모든 응답에 `X-Data-Mode: mock`을 표시하며 변경 요청도 `persisted: false`입니다.
-
-## 로컬 실행
-
 Python 3.11 이상, 저장소 루트에서 실행합니다.
 
 ```sh
@@ -37,10 +44,53 @@ python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 프론트 개발 서버 `http://localhost:5173`, `http://127.0.0.1:5173`에 CORS를 허용합니다.
 다른 주소는 `API_CORS_ORIGINS` 환경변수에 쉼표로 구분해 지정합니다.
 
-## 테스트
+### API·공통 모델 테스트
 
 ```sh
 python -m unittest discover -s tests -v
 ```
 
 라우트·응답 형식·목업의 한계·합의할 항목은 [API 계약](docs/api-contract.md)을 확인하세요.
+다른 모듈의 실행법은 각 구현 PR과 이슈 #42에서 이어 정리합니다.
+
+## 디렉터리 구조
+
+| 폴더 | 역할 |
+| --- | --- |
+| `simulator/` | 개체 기반 시뮬레이터, 합성 에코그램 |
+| `sonar/` | M4 소나 지표 추출 (수직 분포·활동량) |
+| `vision/` | M1 품질 점수, M2 CLAHE, M3 탐지·추적 |
+| `fusion/` | 영상 품질 가중 센서 융합 |
+| `stress/` | M5 기준선·스트레스 지수·경보 단계 |
+| `cause/` | M6 원인 추정 규칙 엔진 |
+| `decision/` | 손익 계산, 긴급방류 요건 확인 |
+| `notify/` | 알림 문장 생성, 템플릿, 관리요령 문서(RAG) |
+| `api/` | FastAPI |
+| `web/` | React (어민 화면, 지자체 대시보드) |
+| `config/` | thresholds, cause_rules, release_rules, costs, first_aid (YAML) |
+| `scenarios/` | 시뮬레이터 시나리오 YAML |
+| `docs/` | SRS(요구사항), SDD(설계) 문서. 구현과 달라지면 PR로 같이 고친다 |
+| `SBOM.md` | 오픈소스 라이선스 목록 |
+
+모듈 사이는 `MetricRecord` 하나의 형식으로만 데이터를 주고받습니다.
+
+## 팀 역할
+
+| 역할 | 맡은 모듈 | 먼저 끝낼 것 | 담당 |
+| --- | --- | --- | --- |
+| 데이터·모델 | `simulator`, `sonar`, `stress`, `fusion` | 고수온→태풍 시나리오의 합성 에코그램과 MetricRecord | _(이름)_ |
+| 백엔드 | `api`, Supabase, `cause`, `decision`, `notify` | `/status`, `/recommendation` API, R1·R2 규칙 | _(이름)_ |
+| 프론트 | `web` | 목업 JSON으로 화면 먼저 만들고 API로 교체 | _(이름)_ |
+| 문서·검증 | 시나리오·config YAML, 비전 시험, RAG 자료, 검증, 발표 | 시나리오 YAML·규칙·비용 YAML | _(이름)_ |
+
+## 협업 규칙
+
+브랜치·PR·이슈 규칙은 [CONTRIBUTING.md](CONTRIBUTING.md)를 봅니다.
+
+## 한계
+
+현장 미검증, 합성 데이터 기반입니다. 질병·기생충은 **의심**까지만 추정하며 병명 확정·약품 안내는 하지 않습니다.
+
+## 라이선스
+
+[LICENSE](LICENSE) 참고. 사용한 오픈소스는 `SBOM.md`에 정리합니다.

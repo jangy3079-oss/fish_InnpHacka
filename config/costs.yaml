@@ -1,0 +1,56 @@
+# 시세·비용·예상 폐사율 (이슈 #17)
+# 근거: SDD 6.4 (L(a) = Σ N·P·W·m(a) + C(a) - S(a)), SRS FR-DEC-02, DR-06
+#
+# !! 이 파일의 숫자는 모두 임시 가정값이다 (SDD 7장: 시세는 "임시 입력").
+# !! 시세는 수산물 위판 공공데이터·수협 확인 후 바꾼다 (A-05, DR-06).
+# 손익 계산 규칙과 입력값은 사용자에게 공개한다 (FR-DEC-05).
+
+currency: KRW
+
+# 크기 그룹별 시세·무게 (P_g: 원/kg, W_g: 마리당 kg)
+size_groups:
+  fry:
+    label: 치어
+    price_per_kg: 8000        # [가정·임시]
+    avg_weight_kg: 0.05       # [가정] 어가 입력(stock.avg_weight_kg)이 있으면 그 값을 쓴다
+  mid:
+    label: 중간어
+    price_per_kg: 10000       # [가정·임시]
+    avg_weight_kg: 0.30       # [가정]
+  market:
+    label: 출하 크기
+    price_per_kg: 13000       # [가정·임시]
+    avg_weight_kg: 0.60       # [가정]
+
+# m_g(a): 선택지 a를 골랐을 때의 예상 손실률
+# 유지(keep)는 아래 단계별 예상 폐사율, 방류는 1(전량 포기), 출하는 시세 할인율 (SDD 6.4)
+expected_mortality_by_level:   # 경보 단계별 고정값 [가정]. M7이 생기면 모델 값으로 바꾼다
+  normal: 0.00
+  caution: 0.05
+  warning: 0.15
+  danger: 0.40
+
+option_loss:
+  keep: {use: expected_mortality_by_level}
+  release: {loss_rate: 1.0}              # 전량 포기
+  early_harvest: {loss_rate: 0.20}       # 출하 시세 할인율 [가정]
+  # 아래 조치는 폐사율을 줄이는 정도를 곱셈 계수로 둔다. 1.0이면 효과 없음 [가정]
+  oxygen_boost: {mortality_factor: 0.7}
+  net_depth_adjust: {mortality_factor: 0.6}
+  overwinter_move: {mortality_factor: 0.5}
+  feed_stop: {mortality_factor: 0.9}
+
+# C(a): 조치 비용 (원) [가정·임시]
+action_cost_krw:
+  keep: 0
+  oxygen_boost: 150000          # 산소 공급 장비·전력, 1회
+  net_depth_adjust: 300000      # 그물 수심 조정 인건비·장비
+  overwinter_move: 1200000      # 월하장 이동 운송비
+  early_harvest: 400000         # 출하 운송·작업비
+  release: 200000               # 방류 신청·운송
+  feed_stop: 0
+
+# 보험금 (S(a)의 일부). [확인] 가입 여부는 어가 입력(FR-ADM-03)을 따른다.
+# 0 은 "아직 반영하지 않음"이다.
+insurance:
+  payout_rate: 0.0
