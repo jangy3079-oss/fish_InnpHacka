@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
+import EvidenceCharts from '../components/EvidenceCharts.jsx';
 import { LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
 
 const CAGE_ID = 3;
+
+// 경고·위험이면 현재 시점을 경보 시점으로 표시한다. (과거 경보 이력 API는 아직 없음)
+const isAlert = (s) => s.level === '경고' || s.level === '위험';
 
 export default function FarmerPage() {
   const [status, setStatus] = useState(null);
@@ -27,6 +31,7 @@ export default function FarmerPage() {
       <SourceNotice status={status} />
       <CauseList causes={status.cause} />
       <Recommendation rec={rec} />
+      <EvidenceCharts cageId={CAGE_ID} alertAt={isAlert(status) ? status.ts : undefined} />
     </div>
   );
 }

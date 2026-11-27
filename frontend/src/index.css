@@ -33,3 +33,11 @@ details { margin-top: 14px; }
 summary { cursor: pointer; padding: 8px 0; font-size: 16px; color: #2f6fdc; }
 .others { padding-left: 18px; font-size: 16px; }
 .big { font-size: 20px; text-align: center; padding: 40px 0; }
+
+/* 근거 그래프 */
+.chart { margin: 14px 0 0; }
+.chart figcaption { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.chart svg { width: 100%; height: auto; display: block; background: #fff; }
+.echogram { width: 100%; height: auto; border-radius: 8px; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; list-style: none; margin: 4px 0 0; padding: 0; font-size: 14px; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; }

@@ -5,6 +5,7 @@ import timeseries from '../mocks/timeseries.json';
 import recommendation from '../mocks/recommendation.json';
 import stressMap from '../mocks/stress-map.json';
 import releaseDemand from '../mocks/release-demand.json';
+import echogramMock from '../mocks/echogram.svg';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000';
@@ -31,12 +32,12 @@ export const api = {
 
   getTimeseries: (cageId, metric, { from, to } = {}) =>
     USE_MOCK
-      ? delay({ ...timeseries, cage_id: Number(cageId), metric })
+      ? delay({ cage_id: Number(cageId), metric, points: timeseries[metric] ?? [] })
       : http(`/cages/${cageId}/timeseries${qs({ metric, from, to })}`),
 
   // 에코그램은 이미지(SVG)이므로 URL을 반환한다.
   getEchogramUrl: (cageId, { from, to } = {}) =>
-    `${BASE}/cages/${cageId}/echogram${qs({ from, to })}`,
+    USE_MOCK ? echogramMock : `${BASE}/cages/${cageId}/echogram${qs({ from, to })}`,
 
   getRecommendation: (cageId) =>
     USE_MOCK
