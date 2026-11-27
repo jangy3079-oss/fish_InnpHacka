@@ -86,6 +86,13 @@ class Probability(ConfigModel):
     method: Literal["normalize_sum_to_one"]
     min_display: Ratio
     scoring: Literal["binary_all_required"]
+    tie_break_order: list[Literal["R1", "R2", "R3", "R5", "R8"]]
+
+    @model_validator(mode="after")
+    def implemented_order(self) -> Self:
+        if len(self.tie_break_order) != 5 or set(self.tie_break_order) != {"R1", "R2", "R3", "R5", "R8"}:
+            raise ValueError("tie_break_order must list each implemented rule once")
+        return self
 
 
 class R1Behavior(ConfigModel):
@@ -109,6 +116,37 @@ class R2Environment(ConfigModel):
     temp_diff_max_c: Positive
 
 
+class R3Behavior(ConfigModel):
+    surface_ratio_x_min: Annotated[float, Field(ge=1)]
+    camera_surface_breathing: bool
+
+
+class R3Environment(ConfigModel):
+    do_max_mg_l: Positive
+
+
+class R5Behavior(ConfigModel):
+    score_rising_days_min: Annotated[int, Field(ge=2)]
+    min_daily_increase: Positive
+    min_daily_coverage: Annotated[float, Field(gt=0, le=1)]
+
+
+class NormalEnvironment(ConfigModel):
+    normal_env: Literal[True]
+    advisory_active: Literal[False]
+
+
+class NormalEnvironmentBounds(ConfigModel):
+    temp_surface_max_c: float
+    do_min_mg_l: Positive
+
+
+class R8Behavior(ConfigModel):
+    rubbing_rate_x_min: Annotated[float, Field(ge=1)]
+    sustained_hours_min: Positive
+    missing_observation: Literal["pause"]
+
+
 class Rule(ConfigModel):
     # Rule-specific evidence names are evolving in #25/#60, so these maps and
     # additional rule fields are preserved rather than silently discarded.
@@ -129,13 +167,16 @@ class CauseRules(ConfigModel):
     def all_rules(self) -> Self:
         if set(self.rules) != {f"R{i}" for i in range(1, 9)}:
             raise ValueError("rules must contain R1 through R8")
-        for rid, behavior, environment in (("R1", R1Behavior, R1Environment), ("R2", R2Behavior, R2Environment)):
+        for rid, behavior, environment in (("R1", R1Behavior, R1Environment), ("R2", R2Behavior, R2Environment),
+                                            ("R3", R3Behavior, R3Environment), ("R5", R5Behavior, NormalEnvironment),
+                                            ("R8", R8Behavior, NormalEnvironment)):
             behavior.model_validate(self.rules[rid].behavior)
             environment.model_validate(self.rules[rid].env)
         if type(self.rules["R2"].model_extra.get("immediate_danger")) is not bool:
             raise ValueError("R2.immediate_danger must be a boolean")
         if self.rules["R1"].env["temp_diff_min_c"] < self.rules["R2"].env["temp_diff_max_c"]:
             raise ValueError("R1/R2 temperature difference ranges must not overlap")
+        NormalEnvironmentBounds.model_validate(self.env_constants.get("normal_env"))
         return self
 
 

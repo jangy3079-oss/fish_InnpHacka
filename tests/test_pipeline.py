@@ -20,7 +20,7 @@ class PipelineExportTest(unittest.TestCase):
         cls.tmp = tempfile.TemporaryDirectory()
         out = Path(cls.tmp.name)
         cls.out = out
-        cls.results = {r["scenario"]: r for r in run(["heatwave_typhoon", "turbidity_event"], out,
+        cls.results = {r["scenario"]: r for r in run(["heatwave_typhoon", "turbidity_event", "hypoxia", "disease_suspect", "parasite_suspect"], out,
                                                       out / "m.pkl")}
         cls.hw = Timeline(out / "heatwave_typhoon" / "api")
         cls.tb = Timeline(out / "turbidity_event" / "api")
@@ -58,6 +58,18 @@ class PipelineExportTest(unittest.TestCase):
             self.assertEqual(row["evidence"]["config_revision"], by_ts[ts]["cause_config_revision"])
             self.assertEqual(row["rule_id"], by_ts[ts]["cause"][0]["rule_id"])
         self.assertEqual((self.out / "turbidity_event/cause_estimate.jsonl").read_text(), "")
+
+    def test_extended_causes_reach_saved_timeline_and_unlabelled_frontend_export(self):
+        from pipeline.frontend import scenario_frames
+        for name, rid in (("hypoxia", "R3"), ("disease_suspect", "R5"), ("parasite_suspect", "R8")):
+            tl = Timeline(self.out / name / "api")
+            rows = [json.loads(s) for s in (self.out / name / "cause_estimate.jsonl").read_text(encoding="utf-8").splitlines()]
+            self.assertTrue(any(r["rule_id"] == rid for r in rows), name)
+            frames = scenario_frames(tl, 48, label_causes=False)["frames"]
+            emitted = [f for f in frames if f["cause"]]
+            self.assertTrue(emitted, name)
+            self.assertTrue(any(f["cause"][0]["rule_id"] == rid for f in emitted), name)
+            self.assertTrue(all(f["cause_source"] == "cause_engine" for f in emitted))
 
     def test_t_axis(self):
         ts = [r["t"] for r in self.hw.status]

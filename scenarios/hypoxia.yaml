@@ -1,0 +1,19 @@
+# R3 회귀 검증용 합성 시나리오 (#26). 현장 실측·공식 DO 권고값이 아니다.
+name: hypoxia
+description: 저산소 의심 — DO 감소와 표층 쏠림
+cage_id: cage-003
+start: "2026-08-05T00:00:00+09:00"
+duration_days: 2
+seed: 61
+baseline: normal_14d
+cage: {depth_m: 9.0, n_fish: 300}
+sampling: {ping_interval_s: 60, cycle_minutes: 5}
+env:
+  advisory_active: false # 합성 입력의 명시적 특보 없음. 실서비스의 기본값이 아님
+  temp_surface: [[0, 21.5], [48, 21.5]]
+  temp_mid: [[0, 19.0], [48, 19.0]]
+  do: [[0, 7.0], [48, 7.0]]
+  diurnal_amp: {temp_surface: 0.3}
+camera: {enabled: true, day_quality: 0.85, night_quality: 0.35}
+events:
+  - {type: hypoxia, start_h: 12, end_h: 40, ramp_h: 2, do: 2.5}
