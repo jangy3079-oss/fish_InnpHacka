@@ -3,11 +3,15 @@
 import json
 import os
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Path as PathParam, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import AwareDatetime
+from common import MetricRecord
+
+from .ingestion import MAX_BATCH_SIZE, SupabaseMetricStore, get_metric_store
 
 from .farmer_data import FarmerDataStore, get_farmer_store
 from .echogram import EchogramRenderer, get_echogram_renderer
@@ -15,7 +19,7 @@ from .echogram import EchogramRenderer, get_echogram_renderer
 from .schemas import (
     CageStatus, ChoiceRequest, ConfigFile, ConfigRequest, DemoResult,
     DiagnosisRequest, Metric, MockReceipt, Recommendation, ReleaseDemand,
-    Scenario, StockRequest, StressMap, Timeseries, StockReceipt,
+    Scenario, StockRequest, StressMap, Timeseries, StockReceipt, IngestReceipt,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures/status.json"
@@ -38,9 +42,9 @@ def time_window(
 
 
 app = FastAPI(
-    title="Rockfish Guard API", version="0.3.0",
-    description="재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 검사하는 실제 데이터 경로입니다. "
-                "나머지 API는 목업입니다. docs/farmer-data-api.md 참조.",
+    title="Rockfish Guard API", version="0.4.0",
+    description="지표 수집·재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 검사하는 실제 데이터 경로입니다. "
+                "나머지 API는 목업입니다. docs/ingestion-contract.md 및 docs/farmer-data-api.md 참조.",
 )
 origins = [s.strip() for s in os.getenv("API_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if s.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
@@ -52,7 +56,7 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=Fals
 async def mock_header(request, call_next):
     response = await call_next(request)
     path = request.url.path.rstrip("/")
-    real = path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"timeseries", "stock", "echogram"}
+    real = path == "/ingest/metrics" or (path.startswith("/cages/") and path.rsplit("/", 1)[-1] in {"timeseries", "stock", "echogram"})
     response.headers["X-Data-Mode"] = "asset" if real and path.endswith("/echogram") else "database" if real else "mock"
     if real:
         response.headers["Cache-Control"] = "private, no-store"
@@ -65,12 +69,25 @@ def health() -> dict[str, str]:
     return {"status": "ok", "mode": "mixed"}
 
 
-@app.post("/ingest/metrics", response_model=MockReceipt, tags=["ingest"],
-          description="배열 envelope만 확인하는 임시 핸들러. #2 병합 후 MetricRecord로 교체하며 현재 지표 필드 검증·저장은 하지 않습니다.")
-def ingest(records: Annotated[list[dict[str, Any]], Body(min_length=1)]) -> MockReceipt:
-    if not records or any(not record for record in records):
-        raise HTTPException(422, detail="Provide a non-empty array of non-empty metric objects")
-    return MockReceipt(action="ingest_metrics", received_count=len(records))
+edge_bearer = HTTPBearer(auto_error=False, scheme_name="EdgeAccessToken")
+
+
+def require_edge_token(credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(edge_bearer)]) -> str:
+    if credentials is None:
+        raise HTTPException(401, detail={"code": "missing_token", "message": "Bearer access token required"},
+                            headers={"WWW-Authenticate": "Bearer"})
+    return credentials.credentials
+
+
+@app.post("/ingest/metrics", response_model=IngestReceipt, status_code=201, tags=["ingest"],
+          responses={401: {"description": "인증 실패"}, 403: {"description": "가두리 수집 권한 없음"},
+                     409: {"description": "기존 지표 키 중복, 전체 거부"}, 503: {"description": "설정 또는 Supabase 장애"}},
+          description="MetricRecord 1~1000개를 하나의 트랜잭션으로 저장합니다. 중복은 전체 거부하며 upsert하지 않습니다.")
+def ingest(records: Annotated[list[MetricRecord], Body(min_length=1, max_length=MAX_BATCH_SIZE)],
+           token: Annotated[str, Depends(require_edge_token)],
+           store: Annotated[SupabaseMetricStore, Depends(get_metric_store)]) -> IngestReceipt:
+    inserted = store.insert(records, token)
+    return IngestReceipt(received_count=len(records), inserted_count=inserted)
 
 
 @app.get("/cages/{id}/status", response_model=CageStatus, tags=["cages"],

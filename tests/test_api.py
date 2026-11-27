@@ -39,7 +39,7 @@ class ApiContractTests(unittest.TestCase):
         actual = {(path, method) for path, item in schema["paths"].items() for method in item if method in {"get", "post", "put"}}
         self.assertEqual(actual, expected)
         for path, method in expected:
-            self.assertIn("200", schema["paths"][path][method]["responses"])
+            self.assertIn("201" if path == "/ingest/metrics" else "200", schema["paths"][path][method]["responses"])
         self.assertEqual(self.client.get("/docs").status_code, 200)
         self.assertEqual(self.client.get("/redoc").status_code, 200)
         params = schema["paths"]["/cages/{id}/timeseries"]["get"]["parameters"]
@@ -57,7 +57,6 @@ class ApiContractTests(unittest.TestCase):
     def test_mock_writes_never_claim_persistence_or_change_status(self):
         before = self.client.get("/cages/3/status").json()
         requests = [
-            ("post", "/ingest/metrics", [{"metric": "activity", "value": 0.5}]),
             ("post", "/recommendations/1/choice", {"option_id": "reduce_feed"}),
             ("post", "/cages/3/diagnosis-request", {"note": "demo"}),
             ("put", "/admin/config/thresholds", {"values": {"warning": 60}}),
@@ -73,8 +72,6 @@ class ApiContractTests(unittest.TestCase):
     def test_invalid_paths_bodies_and_parameters(self):
         requests = [
             ("get", "/cages/0/status", None), ("get", "/cages/abc/status", None),
-            ("post", "/ingest/metrics", []), ("post", "/ingest/metrics", [{}]),
-            ("post", "/ingest/metrics", {"records": []}),
             ("post", "/recommendations/1/choice", {}),
             ("put", "/admin/config/unknown", {"values": {"x": 1}}),
             ("put", "/admin/config/thresholds", {"values": {}}),
@@ -87,6 +84,7 @@ class ApiContractTests(unittest.TestCase):
                 self.assertEqual(self.client.request(method, path, json=payload).status_code, 422)
 
     def test_real_data_routes_require_authentication(self):
+        self.assertEqual(self.client.post("/ingest/metrics", json=[]).status_code, 401)
         for path in ["/cages/3/timeseries?metric=activity", "/cages/3/echogram"]:
             self.assertEqual(self.client.get(path).status_code, 401)
         self.assertEqual(self.client.put("/cages/3/stock", json={"stock": [], "insured": False}).status_code, 401)

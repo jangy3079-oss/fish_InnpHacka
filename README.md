@@ -10,8 +10,8 @@
 
 ### API 로컬 실행
 
-재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 확인하는 실제 데이터 경로입니다.
-나머지는 기존 목업입니다. 실제 데이터 경로의 설정·RPC migration·Bearer/이미지 연계는
+지표 수집 POST·재고 PUT·시계열·에코그램은 사용자 인증과 가두리 권한을 확인하는 실제 데이터 경로입니다.
+수집은 전용 edge 계정, 어민 데이터는 사용자 계정으로 인증합니다. 나머지는 기존 목업입니다. 실제 데이터 경로의 설정·RPC migration·Bearer/이미지 연계는
 [어민 데이터 API 1차 안내](docs/farmer-data-api.md)를 확인하세요.
 Python 3.11 이상, 저장소 루트에서 실행합니다.
 
@@ -52,6 +52,7 @@ python -m unittest discover -s tests -v
 ```
 
 라우트·응답 형식·목업의 한계·합의할 항목은 [API 계약](docs/api-contract.md)을 확인하세요.
+Supabase 환경변수·edge 권한·JSONL 업로드는 [지표 수집 계약](docs/ingestion-contract.md)을 확인하세요.
 다른 모듈의 실행법은 각 구현 PR과 이슈 #42에서 이어 정리합니다.
 
 ### 카메라 파일 영상 시험 (M1~M3)

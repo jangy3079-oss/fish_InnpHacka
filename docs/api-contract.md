@@ -1,7 +1,8 @@
 # API 계약 초안 — #4
 
-> #29 1차 브랜치에서 stock PUT·timeseries GET·echogram GET은 인증된 실제 데이터 경로로 바뀐다.
-> 아래 목업 설명 대신 [어민 데이터 API 계약](farmer-data-api.md)을 따른다. 나머지는 기존 목업이다.
+> `/ingest/metrics`는 실제 edge 인증·DB 저장 경로이며 [수집 계약](ingestion-contract.md)을 따른다.
+> stock PUT·timeseries GET·echogram GET은 인증된 실제 데이터 경로이며 [어민 데이터 API 계약](farmer-data-api.md)을 따른다.
+> 아래 목업 설명은 #4 시점의 기록이다. 나머지는 기존 목업이다.
 
 근거: 제공된 SDD 8장. `/cages/3/status`의 필드·값은 문서 예시 그대로다.
 다른 가두리의 status는 같은 fixture에서 cage_id만 바꾼다. 가두리 존재 여부는 조회하지 않는다.
