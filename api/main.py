@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 from typing import Annotated, Literal
+from uuid import UUID
 
 from fastapi import Body, Depends, FastAPI, HTTPException, Path as PathParam, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +20,7 @@ from .ingestion import MAX_BATCH_SIZE, SupabaseMetricStore, get_metric_store
 from .farmer_data import FarmerDataStore, get_farmer_store
 from .areas import router as areas_router
 from .echogram import EchogramRenderer, get_echogram_renderer
-from .diagnosis import create_request, get_diagnosis_loader
+from .diagnosis import create_request, read_request, get_diagnosis_loader
 from .analysis import read_status,read_recommendation,choose,get_analysis_loader
 from .demo import get_replay_engine, replay
 from .admin_config import require_admin,get_config_editor,invoke as config_operation
@@ -29,7 +30,7 @@ from common.config_loader import ConfigLoader
 
 from .schemas import (
     CageStatus, ChoiceRequest, ChoiceReceipt, ConfigFile, ConfigRequest, ConfigView,ConfigReceipt,DemoResult,
-    DiagnosisRequest, DiagnosisReceipt, Metric, MockReceipt, Recommendation,
+    DiagnosisRequest, DiagnosisReceipt, DiagnosisSummary, Metric, MockReceipt, Recommendation,
     Scenario, StockRequest, Timeseries, StockReceipt, IngestReceipt, WorkLogReceipt, WorkLogRequest,
 )
 
@@ -161,6 +162,13 @@ async def validation_error(request, exc):
                 else 'invalid_diagnosis_request')
         return JSONResponse(status_code=422, content={"detail": {"code": code, "message": "Invalid request"}})
     return await request_validation_exception_handler(request, exc)
+
+
+@app.get('/cages/{id}/diagnosis-request', response_model=DiagnosisSummary, tags=['cages'],
+         description='소유자 본인의 최신 접수 요약 또는 request_key에 해당하는 접수만 조회합니다. 새 접수·전달을 만들지 않습니다.')
+def diagnosis_query(id: Id, store: Annotated[FarmerDataStore, Depends(get_farmer_store)],
+                    request_key: UUID | None = None):
+    return read_request(store, id, request_key)
 
 
 @app.post("/cages/{id}/diagnosis-request", response_model=DiagnosisReceipt, status_code=201, tags=["cages"],

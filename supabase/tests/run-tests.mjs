@@ -15,6 +15,7 @@ try {
   await db.exec(await read('./ingestion_rls.sql'));
   await db.exec(await read('./idempotent_ingestion.sql'));
   await db.exec(await read('./diagnosis.sql'));
+  await db.exec(await read('./diagnosis_query.sql'));
   await db.exec(await read('./analysis.sql'));
   await db.exec(await read('./areas.sql'));
   await db.exec(await read('./work_log.sql'));

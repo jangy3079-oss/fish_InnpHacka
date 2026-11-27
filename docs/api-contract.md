@@ -15,6 +15,7 @@
 
 > #28 진단 POST는 소유자 인증·DB 저장 경로이며201/pending이다. note 대신 request_key UUID를 보낸다.
 > [진단 API 계약](diagnosis-api.md)을 따른다.
+> #203의 GET 접수 요약과 관측 회차별 중복 억제는 [접수 조회 계약](diagnosis-query.md)을 따른다.
 
 > `/ingest/metrics`는 실제 edge 인증·DB 저장 경로이며 [멱등 수집 계약](idempotent-ingestion.md)을 따른다.
 > #198에서 동일 값은 중복 성공, 다른 값은 전체409이며 received=inserted+duplicate 응답을 제공한다.

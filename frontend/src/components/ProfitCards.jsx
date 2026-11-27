@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import RecommendationDeadlines from './RecommendationDeadlines.jsx';
 
@@ -154,15 +154,36 @@ export function FirstAidCard({ rec, rule }) {
   const [state, setState] = useState('idle'); // idle | sending | done | error
   const [error, setError] = useState('');
   const simulated = rec.simulated || rec.id === 0;
+  const [receipt, setReceipt] = useState(null);
+  const [lookup, setLookup] = useState('loading');
+  const generation = useRef(0);
+  useEffect(() => {
+    let active = true;
+    generation.current += 1;
+    setReceipt(null); setState('idle'); setError(''); setLookup('loading');
+    if (simulated) { setLookup('ready'); return; }
+    // Screen entry reads only; never POST to recover a previous request.
+    api.getDiagnosisRequest(rec.cage_id).then((r) => {
+      if (active) {
+        setReceipt(r); setLookup('ready');
+        if (r && Date.parse(r.observed_at) === Date.parse(rec.ts)) setState('done');
+      }
+    }).catch(() => { if (active) setLookup('error'); });
+    return () => { active = false; generation.current += 1; };
+  }, [rec.cage_id, rec.id, rec.ts, simulated]);
   const request = async () => {
+    const started = generation.current;
     setState('sending');
     try {
-      if (!simulated) await api.requestDiagnosis(rec.cage_id); // 시연 화면은 접수하지 않는다
+      const result = !simulated ? await api.requestDiagnosis(rec.cage_id) : null; // 시연 화면은 접수하지 않는다
+      if (started !== generation.current) return;
+      if (result) setReceipt(result);
       setState('done');
     } catch (e) {
+      if (started !== generation.current) return;
       setError(
         e.status === 409
-          ? '지금은 요청할 수 있는 최신 관측이 없습니다. 잠시 뒤 다시 확인해 주세요.'
+          ? '이미 접수되었거나 최신 관측을 확인해야 합니다. 상태를 다시 확인해 주세요.'
           : e.status === 403
             ? '이 가두리의 소유자만 요청할 수 있습니다.'
             : e.status === 422 || e.status === 503
@@ -170,6 +191,11 @@ export function FirstAidCard({ rec, rule }) {
               : '요청하지 못했습니다. 다시 눌러 주세요.',
       );
       setState('error');
+      if (e.status === 409 && !simulated) {
+        api.getDiagnosisRequest(rec.cage_id).then((r) => {
+          if (started === generation.current) setReceipt(r);
+        }).catch(() => { if (started === generation.current) setReceipt(null); });
+      }
     }
   };
   return (
@@ -177,6 +203,8 @@ export function FirstAidCard({ rec, rule }) {
       <h2>{rule === 'R8' ? '기생충이 의심됩니다' : '질병이 의심됩니다'}</h2>
       <p>원인을 확정하지 못했습니다. 먼저 아래 조치를 해 주세요.</p>
       <RecommendationDeadlines rec={rec} />
+      {receipt && <p role="status">최근 접수: {new Date(receipt.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })} · 전달 대기 중입니다. 현재 원인의 신규 접수 가능 여부와는 별개입니다.</p>}
+      {!simulated && lookup === 'error' && <p className="error">접수 상태를 조회하지 못했습니다. 인증과 접근 권한을 확인한 뒤 화면을 다시 열어 주세요.</p>}
       <ol className="aid-steps">
         {rec.first_aid.map((s) => (
           <li key={s}>{s}</li>
@@ -187,7 +215,7 @@ export function FirstAidCard({ rec, rule }) {
           {simulated ? '✔ 시연 화면이라 실제로 접수되지 않습니다.' : '✔ 진단 요청을 접수했습니다. 담당자에게 전달 대기 중입니다.'}
         </p>
       ) : (
-        <button className="primary" disabled={state === 'sending'} onClick={request}>
+        <button className="primary" disabled={state === 'sending' || (!simulated && lookup !== 'ready')} onClick={request}>
           {state === 'sending' ? '요청 중…' : simulated ? '시연: 진단 요청해 보기' : '진단 요청 접수하기'}
         </button>
       )}

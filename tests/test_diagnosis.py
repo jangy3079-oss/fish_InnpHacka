@@ -122,6 +122,10 @@ class DiagnosisApiTest(unittest.TestCase):
         self.auth_status = 200
         self.rpc_error = None
         self.create_error = None
+        self.query_error = None
+        self.summary = {'persisted':True,'id':10,'cage_id':3,'request_key':KEY,'primary_cause_id':1,
+                        'created_at':NOW.isoformat(),'observed_at':NOW.isoformat(),
+                        'status':'pending','dispatch_status':'pending'}
         self.user = {'id': '00000000-0000-4000-8000-000000000001'}
         env = patch.dict(os.environ, {'SUPABASE_URL': 'https://test.supabase.co', 'SUPABASE_PUBLISHABLE_KEY': 'test-publishable'})
         env.start()
@@ -155,6 +159,10 @@ class DiagnosisApiTest(unittest.TestCase):
             if self.create_error:
                 return httpx.Response(400, json={'code': self.create_error, 'message': 'private details'})
             return httpx.Response(200, json=self.receipt())
+        if path == '/rest/v1/rpc/read_diagnosis_request':
+            if self.query_error:
+                return httpx.Response(400,json={'code':self.query_error,'message':'private details'})
+            return httpx.Response(200,content=json.dumps(self.summary),headers={'content-type':'application/json'})
         raise AssertionError(path)
 
     def post(self, body=None):
@@ -179,6 +187,38 @@ class DiagnosisApiTest(unittest.TestCase):
         self.assertNotIn('packet', body)
         self.assertEqual(body['p_context_version'], 'digest')
         self.assertEqual(writes[0].headers['Authorization'], 'Bearer owner-access-token')
+
+    def test_get_summary_is_read_only_and_does_not_need_current_config_or_cause(self):
+        with patch.object(self.loader,'snapshot',side_effect=ConfigError('bad config')):
+            for suffix in ('','?request_key='+KEY):
+                result=self.client.get('/cages/3/diagnosis-request'+suffix,headers=self.headers)
+                self.assertEqual(result.status_code,200,result.text)
+                from api.schemas import DiagnosisSummary
+                self.assertEqual(result.json(),DiagnosisSummary.model_validate(self.summary).model_dump(mode='json'))
+                self.assertEqual(result.headers['cache-control'],'private, no-store')
+                self.assertEqual(result.headers['x-data-mode'],'database')
+        self.assertTrue(all(r.url.path in ('/auth/v1/user','/rest/v1/cage','/rest/v1/rpc/read_diagnosis_request') for r in self.requests))
+        self.assertNotIn('packet',result.json())
+
+    def test_get_missing_or_inaccessible_requests_and_owner_denial(self):
+        self.summary=None
+        self.assertEqual(self.client.get('/cages/3/diagnosis-request',headers=self.headers).status_code,404)
+        self.query_error='42501'
+        self.assertEqual(self.client.get('/cages/3/diagnosis-request',headers=self.headers).status_code,403)
+        self.query_error=None; self.visible=False
+        self.assertEqual(self.client.get('/cages/3/diagnosis-request',headers=self.headers).status_code,404)
+
+    def test_get_rejects_malformed_keys_and_unscoped_receipts(self):
+        self.assertEqual(self.client.get('/cages/3/diagnosis-request',headers={}).status_code,401)
+        bad=self.client.get('/cages/3/diagnosis-request?request_key=private-input',headers=self.headers)
+        self.assertEqual(bad.status_code,422)
+        self.assertNotIn('private-input',bad.text)
+        for change in ({'cage_id':4},{'status':'sent'},{'packet':{'private':True}}):
+            original=self.summary.copy(); self.summary.update(change)
+            self.assertEqual(self.client.get('/cages/3/diagnosis-request',headers=self.headers).status_code,503)
+            self.summary=original
+        self.summary['request_key']='22222222-2222-4222-8222-222222222222'
+        self.assertEqual(self.client.get('/cages/3/diagnosis-request?request_key='+KEY,headers=self.headers).status_code,503)
 
     def test_replay_uses_original_snapshot_without_second_write(self):
         self.replay = True

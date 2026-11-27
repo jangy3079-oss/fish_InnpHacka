@@ -241,6 +241,18 @@ class DiagnosisReceipt(Contract):
     packet: dict[str, Any]
 
 
+class DiagnosisSummary(Contract):
+    persisted: Literal[True]
+    id: Annotated[int, Field(strict=True, gt=0)]
+    cage_id: Annotated[int, Field(strict=True, gt=0)]
+    request_key: UUID
+    primary_cause_id: Annotated[int, Field(strict=True, gt=0)]
+    status: Literal['pending']
+    dispatch_status: Literal['pending']
+    created_at: AwareDatetime
+    observed_at: AwareDatetime
+
+
 class ConfigRequest(Contract):
     values: Annotated[dict[str, Any], Field(min_length=1)]
     expected_revision: Annotated[str, Field(pattern=r'^[a-f0-9]{64}$')]
