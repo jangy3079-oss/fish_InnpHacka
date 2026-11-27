@@ -1,0 +1,20 @@
+# #18 M1~M3 보정값. 모두 시험용 가정값이며 현장 검증 전 정확도를 보증하지 않는다.
+# 탐지/CLAHE/카메라 전용 지표 게이트는 thresholds.yaml의 기존 값을 사용한다.
+contrast_reference: 64.0       # 회색조 표준편차, 8-bit
+sharpness_reference: 200.0    # Laplacian 분산
+brightness_target: 127.5     # 8-bit 중간 밝기
+quality_weights: [0.4, 0.4, 0.2]  # 대비, 선명도, 밝기 (합 1)
+clahe_clip_limit: 2.0
+clahe_grid_size: 8
+detection_threshold: 0.3
+track_activation_threshold: 0.3
+high_conf_det_threshold: 0.3
+minimum_consecutive_frames: 2
+lost_track_buffer: 30
+still_speed_px_s: 5.0         # 프레임 간 중심 이동 속도. 카메라 고정·해상도별 재보정 필요
+# 아래는 설치별 보정값. null이면 해당 물리량/공통 지표를 출력하지 않는다.
+activity_reference_px_s: null # 정상 낮 평균 픽셀 속도. activity = 현재 속도 / 정상 평균
+meters_per_pixel: null       # speed_m_s 계산용; 원근 왜곡 없는 평면이라는 가정 필요
+depth_top_m: null            # 화면 맨 위(y=0)의 실제 수심
+depth_bottom_m: null         # 화면 맨 아래(y=height)의 실제 수심
+net_depth_m: null            # vertical_dist [저층, 중층, 표층]의 전체 그물 깊이
