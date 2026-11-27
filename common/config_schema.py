@@ -169,6 +169,13 @@ class R4Behavior(ConfigModel):
 
 class R4Environment(ConfigModel):
     red_tide_advisory: Literal[True]
+    advisory_stages: Annotated[list[Literal["watch", "advisory", "warning"]], Field(min_length=1)]
+
+    @model_validator(mode="after")
+    def unique_stages(self) -> Self:
+        if len(set(self.advisory_stages)) != len(self.advisory_stages):
+            raise ValueError("R4 advisory_stages must not repeat")
+        return self
 
 
 class R6Behavior(ConfigModel):

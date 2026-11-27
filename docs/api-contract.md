@@ -47,6 +47,7 @@
 | GET | `/areas/stress-map` | `{ts, areas: [{area_id, name, level, stress_score, cage_count}]}`. 개별 어가 손익 제외 |
 | GET | `/areas/{id}/release-demand` | `{area_id, ts, estimated_fish_count, cage_count}` |
 | POST | `/cages/{id}/diagnosis-request` | `{note: ""}` → MockReceipt |
+| POST | `/cages/{id}/work-log` | 실제 DB. `{kind, performed_at, request_key}` → WorkLogReceipt (201). [적조 특보·작업 기록 안내](red-tide-work-log.md) |
 | POST | `/demo/scenario/{name}?t=0` | `{mock: true, scenario, t, status}`. 실제 재생하지 않음 |
 | PUT | `/admin/config/{file}` | `{values: {warning: 60}}` → MockReceipt. YAML 파일 수정 없음 |
 

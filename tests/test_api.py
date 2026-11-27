@@ -31,13 +31,13 @@ class ApiContractTests(unittest.TestCase):
             ("/cages/{id}/echogram", "get"), ("/cages/{id}/recommendation", "get"),
             ("/recommendations/{id}/choice", "post"), ("/cages/{id}/stock", "put"),
             ("/areas/stress-map", "get"), ("/areas/{id}/release-demand", "get"),
-            ("/cages/{id}/diagnosis-request", "post"), ("/demo/scenario/{name}", "post"),
+            ("/cages/{id}/diagnosis-request", "post"), ("/cages/{id}/work-log", "post"), ("/demo/scenario/{name}", "post"),
             ("/admin/config/{file}", "put"),
         }
         actual = {(path, method) for path, item in schema["paths"].items() for method in item if method in {"get", "post", "put"}}
         self.assertEqual(actual, expected)
         for path, method in expected:
-            self.assertIn("201" if path in ("/ingest/metrics", "/cages/{id}/diagnosis-request") else "200", schema["paths"][path][method]["responses"])
+            self.assertIn("201" if path in ("/ingest/metrics", "/cages/{id}/diagnosis-request", "/cages/{id}/work-log") else "200", schema["paths"][path][method]["responses"])
         self.assertEqual(self.client.get("/docs").status_code, 200)
         self.assertEqual(self.client.get("/redoc").status_code, 200)
         params = schema["paths"]["/cages/{id}/timeseries"]["get"]["parameters"]
