@@ -5,11 +5,8 @@ import timeseries from '../mocks/timeseries.json';
 import recommendation from '../mocks/recommendation.json';
 import recommendationDisease from '../mocks/recommendation-disease.json';
 import stressMap from '../mocks/stress-map.json';
-<<<<<<< HEAD
 import notifications from '../mocks/notifications.json';
-=======
 import areasGeo from '../mocks/areas.geojson?raw';
->>>>>>> origin/main
 import releaseDemand from '../mocks/release-demand.json';
 import echogramMock from '../mocks/echogram.svg';
 
