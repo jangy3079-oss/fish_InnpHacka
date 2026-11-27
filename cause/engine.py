@@ -1,4 +1,4 @@
-"""Config-driven R1/R2 rules (#25/#60). A CauseEngine belongs to one ordered stream.
+"""Config-driven R1/R2/R3/R5/R8 rules. One CauseEngine per ordered stream.
 
 No raw sensor contract is introduced: observations remain MetricRecord; this stage
 consumes the existing derived StressScore/FusedFeatures pair, matched by cage/time.
@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from common.config_loader import ConfigLoader
+from .temporal import CauseContext, TemporalRules
 
 
 def _utc(ts):
@@ -74,17 +75,22 @@ class CauseEngine:
         self._revision = None
         self._history = defaultdict(deque)
         self._last_ts = {}
+        self._temporal = TemporalRules()
 
-    def evaluate(self, score, fused) -> CauseResult:
-        return self.evaluate_series([score], [fused])[0]
+    def evaluate(self, score, fused, *, context: CauseContext | None = None) -> CauseResult:
+        return self.evaluate_series([score], [fused], contexts=[CauseContext() if context is None else context])[0]
 
-    def evaluate_series(self, scores, fused) -> list[CauseResult]:
+    def evaluate_series(self, scores, fused, *, contexts=None) -> list[CauseResult]:
         """One validated config snapshot per batch; exact cage and previous cycle match.
 
         Batch validation is atomic: bad alignment/order/value cannot advance history.
         Input order may interleave cages, but must increase strictly for each cage.
         """
         snapshot = self.loader.snapshot()  # ConfigError propagates; no stale fallback.
+        scores = list(scores)
+        contexts = [CauseContext() for _ in scores] if contexts is None else list(contexts)
+        if len(contexts) != len(scores) or any(not isinstance(c, CauseContext) for c in contexts):
+            raise ValueError("One CauseContext per score is required")
         threshold = snapshot["thresholds"]
         cycle = timedelta(minutes=threshold["cycle_minutes"])
         indexed = {}
@@ -95,13 +101,13 @@ class CauseEngine:
             indexed[key] = f
         last = dict(self._last_ts)
         pairs = []
-        for s in scores:
+        for s, context in zip(scores, contexts):
             ts = _utc(s.ts)
             if not isinstance(s.cage_id, str) or not s.cage_id.strip():
                 raise ValueError("A producer cage ID is required")
             key = (s.cage_id, ts - cycle)
-            if key not in indexed or (s.cage_id in last and ts <= last[s.cage_id]):
-                raise ValueError("Unmatched or out-of-order score/fused pair")
+            if key not in indexed or (s.cage_id in last and ts - last[s.cage_id] < cycle):
+                raise ValueError("Unmatched, overlapping or out-of-order score/fused pair")
             if s.baseline_status not in ("ready", "warming_up"):
                 raise ValueError("Unknown baseline status")
             number = _number(s.score)
@@ -109,22 +115,27 @@ class CauseEngine:
                 raise ValueError("Stress score must be within 0..100")
             f = indexed.pop(key)
             # Validate all consumed values before any stream state is changed.
-            for name in ("lower_layers_ratio_x", "activity_change", "cohesion_change"):
+            for name in ("lower_layers_ratio_x", "activity_change", "cohesion_change", "surface_ratio_x", "rubbing_rate_x"):
                 _number(s.evidence.get(name))
-            for name in ("temp_surface", "temp_mid"):
+            for name in ("temp_surface", "temp_mid", "do"):
                 _number(f.env.get(name))
-            pairs.append((s, f, ts))
+            quality = _number(f.quality)
+            if quality is not None and not 0 <= quality <= 1:
+                raise ValueError("Camera quality must be within 0..1")
+            pairs.append((s, f, ts, context))
             last[s.cage_id] = ts
         if indexed:
             raise ValueError("Extra unmatched fused observations")
         if snapshot.revision != self._revision:
             self._history.clear()  # Never mix history from different config revisions.
+            self._temporal = TemporalRules()
             self._revision = snapshot.revision
-        results = [self._evaluate(s, f, ts, snapshot) for s, f, ts in pairs]
+        rule_details = snapshot.to_dict()["cause_rules"]["rules"]
+        results = [self._evaluate(s, f, ts, snapshot, context, rule_details) for s, f, ts, context in pairs]
         self._last_ts = last
         return results
 
-    def _evaluate(self, s, f, ts, snapshot):
+    def _evaluate(self, s, f, ts, snapshot, context, rule_details):
         cfg, thresholds = snapshot["cause_rules"], snapshot["thresholds"]
         rules = cfg["rules"]
         r1, r2 = rules["R1"], rules["R2"]
@@ -141,10 +152,27 @@ class CauseEngine:
         surface, mid = _number(f.env.get("temp_surface")), _number(f.env.get("temp_mid"))
         diff = None if surface is None or mid is None else surface - mid
         drop = None if peak is None or coh is None else peak - coh
+        oxygen = _number(f.env.get("do"))
+        surface_ratio = _number(ev.get("surface_ratio_x"))
+        rubbing = _number(ev.get("rubbing_rate_x"))
+        normal_bounds = cfg["env_constants"]["normal_env"]
+        normal = (surface is not None and surface < normal_bounds["temp_surface_max_c"]
+                  and oxygen is not None and oxygen >= normal_bounds["do_min_mg_l"])
+        temporal = self._temporal.evaluate(s.cage_id, ts, s.score, ready, normal, context,
+                                           rubbing, f.quality, cfg, thresholds)
         observations = {"lower_layers_ratio_x": ratio, "activity_change": act,
                         "cohesion_change": coh, "cohesion_prior_peak": peak,
                         "cohesion_drop_observed": drop, "temp_surface": surface,
-                        "temp_mid": mid, "temp_diff": diff}
+                        "temp_mid": mid, "temp_diff": diff, "do": oxygen,
+                        "surface_ratio_x": surface_ratio, "rubbing_rate_x": rubbing,
+                        "normal_env": normal, "normal_env_bounds": dict(normal_bounds),
+                        "advisory_active": context.advisory_active, "quality": f.quality,
+                        "rubbing_quality_min": thresholds["quality"]["rubbing_min"],
+                        "camera_surface_breathing": context.camera_surface_breathing,
+                        "camera_breathing_support": bool(rules["R3"]["behavior"]["camera_surface_breathing"]
+                            and context.camera_surface_breathing is True and f.quality is not None
+                            and f.quality >= thresholds["quality"]["camera_only_min"]),
+                        **temporal["details"]}
         checks = {
             "R1": {"lower_layers": ratio is not None and ratio >= r1["behavior"]["mid_low_ratio_x_min"],
                    "activity": act is not None and act <= r1["behavior"]["activity_change_max"],
@@ -154,10 +182,16 @@ class CauseEngine:
                        or (drop is not None and drop >= r2["behavior"]["cohesion_drop"]),
                    "surface": surface is not None and surface >= r2["env"]["temp_surface_min_c"],
                    "difference": diff is not None and diff < r2["env"]["temp_diff_max_c"]},
+            "R3": {"surface": surface_ratio is not None and surface_ratio >= rules["R3"]["behavior"]["surface_ratio_x_min"],
+                   "oxygen": oxygen is not None and oxygen < rules["R3"]["env"]["do_max_mg_l"]},
+            "R5": {"trend": temporal["R5"], "normal_environment": normal,
+                   "advisory_clear": context.advisory_active is False},
+            "R8": {"sustained_rubbing": temporal["R8"], "normal_environment": normal,
+                   "advisory_clear": context.advisory_active is False},
         }
         triggered = ready and all(checks["R2"].values())
         suppression = "warming_up" if not ready else "missing_score" if s.score is None else "low_stress" if s.score < thresholds["cause_min_stress"] else None
-        matched = [rid for rid in ("R1", "R2") if ready and s.score is not None
+        matched = [rid for rid in cfg["probability"]["tie_break_order"] if ready and s.score is not None
                    and (suppression is None or rid in thresholds["cause_min_stress_exceptions"])
                    and all(checks[rid].values())]
         estimates = []
@@ -165,7 +199,7 @@ class CauseEngine:
             rule = rules[rid]
             probability = 1.0 / len(matched)  # YAML binary_all_required: each matched score is 1.
             evidence = {**observations, "stress_score": s.score, "conditions": checks[rid],
-                        "thresholds": json.loads(json.dumps(snapshot.to_dict()["cause_rules"]["rules"][rid])),
+                        "thresholds": json.loads(json.dumps(rule_details[rid])),
                         "config_revision": snapshot.revision, "model_version": s.model_version,
                         "fused_ts": _utc(f.ts).isoformat(), "scoring": cfg["probability"]["scoring"],
                         "raw_score": 1.0, "cause_min_stress": thresholds["cause_min_stress"]}

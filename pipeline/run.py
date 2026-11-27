@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 
 from fusion.fuse import fuse, load_jsonl
-from cause import CauseEngine
+from cause import CauseContext, CauseEngine
 from cause.store import save_jsonl as save_causes
 from common.config_loader import ConfigLoader
 from pipeline import export
@@ -32,12 +32,13 @@ def score_scenario(name: str, out_dir: Path, model: StressModel) -> dict:
     d = out_dir / name
     fused = [f for f in fuse(load_jsonl(d / "metrics.jsonl")) if f.cage_id == model.cage_id]
     scores = model.score_series(fused)
+    sc = load_scenario(name)
     snapshot_loader = ConfigLoader()
-    results = CauseEngine(snapshot_loader).evaluate_series(scores, fused)
+    context = CauseContext(advisory_active=sc.env.get("advisory_active"))
+    results = CauseEngine(snapshot_loader).evaluate_series(scores, fused, contexts=[context] * len(scores))
     changes = apply_levels(scores, [r.immediate_danger for r in results],
                            cfg=snapshot_loader.last_good.to_dict()["thresholds"])
     labels = json.loads((d / "labels.json").read_text(encoding="utf-8"))
-    sc = load_scenario(name)
     start = export._parse(labels["start"])
     status = export.status_rows(scores, fused, start, results)
     series = export.hourly_timeseries(fused, scores)

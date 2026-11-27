@@ -49,8 +49,8 @@ class FrontendExportTest(unittest.TestCase):
         self.assertTrue(all(not f["cause"] for f in hw if f["level"] == "정상"))
         para = self.data["parasite_suspect"]["frames"]
         self.assertIn("R8", {f["cause"][0]["rule_id"] for f in para if f["cause"]})
-        self.assertTrue(all(f["cause_source"] == "scenario_label" for f in para if f["cause"]
-                            and f["cause"][0]["rule_id"] == "R8"))   # R8은 엔진 미구현 → 라벨
+        self.assertTrue(any(f["cause_source"] == "cause_engine" for f in para if f["cause"]
+                            and f["cause"][0]["rule_id"] == "R8"))   # #26에서 R8 엔진 결과 연결
         self.assertTrue(all(f["level"] == "정상" for f in self.data["turbidity_event"]["frames"]))
 
 

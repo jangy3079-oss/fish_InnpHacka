@@ -1,11 +1,11 @@
-# R1·R2 원인 추정 엔진 — #25 / #60
+# 원인 추정 엔진 — #25 / #26 / #60
 
 ## 입력과 실행
 
 원시 센서는 기존 `MetricRecord` 계약을 유지한다. 새 엔진은 기존 파생 산출물인
 `StressScore`와 `FusedFeatures`를 받는다. 가두리 문자열 ID와 시각으로 정확히 연결하며
 `score.ts - thresholds.cycle_minutes == fused.ts`여야 한다. 현재 주기는 5분이다.
-다른 가두리·중복·역순·naive 시각·비유한 숫자·짝이 없는 입력은 오류다.
+다른 가두리·중복·역순·서로 겹치는 주기·naive 시각·비유한 숫자·짝이 없는 입력은 오류다.
 누락된 관측값은 조건을 충족시키지 않으며 0이나 최근 값으로 채우지 않는다.
 
 ```python
@@ -27,7 +27,7 @@ apply_levels(scores, [r.immediate_danger for r in results],
 ## 조건과 확률 초안
 
 모든 업무 임계값은 `cause_rules.yaml`과 `thresholds.yaml`에서 읽는다.
-구현된 R1/R2 조건 키·범위·R2 boolean·점수 정책은 공통 로더에서 검증하며,
+구현된 R1/R2/R3/R5/R8 조건 키·범위·R2 boolean·점수 정책은 공통 로더에서 검증하며,
 잘못된 설정이나 미지원 조건을 조용히 무시하지 않는다.
 
 | 규칙 | 행동 | 환경 |
@@ -44,8 +44,10 @@ R2는 #60과 현재 SDD/YAML의 OR 조건을 따른다. 응집도 이력은 `[�
 
 `probability.scoring: binary_all_required`는 **초안 가정**이다. 행동/환경 필수 조건이 모두 참이면
 점수 1, 아니면 0이다. 양수 점수를 합으로 나눠 `probability`를 낸다.
-현재 R1/R2 수온차 영역은 겹치지 않아 후보가 있으면 값은 1.0이다. 이는 **후보 간 상대값이며 통계적
-진단 확률이나 원인 확정이 아니다**. 점수 곡선·부분 조건 가중치·미구현 원인과의 정규화는 후속 합의 대상이다.
+R1/R2 수온차 영역은 겹치지 않지만 R3/R5/R8과는 중첩될 수 있다. 단일 후보는 1.0,
+후보가 여러 개면 동일 점수이므로 균등 분배한다. 이는 **후보 간 상대값이며 통계적
+진단 확률이나 원인 확정이 아니다**. 같은 점수의 순서는 YAML의 tie_break_order를 따른다.
+점수 곡선·부분 조건 가중치·미구현 원인과의 정규화는 후속 합의 대상이다.
 `min_display`는 표시 여부에만 쓰며 저장 후보를 제거하거나 확률을 다시 바꾸지 않는다.
 
 ## 지수 문턱과 R2 즉시 위험
@@ -70,7 +72,7 @@ warming_up에는 R2 경보 신호도 만들지 않는다. 이 표시·게이트 
 
 DB 행 변환까지 제공하며 원격 DB 쓰기·계정/RLS 변경은 하지 않는다. 재전송 시 중복을 피할 키와
 저장 주체는 합의해야 한다. 현재 HTTP `/status`는 기존 목업이다. 실제 조회/DB 저장 연결은 #104 후속이며
-파이프라인 JSONL을 API가 즉시 읽는다고 가정하면 안 된다. R3~R8·추천·알림도 이번 범위가 아니다.
+파이프라인 JSONL을 API가 즉시 읽는다고 가정하면 안 된다. R4/R6/R7·추천·알림은 후속 범위다.
 
 ## 설정 적용과 검증
 
@@ -87,3 +89,68 @@ python -m pipeline --help
 
 검증 범위는 R1/R2 경계·누락·숫자·시각·이력 격리/만료·설정 재로드/실패·원인 억제·즉시 위험·
 JSONL 및 DB 행 형식·실제 simulator→fusion→M5 시나리오다. 원격 Supabase 통합이나 현장 진단 성능을 검증한 결과가 아니다.
+
+## #26: R3·R5·R8 입력과 판정
+
+```python
+from cause import CauseContext, CauseEngine
+
+# 실제 서비스에서는 호출자가 해당 가두리/해역·시점의 특보 상태를 확인해 제공한다.
+context = CauseContext(advisory_active=False)
+results = CauseEngine().evaluate_series(scores, fused, contexts=[context] * len(scores))
+```
+
+contexts는 점수와 동일한 순서/길이이며 각 시점에 유효한 외부 컨텍스트다. 특보 있음=True,
+없음을 확인함=False, 조회 실패·미입력·정보 없음=None이다. **기본값 None을 특보 없음으로 해석하지 않는다.**
+원인 엔진이 특보 API를 조회하거나 시나리오 정답/이벤트명을 조건으로 읽지 않는다.
+실제 특보 어댑터·갱신 주기·유효기간·해역 매핑은 별도 통합/합의 범위다.
+
+| 규칙 | 현재 조건 | 누락·경계 |
+| --- | --- | --- |
+| R3 저산소 | surface_ratio_x >=1.5 AND DO <4.0 | DO=4.0은 제외. 카메라나 특보 상태 없이도 판정 가능 |
+| R5 질병 의심 | 정상 환경·명시적 특보 없음·완료된 최근 3개 24시간 블록 평균이 매번 1점 이상 상승·블록별 유효 점수 비율 >=0.8·마지막 블록 평균 >=cause_min_stress | 완전한 72시간 구간 필요. 순간적인 높은 점수나 하루 상승/나머지 정체는 부족 |
+| R8 기생충 의심 | 정상 환경·명시적 특보 없음·quality >= rubbing_min(현재0.6)에서 rubbing_rate_x >=3 관측을 6시간 누적 | 현재도 관측 가능/이상이어야 후보 발생. 야간·저품질·미관측 시간은 누적하지 않고 대기 |
+
+정상 환경은 YAML env_constants.normal_env의 표층 **25℃ 미만**, DO **4.0 이상**이다.
+이 수치는 구현의 설정값이며 특히 DO는 공식 양식 권고값이 아닌 임시 가정이다. 알림 문구로 변환하지 않는다.
+R3의 선택 입력 camera_surface_breathing은 고품질일 때만 보조 근거로 기록하며 표층 쏠림을 대체하지 않는다.
+새 MetricRecord 지표를 임의로 추가하지 않는다. 실제 영상 생산자 연결은 후속이다.
+
+R5는 현 시각에 끝나는 24시간 블록들을 사용한다. 각 주기는 score.ts에서 끝나는 cycle_minutes 구간으로 계산한다.
+점수 없음은 관측 비율을 낮추며, 정상 환경/특보 없음/ready 상태를 잃으면 이력을 비운다.
+평균은 낮·밤 모두 포함하며 정상 평균의 작은 상승에 순간 점수만 높은 경우를 막기 위해 마지막 24시간 평균에도 문턱을 적용한다.
+평균 계산은 과거와 현재 점수만 사용한다. 상승 곡선의 공식/기간·관측 비율은 검증용 초안이다.
+
+R8은 저품질·비비기 미관측 시 이력을 유지하지만 그 시간은 더하지 않는다. 관측된 비비기가 3배 미만이면 초기화한다.
+정상 환경·특보 없음·ready 조건이 깨지거나 스트림의 시각 간격이 한 주기를 넘으면 초기화한다.
+따라서 6시간은 벽시계 6시간이 아닌 **유효하게 관측한 이상 시간**이며 밤을 사이에 두고 합산될 수 있다.
+이 pause 정책과 실서비스 최대 허용 관측 공백은 팀 합의 대상이다.
+
+같은 이진 점수는 `R2 → R3 → R8 → R1 → R5` 순으로 표시한다(가정). R8의 구체적 비비기 신호와 R5의
+일반 상승 추세가 함께 맞으면 각각 0.5이면서 R8이 먼저 나온다. 우선순위를 진단 정확도로 해석하지 않는다.
+
+## #26 실행·설정 호환·검증 범위
+
+```sh
+python -m pipeline hypoxia disease_suspect parasite_suspect
+python -m pipeline.frontend hypoxia disease_suspect parasite_suspect --no-label-causes
+python -m stress score data/out/parasite_suspect/metrics.jsonl --model models/cage-003.pkl --advisory-state clear
+python -m unittest tests.test_cause_extended -v
+```
+
+합성 시나리오는 env.advisory_active=false를 명시한 고정 입력이다. 새로운 hypoxia.yaml은 R3용 합성 시나리오이며
+기존 기본 시나리오 목록은 유지한다. CLI는 이름을 명시해 실행한다. stress CLI의 --advisory-state 기본은 unknown이며
+입력을 확인한 경우에만 clear/active로 지정한다.
+
+최근 main의 프론트 내보내기는 기본적으로 엔진이 빈 경보 구간에 정답 라벨을 보충할 수 있다.
+실제 엔진 결과 검증/전달에는 **--no-label-causes**를 사용한다. 이번 테스트는 라벨 보충 없이 세 시나리오의
+JSONL→status 타임라인→프론트 형식까지 연결되는지 확인한다. 정답은 테스트의 비교에만 사용한다.
+
+새로 필수화한 YAML 키는 probability.tie_break_order, R5 behavior의 min_daily_increase/min_daily_coverage,
+R8 behavior의 missing_observation=pause다. 커스텀 설정 묶음도 저장소 예시와 함께 갱신해야 한다.
+누락·미지원 값은 ConfigError이며, R1/R2/추세/지속시간 이력은 revision 변경 시 모두 초기화된다.
+
+evidence에는 DO·표층 비율·정상 환경 경계·특보 상태·카메라 품질/보조 근거·24시간별 평균/관측 비율·
+관측된 비비기 누적시간·시작 시각을 추가한다. 기존 JSONL 및 DB 행 변환 계약은 유지한다.
+실제 HTTP status 연결·원격 DB 저장·외부 특보 조회·질병/기생충 확정 및 조치/약품 안내는 구현하지 않는다.
+시뮬레이터 기본 시드의 결과이며 현장 진단 성능이나 모든 시드에 대한 일반화를 의미하지 않는다.

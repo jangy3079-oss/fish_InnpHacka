@@ -10,6 +10,7 @@ baseline: normal_14d
 cage: {depth_m: 9.0, n_fish: 300}
 sampling: {ping_interval_s: 60, cycle_minutes: 5}
 env:
+  advisory_active: false # 합성 시나리오의 명시적 특보 없음 (#26), 실서비스 기본값 아님
   temp_surface: [[0, 21.6], [72, 22.0]]
   temp_mid:     [[0, 19.0], [72, 19.2]]
   do:           [[0, 7.0], [72, 7.0]]

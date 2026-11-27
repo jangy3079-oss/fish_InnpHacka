@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 
 from fusion.fuse import fuse, load_jsonl
-from cause import CauseEngine
+from cause import CauseContext, CauseEngine
 from cause.store import save_jsonl as save_causes
 from common.config_loader import ConfigLoader
 from stress.levels import apply_levels
@@ -29,6 +29,8 @@ s.add_argument("metrics")
 s.add_argument("--model", required=True)
 s.add_argument("--out", default=None)
 s.add_argument("--supabase", action="store_true")
+s.add_argument("--advisory-state", choices=["unknown", "clear", "active"], default="unknown",
+               help="외부 특보 상태. 생략하면 R5/R8은 특보 없음으로 가정하지 않음")
 a = ap.parse_args()
 
 fused = fuse(load_jsonl(a.metrics))
@@ -42,7 +44,8 @@ else:
     m = StressModel.load(a.model)
     scores = m.score_series(fused)
     loader = ConfigLoader()
-    causes = CauseEngine(loader).evaluate_series(scores, fused)
+    context = CauseContext(advisory_active={"unknown": None, "clear": False, "active": True}[a.advisory_state])
+    causes = CauseEngine(loader).evaluate_series(scores, fused, contexts=[context] * len(scores))
     changes = apply_levels(scores, [r.immediate_danger for r in causes], cfg=loader.last_good.to_dict()["thresholds"])
     out = Path(a.out) if a.out else Path(a.metrics).with_name("stress.jsonl")
     save_jsonl(scores, out.with_name("stress_score.jsonl"))
