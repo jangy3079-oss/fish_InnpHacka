@@ -32,7 +32,7 @@ class ApiContractTests(unittest.TestCase):
             ("/recommendations/{id}/choice", "post"), ("/cages/{id}/stock", "put"),
             ("/areas/stress-map", "get"), ("/areas/{id}/release-demand", "get"),
             ("/cages/{id}/diagnosis-request", "post"), ("/cages/{id}/work-log", "post"), ("/demo/scenario/{name}", "post"),
-            ("/admin/config/{file}", "put"),
+            ("/admin/config/{file}", "get"), ("/admin/config/{file}", "put"),
         }
         actual = {(path, method) for path, item in schema["paths"].items() for method in item if method in {"get", "post", "put"}}
         self.assertEqual(actual, expected)
@@ -50,23 +50,12 @@ class ApiContractTests(unittest.TestCase):
                 self.assertEqual(result.status_code, 200, result.text)
                 self.assertEqual(result.headers["x-data-mode"], "mock")
 
-    def test_mock_writes_never_claim_persistence_or_change_status(self):
-        before = self.client.post('/demo/scenario/heatwave_typhoon').json()['status']
-        requests = [
-            ("put", "/admin/config/thresholds", {"values": {"warning": 60}}),
-        ]
-        for method, path, payload in requests:
-            with self.subTest(path=path):
-                result = self.client.request(method, path, json=payload)
-                self.assertEqual(result.status_code, 200, result.text)
-                self.assertTrue(result.json()["mock"])
-                self.assertFalse(result.json()["persisted"])
-        self.assertEqual(self.client.post('/demo/scenario/heatwave_typhoon').json()['status'], before)
+    def test_admin_config_requires_authentication_before_read_or_write(self):
+        self.assertEqual(self.client.get('/admin/config/thresholds').status_code,401)
+        self.assertEqual(self.client.put('/admin/config/thresholds',json={'values':{'warning':60}}).status_code,401)
 
     def test_invalid_paths_bodies_and_parameters(self):
         requests = [
-            ("put", "/admin/config/unknown", {"values": {"x": 1}}),
-            ("put", "/admin/config/thresholds", {"values": {}}),
             ("post", "/demo/scenario/unknown", None),
             ("post", "/demo/scenario/heatwave_typhoon?t=-1", None),
             ("post", "/demo/scenario/heatwave_typhoon?t=nan", None),

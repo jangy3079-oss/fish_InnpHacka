@@ -12,3 +12,5 @@ data/out/
 data/samples/
 models/
 .env.local
+.admin-config.lock
+.admin-config.sqlite3*

@@ -243,6 +243,35 @@ class DiagnosisReceipt(Contract):
 
 class ConfigRequest(Contract):
     values: Annotated[dict[str, Any], Field(min_length=1)]
+    expected_revision: Annotated[str, Field(pattern=r'^[a-f0-9]{64}$')]
+    request_key: UUID
+    reason: Annotated[str, Field(min_length=1,max_length=500)]
+
+    @field_validator('reason')
+    @classmethod
+    def nonblank_reason(cls,value):
+        if not value.strip(): raise ValueError('A change reason is required')
+        return value
+
+
+class ConfigView(Contract):
+    file: ConfigFile
+    revision: str
+    values: dict[str,Any]
+    loaded_at: AwareDatetime
+
+
+class ConfigReceipt(Contract):
+    persisted: Literal[True]
+    changed: bool
+    file: ConfigFile
+    request_key: UUID
+    previous_revision: str
+    revision: str
+    validated_at: AwareDatetime
+    reload_status: Literal['validated']
+    application: Literal['next_snapshot','restart_required']
+    restart_required: bool
 
 
 class MockReceipt(Contract):

@@ -118,6 +118,13 @@ SDD·SRS는 "AGPL"이라고 적었지만, 저장소를 직접 보니 다음과 �
 
 ## 5. 갱신 규칙
 
+#36 API 의존성 추가(2026-11-27): YAML의 가정/출처 주석을 보존하는 편집에
+[ruamel.yaml 0.18.17](https://pypi.org/project/ruamel.yaml/0.18.17/)(MIT,
+[LICENSE](https://sourceforge.net/p/ruamel-yaml/code/ci/default/tree/LICENSE))를 사용합니다.
+설치 시 함께 포함된 [ruamel.yaml.clib 0.2.15](https://pypi.org/project/ruamel.yaml.clib/0.2.15/)도 MIT
+([LICENSE](https://sourceforge.net/p/ruamel-yaml-clib/code/ci/default/tree/LICENSE))입니다.
+패키지 배포 메타데이터/설치 라이선스를 확인했으며 API의 round-trip 편집은 pure Python 모드를 사용합니다.
+
 - 의존성을 추가하거나 바꾸는 PR은 이 표도 같이 고친다.
 - 새 항목은 저장소 LICENSE 링크와 확인일을 적는다.
 - "확인 필요" 항목이 남아 있으면 상용화 전에 닫는다.
