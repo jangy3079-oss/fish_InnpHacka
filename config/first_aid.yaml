@@ -14,7 +14,7 @@
 #                pending = 근거 없음. 근거를 찾기 전에는 알림에 쓰지 않는다
 common_first_aid:
   - id: feed_reduction
-    name: 사료 감량
+    name: 사료 공급 조절
     text: "먹이를 먹는 상태가 활발하지 않으면 먹이 공급을 중단해야 한다."
     source: notify/docs/nifs_disease_rearing_management.md
     source_status: official
@@ -27,7 +27,7 @@ common_first_aid:
     # source_status: official # 밀식 예방, 사육밀도 낮추기 (D4, D5, D8)
   - id: dead_fish_removal
     name: 폐사체 즉시 수거
-    text: "조피볼락 연쇄구균병 피해를 줄이려면 가두리 안의 병든 고기나 폐사어를 빨리 제거해야 한다."
+    text: "가두리 안의 병든 고기나 폐사어를 빨리 제거해야 한다."
     source: notify/docs/nifs_disease_rearing_management.md
     source_status: official
     # source_status: official # 병든 고기·폐사어를 빨리 제거 (D5, D8)
