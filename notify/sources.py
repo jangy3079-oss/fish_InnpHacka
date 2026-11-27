@@ -23,6 +23,7 @@ class Passage(Contract):
     source_url: str
     scope: str
     quote: str
+    months: tuple[Annotated[int, Field(strict=True, ge=1, le=12)], ...] | None = None   # KST 월, 비우면 항상
 
 
 class GenerationPolicy(Contract):
@@ -65,19 +66,26 @@ def citation(root: Path, id, source, scope, quote, source_url=None):
                     source_sha256=hashlib.sha256(raw).hexdigest(), scope=scope, quote=quote)
 
 
-def retrieve(rule_id, policy, snapshot, root=ROOT):
+def _kst_month(ts):
+    from datetime import timedelta, timezone
+    return None if ts is None else ts.astimezone(timezone(timedelta(hours=9))).month
+
+
+def retrieve(rule_id, policy, snapshot, root=ROOT, ts=None):
+    """ts: 알림 시각. months가 정해진 구절은 그 달(KST)에만 쓴다. ts가 없으면 시기 구절은 쓰지 않는다."""
     if rule_id is None:
         return ()
     root = Path(root).resolve()
-    if rule_id in ("R5", "R8"):
-        # Uses the existing official-status, path, source-text and blocked-term checks.
-        guide = reviewed_guide(rule_id, snapshot, source_root=root)
-        return tuple(citation(root, action["id"], action["source"], "수과원 질병 사육관리 자료",
-                              action["text"]) for action in guide["actions"])
+    month = _kst_month(ts)
     results = []
     for passage in policy.passages:
-        if rule_id in passage.rules:
+        if rule_id in passage.rules and (passage.months is None or month in passage.months):
             ensure_safe(passage.quote, snapshot)
             results.append(citation(root, passage.id, passage.source, passage.scope,
                                     passage.quote, passage.source_url))
+    if rule_id in ("R5", "R8"):
+        # Uses the existing official-status, path, source-text and blocked-term checks.
+        guide = reviewed_guide(rule_id, snapshot, source_root=root)
+        results += [citation(root, action["id"], action["source"], "수과원 질병 사육관리 자료",
+                             action["text"]) for action in guide["actions"]]
     return tuple(results)

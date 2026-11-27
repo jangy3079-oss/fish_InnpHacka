@@ -6,9 +6,54 @@ llm_max_completion_tokens: 384
 
 # 출처를 확인한 짧은 구절만 검색 대상으로 둔다. 임의 문서 전체를 LLM에 넣지 않는다.
 # quote는 지정 문서에 실제 존재해야 하며, 규칙·문맥도 함께 고정한다.
+# 같은 규칙의 구절은 위에서부터 먼저 쓴다. 원인별 문구 근거: notify/docs/action-phrases.md (#232)
+# months: 이 달(KST)에만 쓰는 구절. 비우면 항상 쓴다.
 passages:
+  - id: rockfish_high_temp_feed_stop
+    rules: [R1]
+    source: notify/docs/nifs_rockfish_manual.md
+    source_url: https://www.nifs.go.kr/contents/actionContentsCons0105.do
+    scope: "수과원 조피볼락 양식 매뉴얼"
+    quote: "수온 25℃ 이상의 고수온에서는 우선 먹이공급을 전면 중단(가장 중요)해야 한다."
+  - id: rockfish_oxygen_supply
+    rules: [R2, R3]
+    source: notify/docs/nifs_rockfish_manual.md
+    source_url: https://www.nifs.go.kr/contents/actionContentsCons0105.do
+    scope: "수과원 조피볼락 양식 매뉴얼"
+    quote: "블로워, 콤프레서, 액체산소 등을 이용해 충분한 산소를 공급한다."
+  - id: rockfish_early_harvest
+    rules: [R2]
+    source: notify/docs/nifs_rockfish_manual.md
+    source_url: https://www.nifs.go.kr/contents/actionContentsCons0105.do
+    scope: "수과원 조피볼락 양식 매뉴얼"
+    quote: "출하 가능한 어류는 최대한 많이, 신속하게 출하하는 것이 피해를 최소화하는 방법이다."
+  - id: red_tide_oxygen
+    rules: [R4]
+    source: notify/docs/nifs_red_tide_cage_manual.md
+    source_url: https://nifs.go.kr/portal/pcon0000051/systA/actionConts.do
+    scope: "수과원 적조 매뉴얼"
+    quote: "산소공급장치를 가동한다."
+  - id: stress_recovery_oxygen
+    rules: [R6]
+    source: notify/docs/nifs_stress_immunity.md
+    source_url: https://nifs.go.kr/portal/pcon0000271/systA/actionConts.do
+    scope: "수과원 병리연구과 자료"
+    quote: "스트레스를 받은 어류가 빨리 회복하려면 고농도의 산소가 효과적이다."
+  - id: rockfish_feeding_watch
+    rules: [R7]
+    source: notify/docs/nifs_rockfish_manual.md
+    source_url: https://www.nifs.go.kr/contents/actionContentsCons0105.do
+    scope: "수과원 조피볼락 양식 매뉴얼"
+    quote: "급이할 때는 섭식 활동을 직접 눈으로 확인하면서 적당한 수준에서 공급을 중지한다."
+  - id: rockfish_gill_fluke_net
+    rules: [R8]
+    months: [9, 10]
+    source: notify/docs/nifs_rockfish_manual.md
+    source_url: https://www.nifs.go.kr/contents/actionContentsCons0105.do
+    scope: "수과원 조피볼락 양식 매뉴얼(9~10월 가두리망 관리)"
+    quote: "수온 하강기 이전에 주기적으로 가두리망을 청소하고 교체해야 한다."
   - id: high_temp_monitoring
-    rules: [R1, R2, R7]
+    rules: [R1, R2]
     source: notify/docs/nifs_high_temp_stage_manual.md
     source_url: https://nifs.go.kr/news/actionNewsView.do?MENU_ID=M0000307&NEWS_SEQ=3013
     scope: "수과원 2018년 고수온 관리요령"
@@ -19,5 +64,5 @@ passages:
     source_url: https://nifs.go.kr/portal/pcon0000051/systA/actionConts.do
     scope: "수과원 적조 매뉴얼"
     quote: "출현 정보는 국립수산과학원 홈페이지 적조속보에서 확인한다."
-# R5/R8: first_aid.yaml의 official 조치만 reviewed_guide()로 검색한다.
-# R3/R6: 상황에 맞는 공식 구절을 확정하기 전까지 조치 문장을 추가하지 않는다.
+# R5/R8: first_aid.yaml의 official 조치만 reviewed_guide()로 검색한다. R8은 9~10월에 아가미흡충병 망 관리 구절을 먼저 쓴다.
+# 쓰지 않는 것 (#232): 수치 지시(감량률·포식량 %·황토 양), 약품·투약, 병명 단정, R3 용존산소 수치(팀 결정 전).
