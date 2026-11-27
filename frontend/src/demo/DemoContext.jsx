@@ -9,6 +9,7 @@ export function DemoProvider({ children }) {
   const [scenario, setScenario] = useState(DEFAULT_DEMO.scenario);
   const [t, setT] = useState(DEFAULT_DEMO.t);
   const [playing, setPlaying] = useState(false);
+  const [file, setFile] = useState(false); // 실제 모드에서 사용자가 고른 '파일 재생'
   // 화면이 데이터를 불러오는 중이면 재생이 다음 칸으로 가지 않는다(서버는 요청을 하나씩 계산한다).
   const busyRef = useRef(false);
   const setBusy = useCallback((v) => {
@@ -33,10 +34,11 @@ export function DemoProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      demo: { scenario, t },
+      demo: { scenario, t, file },
       maxT,
       playing,
       setBusy,
+      toggleFile: () => setFile((v) => !v),
       selectScenario: (s) => {
         setScenario(s);
         setT(0);
@@ -51,7 +53,7 @@ export function DemoProvider({ children }) {
         setPlaying((p) => !p);
       },
     }),
-    [scenario, t, playing, maxT, setBusy],
+    [scenario, t, file, playing, maxT, setBusy],
   );
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 }

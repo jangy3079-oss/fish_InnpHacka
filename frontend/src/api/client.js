@@ -6,6 +6,8 @@ import echogramMock from '../mocks/echogram.svg';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
 const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000';
+// 실제 모드에서도 사용자가 '파일 재생'을 고르면(demo.file) 파일 데이터를 쓴다. 자동으로 바꾸지 않는다.
+const files = (demo) => USE_MOCK || demo?.file === true;
 const delay = (v) => new Promise((r) => setTimeout(() => r(structuredClone(v)), 150));
 
 async function http(path, options) {
@@ -51,23 +53,39 @@ function choiceKey(recId, optionId) {
 // 시연 응답(POST /demo/scenario)은 한 번의 계산으로 status·recommendation·timeseries를 함께 준다.
 // 같은 시각의 요청은 한 번만 보내고, 세 호출이 같은 응답을 나눠 쓴다. 준비 중(503)이면 몇 번 다시 시도한다.
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function withRetry503(fn, tries = 3, waitMs = 3000) {
+async function withRetry503(fn, signal, tries = 3, waitMs = 3000) {
   for (let i = 0; ; i += 1) {
     try {
       return await fn();
     } catch (e) {
-      if (e.status !== 503 || i >= tries) throw e;
+      if (e.status !== 503 || i >= tries || signal?.aborted) throw e;
       await sleep(waitMs);
+      if (signal?.aborted) throw e;
     }
   }
 }
 const demoCache = new Map();
+const inflight = new Map(); // 아직 끝나지 않은 요청의 취소 장치
 function demoResult(demo) {
   const hours = hoursAt(demo); // 서버의 t는 시나리오 시작 후 경과 시간(시간 단위). 프레임 번호가 아니다.
   const key = `${demo.scenario}:${hours}`;
   if (!demoCache.has(key)) {
-    const p = withRetry503(() => http(`/demo/scenario/${demo.scenario}?t=${hours}`, { method: 'POST' }));
-    p.catch(() => demoCache.delete(key));
+    // 시각이 바뀌어 새 요청을 보낼 때, 아직 끝나지 않은 이전 시각의 요청은 취소한다(서버는 요청을 하나씩 계산한다).
+    for (const [k, c] of inflight) {
+      c.abort();
+      inflight.delete(k);
+      demoCache.delete(k);
+    }
+    const ctl = new AbortController();
+    inflight.set(key, ctl);
+    const p = withRetry503(() => http(`/demo/scenario/${demo.scenario}?t=${hours}`, { method: 'POST', signal: ctl.signal }), ctl.signal);
+    p.then(
+      () => inflight.delete(key),
+      () => {
+        inflight.delete(key);
+        demoCache.delete(key);
+      },
+    );
     demoCache.set(key, p);
     if (demoCache.size > 8) demoCache.delete(demoCache.keys().next().value);
   }
@@ -82,12 +100,13 @@ const qs = (params) => {
 
 export const api = {
   // 시연 입력이 바뀔 때 바로 요청하지 않고 잠시 기다린다(실제 서버는 한 번에 하나씩 계산한다).
-  debounceMs: USE_MOCK ? 0 : 300,
+  debounceFor: (demo) => (files(demo) ? 0 : 300),
   isMock: USE_MOCK, // 목업 모드면 모든 화면이 파일 데이터다
+  files, // 이 시연 입력이 파일 데이터를 쓰는지
 
   // demo: {scenario, t}. 시연 중이면 POST /demo/scenario/{name}?t= 응답의 status를 쓴다.
   getStatus: (cageId, demo) => {
-    if (USE_MOCK) return delay({ ...statusAt(cageId, demo), simulated: true });
+    if (files(demo)) return delay({ ...statusAt(cageId, demo), simulated: true });
     if (!demo) return http(`/cages/${cageId}/status`);
     return demoResult(demo).then((r) => ({
       ...r.status,
@@ -98,19 +117,19 @@ export const api = {
   },
 
   getTimeseries: (cageId, metric, { from, to, demo } = {}) => {
-    if (USE_MOCK) return delay(timeseriesAt(cageId, metric, demo));
+    if (files(demo)) return delay(timeseriesAt(cageId, metric, demo));
     // 시연 중에는 같은 응답의 timeseries를 쓴다. DB 경로를 부르지 않는다.
     if (demo) return demoResult(demo).then((r) => ({ cage_id: Number(cageId), metric, points: r.timeseries?.[metric] ?? [] }));
     return http(`/cages/${cageId}/timeseries${qs({ metric, from, to })}`);
   },
 
   // 에코그램은 이미지(SVG)이므로 URL을 반환한다.
-  getEchogramUrl: (cageId, { from, to } = {}) =>
-    USE_MOCK ? echogramMock : `${BASE}/cages/${cageId}/echogram${qs({ from, to })}`,
+  getEchogramUrl: (cageId, { from, to, demo } = {}) =>
+    files(demo) ? echogramMock : `${BASE}/cages/${cageId}/echogram${qs({ from, to })}`,
 
   // 추천이 없는 회차(정상 등)는 404, 금전 정보 권한이 없으면 403이다. 둘 다 화면 오류가 아니라 '추천 없음'으로 받는다.
   getRecommendation: (cageId, demo) => {
-    if (USE_MOCK) return delay({ ...recommendationAt(cageId, demo), simulated: true });
+    if (files(demo)) return delay({ ...recommendationAt(cageId, demo), simulated: true });
     // 시연 응답의 추천은 id=0, selectable=false인 표시 전용이다. recommendation이 null이면 추천 없음이다.
     if (demo) {
       return demoResult(demo).then((r) =>
@@ -157,7 +176,7 @@ export const api = {
 
   // 계약 초안에 없는 API. 알림 문장 생성(#34)과 함께 백엔드와 맞춘다.
   getNotifications: (cageId, demo) =>
-    USE_MOCK ? delay(notificationsAt(cageId, demo)) : http(`/cages/${cageId}/notifications`),
+    files(demo) ? delay(notificationsAt(cageId, demo)) : http(`/cages/${cageId}/notifications`),
 
   // body: {stock: [{size_group: 'fry'|'mid'|'market', count, avg_weight_kg}], insured}
   putStock: (cageId, body) =>
@@ -165,11 +184,11 @@ export const api = {
       ? delay({ mock: true, persisted: false })
       : http(`/cages/${cageId}/stock`, { method: 'PUT', body: JSON.stringify(body) }),
 
-  getStressMap: (demo) => (USE_MOCK ? delay(stressMapAt(demo)) : http('/areas/stress-map')),
+  getStressMap: (demo) => (files(demo) ? delay(stressMapAt(demo)) : http('/areas/stress-map')),
 
   // 해역 경계(GeoJSON). 계약상 지도 응답 형식이 미정이라 프론트는 area_id로 stress-map과 이어 붙인다.
   getAreaShapes: () => (USE_MOCK ? delay(JSON.parse(areasGeo)) : http('/areas/shapes')),
 
   getReleaseDemand: (areaId, demo) =>
-    USE_MOCK ? delay(releaseDemandAt(areaId, demo)) : http(`/areas/${areaId}/release-demand`),
+    files(demo) ? delay(releaseDemandAt(areaId, demo)) : http(`/areas/${areaId}/release-demand`),
 };
