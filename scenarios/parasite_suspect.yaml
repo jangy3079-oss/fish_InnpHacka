@@ -1,0 +1,20 @@
+# 기생충 의심 (R8, UC-06, VC-03·08): 수온·DO 정상, 몸 비비기(rubbing_rate)가 기준선 3배 이상으로 6시간 넘게 지속.
+# 가정: 30h(2일차 06시)부터 끝까지 비비기 4배. 비비기·급회전으로 활동은 조금(+15%) 늘어남.
+#       기준선 rubbing_rate는 낮 0.3, 밤 0.15 회/(마리·h) (가정값, DR-10 영상으로 보정 예정).
+name: parasite_suspect
+description: 기생충 의심 — 환경 정상, 몸 비비기 급증 지속
+cage_id: cage-003
+start: "2026-08-05T00:00:00+09:00"
+duration_days: 4
+seed: 31
+baseline: normal_14d
+cage: {depth_m: 9.0, n_fish: 300}
+sampling: {ping_interval_s: 60, cycle_minutes: 5}
+env:
+  temp_surface: [[0, 21.8], [96, 22.1]]
+  temp_mid:     [[0, 19.1], [96, 19.3]]
+  do:           [[0, 7.0], [96, 7.0]]
+  diurnal_amp:  {temp_surface: 0.3}
+camera: {enabled: true, day_quality: 0.85, night_quality: 0.35}
+events:
+  - {type: parasite, start_h: 30, ramp_h: 2, rubbing_multiplier: 4.0}

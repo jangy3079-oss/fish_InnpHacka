@@ -1,0 +1,20 @@
+# 질병 의심 (R5, VC-02·03·08): 수온·DO 정상, 특보 없음. 이상 지수가 3일 이상 서서히 상승.
+# 가정: 36h부터 96h(4일)에 걸쳐 진행도 0 → 0.8 선형 증가.
+#       진행될수록 활동 감소, 저층으로 가라앉음, 정지 개체·급이 반응 저하 (SDD 6.3 R5).
+name: disease_suspect
+description: 질병 의심 — 환경 정상, 행동 이상이 며칠에 걸쳐 서서히 커짐
+cage_id: cage-003
+start: "2026-08-05T00:00:00+09:00"
+duration_days: 6
+seed: 21
+baseline: normal_14d
+cage: {depth_m: 9.0, n_fish: 300}
+sampling: {ping_interval_s: 60, cycle_minutes: 5}
+env:
+  temp_surface: [[0, 21.5], [72, 22.0], [144, 21.7]]
+  temp_mid:     [[0, 19.0], [144, 19.3]]
+  do:           [[0, 7.0], [144, 6.9]]
+  diurnal_amp:  {temp_surface: 0.3}
+camera: {enabled: true, day_quality: 0.85, night_quality: 0.35}
+events:
+  - {type: disease, start_h: 36, ramp_h: 96, severity: 0.8}

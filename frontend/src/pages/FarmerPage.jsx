@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useDemo } from '../demo/DemoContext.jsx';
 import { api } from '../api/client.js';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
 import { FirstAidCard, ProfitCompare } from '../components/ProfitCards.jsx';
@@ -14,14 +15,23 @@ export default function FarmerPage() {
   const [rec, setRec] = useState(null);
   const [error, setError] = useState(null);
 
+  const { demo } = useDemo();
+
+  // 시나리오·시각이 바뀌면 다시 불러온다. 이전 화면은 새 값이 올 때까지 유지해 깜빡임을 줄인다.
   useEffect(() => {
-    Promise.all([api.getStatus(CAGE_ID), api.getRecommendation(CAGE_ID)])
+    let alive = true;
+    Promise.all([api.getStatus(CAGE_ID, demo), api.getRecommendation(CAGE_ID, demo)])
       .then(([s, r]) => {
+        if (!alive) return;
         setStatus(s);
         setRec(r);
+        setError(null);
       })
-      .catch((e) => setError(e.message));
-  }, []);
+      .catch((e) => alive && setError(e.message));
+    return () => {
+      alive = false;
+    };
+  }, [demo]);
 
   if (error) return <p className="error big">불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>;
   if (!status || !rec) return <p className="big">불러오는 중…</p>;
@@ -31,11 +41,13 @@ export default function FarmerPage() {
       <LevelCard status={status} />
       <SourceNotice status={status} />
       <CauseList causes={status.cause} />
-      {rec.kind === 'first_aid' ? (
-        <FirstAidCard rec={rec} />
+      {rec.kind === 'none' ? (
+        <section className="card"><h2>지금 추천하는 조치</h2><p>지금은 따로 할 조치가 없습니다.</p></section>
+      ) : rec.kind === 'first_aid' ? (
+        <FirstAidCard key={rec.ts} rec={rec} />
       ) : (
         <>
-          <Recommendation rec={rec} />
+          <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />
           <ProfitCompare rec={rec} />
         </>
       )}
