@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDemo } from '../demo/DemoContext.jsx';
 import { api } from '../api/client.js';
+import { FarmerTabs } from '../components/SiteChrome.jsx';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
 import { FirstAidCard, ProfitCompare } from '../components/ProfitCards.jsx';
 import { BASELINE_WINDOWS, LEVELS, SOURCE_LABELS, formatTime } from '../constants.js';
@@ -36,22 +37,28 @@ export default function FarmerPage() {
   if (error) return <p className="error big">불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>;
   if (!status || !rec) return <p className="big">불러오는 중…</p>;
 
+  const isProfit = rec.kind !== 'none' && rec.kind !== 'first_aid';
+
+  // 넓은 화면에서는 왼쪽에 지금 상태와 조치, 오른쪽에 판단 근거를 둔다.
   return (
-    <div className="farmer">
-      <LevelCard status={status} />
-      <SourceNotice status={status} />
-      <CauseList causes={status.cause} />
-      {rec.kind === 'none' ? (
-        <section className="card"><h2>지금 추천하는 조치</h2><p>지금은 따로 할 조치가 없습니다.</p></section>
-      ) : rec.kind === 'first_aid' ? (
-        <FirstAidCard key={rec.ts} rec={rec} />
-      ) : (
-        <>
-          <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />
-          <ProfitCompare rec={rec} />
-        </>
-      )}
-      <EvidenceCharts cageId={CAGE_ID} alertAt={isAlert(status) ? status.ts : undefined} />
+    <div className="farmer-page">
+      <FarmerTabs />
+      <div className="farmer-grid">
+        <div className="farmer">
+          <LevelCard status={status} />
+          <SourceNotice status={status} />
+          <CauseList causes={status.cause} />
+          {rec.kind === 'none' && (
+            <section className="card"><h2>지금 추천하는 조치</h2><p>지금은 따로 할 조치가 없습니다.</p></section>
+          )}
+          {rec.kind === 'first_aid' && <FirstAidCard key={rec.ts} rec={rec} />}
+          {isProfit && <Recommendation key={`${rec.ts}-${rec.recommended_option}`} rec={rec} />}
+        </div>
+        <div className="farmer">
+          {isProfit && <ProfitCompare rec={rec} />}
+          <EvidenceCharts cageId={CAGE_ID} alertAt={isAlert(status) ? status.ts : undefined} />
+        </div>
+      </div>
     </div>
   );
 }

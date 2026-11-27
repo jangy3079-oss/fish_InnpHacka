@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDemo } from '../demo/DemoContext.jsx';
+import { FarmerTabs } from '../components/SiteChrome.jsx';
 import { api } from '../api/client.js';
 import { LEVELS, formatTime } from '../constants.js';
 
@@ -25,6 +26,8 @@ export default function NotificationsPage() {
   if (!data) return <p className="big">불러오는 중…</p>;
 
   return (
+    <div className="narrow">
+    <FarmerTabs />
     <div className="chat">
       <h1>알림</h1>
       <p className="hint">시연용 모의 화면입니다. 실제 메시지는 발송되지 않습니다.</p>
@@ -43,6 +46,7 @@ export default function NotificationsPage() {
           );
         })}
       </ul>
+    </div>
     </div>
   );
 }
