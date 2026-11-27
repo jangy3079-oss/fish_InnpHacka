@@ -55,6 +55,8 @@ python -m pipeline.validate --seeds 10   # VC-01~05 검증 (시드 10개, 약 1�
 
 시나리오 HTTP 재생은 [API 계약·실행 예시](docs/scenario-replay-api.md)를 따릅니다. 합성 센서를 실제 분석하며 운영 DB에는 저장하지 않습니다 (#30).
 
+공무원 해역 상태·방류 수요 집계는 [해역 집계 API 안내](docs/area-aggregates.md)를 확인하세요.
+
 DB 지표 분석→결과 저장→어민 상태/추천 조회→선택 저장은 [어민 API 2차 안내](docs/analysis-api.md)를 확인하세요.
 
 공통 1차 조치와 소유자 진단 접수는 [진단 API 안내](docs/diagnosis-api.md)를 확인하세요.
