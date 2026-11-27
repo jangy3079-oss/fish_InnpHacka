@@ -36,10 +36,12 @@ export default function FarmerPage() {
 
   const { demo, setBusy } = useDemo();
 
+  // 가두리를 바꿀 때만 이전 가두리의 화면을 비운다. 시각이 바뀔 때마다 비우면 재생 중 페이지 높이가 요동쳐 스크롤이 튄다.
+  useEffect(() => { setStatus(null); setRec(null); }, [CAGE_ID]);
+
   // 시나리오·시각이 바뀌면 다시 불러온다. 이전 화면은 새 값이 올 때까지 유지해 깜빡임을 줄인다.
   useEffect(() => {
     let alive = true;
-    setStatus(null); setRec(null);
     if (CAGE_ID == null) { setBusy(false); setError('접근 가능한 가두리가 없습니다.'); return; }
     setBusy(true); // 응답이 올 때까지 재생을 멈춘다
     // 슬라이더를 빠르게 움직일 때 중간 값마다 요청하지 않고 마지막 값만 보낸다(실제 서버만).
