@@ -7,15 +7,51 @@ import { LEVELS } from '../constants.js';
 // Vite에서는 워커 파일 경로를 직접 알려줘야 한다.
 maplibregl.setWorkerUrl(workerUrl);
 
+// 배경 지도: OpenFreeMap(API 키 없이 무료, OpenStreetMap 데이터). 닿지 않으면 빈 바다색 배경으로 그린다.
+const BASEMAP_URL = 'https://tiles.openfreemap.org/styles/positron';
+const BLANK_STYLE = { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#dbe8f3' } }] };
+
+async function loadBasemap() {
+  try {
+    const res = await fetch(BASEMAP_URL, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(String(res.status));
+    const style = await res.json();
+    // 지명은 한글 이름을 먼저 쓰고, 없으면 현지 이름을 쓴다(기본 스타일은 영문+현지 두 줄).
+    // 기본 회색조는 바다와 육지가 잘 구분되지 않아, 바다는 푸른색·육지는 밝은 베이지로 바꾼다.
+    style.layers.forEach((l) => {
+      if (l.layout?.['text-field']) l.layout['text-field'] = ['coalesce', ['get', 'name:ko'], ['get', 'name']];
+      if (l.id === 'background') l.paint = { ...l.paint, 'background-color': '#f4f1ea' };
+      if (l.id === 'water') l.paint = { ...l.paint, 'fill-color': '#b9d7ea' };
+      if (l.id === 'park' || l.id.startsWith('landcover') || l.id.startsWith('landuse')) l.paint = { ...l.paint, 'fill-opacity': 0.4 };
+    });
+    return style;
+  } catch {
+    return BLANK_STYLE;
+  }
+}
+
+// Polygon과 MultiPolygon 모두 바깥 고리 목록으로 바꾼다.
+const outerRings = (geometry) =>
+  geometry.type === 'MultiPolygon' ? geometry.coordinates.map((p) => p[0]) : [geometry.coordinates[0]];
+
+// 라벨 자리: 가장 큰 조각의 면적 중심. 해안선을 따라 꼭짓점이 몰려도 한쪽으로 쏠리지 않는다.
 const centroid = (feature) => {
-  const ring = feature.geometry.coordinates[0].slice(0, -1); // 마지막 점은 첫 점과 같다
-  const sum = ring.reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
-  return [sum[0] / ring.length, sum[1] / ring.length];
+  let best = null;
+  outerRings(feature.geometry).forEach((ring) => {
+    let a = 0, cx = 0, cy = 0;
+    for (let i = 0; i < ring.length - 1; i++) {
+      const [x0, y0] = ring[i], [x1, y1] = ring[i + 1];
+      const k = x0 * y1 - x1 * y0;
+      a += k; cx += (x0 + x1) * k; cy += (y0 + y1) * k;
+    }
+    if (a && (!best || Math.abs(a) > Math.abs(best.a))) best = { a, c: [cx / (3 * a), cy / (3 * a)] };
+  });
+  return best?.c ?? outerRings(feature.geometry)[0][0];
 };
 
 const boundsOf = (shapes) => {
   const b = new maplibregl.LngLatBounds();
-  shapes.features.forEach((f) => f.geometry.coordinates[0].forEach((c) => b.extend(c)));
+  shapes.features.forEach((f) => outerRings(f.geometry).forEach((ring) => ring.forEach((c) => b.extend(c))));
   return b;
 };
 
@@ -39,8 +75,7 @@ function popupNode(a) {
   return box;
 }
 
-// 해역 폴리곤을 경보 단계 색으로 칠한다. 타일 서버와 지도 글꼴 없이 동작하도록 빈 배경 스타일을 쓰고,
-// 해역 이름은 HTML 라벨로 올린다.
+// 실제 지도 위에 해역 폴리곤을 경보 단계 색으로 반투명하게 칠한다. 해역 이름은 HTML 라벨로 올린다.
 export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
   const el = useRef(null);
   const map = useRef(null);
@@ -52,6 +87,7 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
   selRef.current = selectedId;
   onSelectRef.current = onSelect;
 
+  const dataRef = useRef(null);
   const data = {
     ...shapes,
     features: shapes.features.map((f) => {
@@ -59,6 +95,7 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
       return { ...f, properties: { ...f.properties, level: a?.level ?? '미집계', name: a?.name ?? '' } };
     }),
   };
+  dataRef.current = data;
 
   useEffect(() => {
     const colors = ['match', ['get', 'level']];
@@ -68,13 +105,14 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     const featuresById = Object.fromEntries(shapes.features.map((f) => [f.properties.area_id, f]));
     const m = new maplibregl.Map({
       container: el.current,
-      style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#dbe8f3' } }] },
+      style: BLANK_STYLE,
       bounds: boundsOf(shapes),
       fitBoundsOptions: { padding: 56, maxZoom: 11 },
-      attributionControl: false,
+      attributionControl: { compact: true },
       cooperativeGestures: false,
     });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    let disposed = false;
 
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'area-popup' });
     const markers = {};
@@ -111,14 +149,27 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     const refreshPaint = () => {
       if (!m.getLayer('fill')) return;
       const sel = selRef.current ?? -1;
-      m.setPaintProperty('fill', 'fill-opacity', ['case', ['==', ['get', 'area_id'], sel], 0.92, 0.68]);
-      m.setPaintProperty('line', 'line-width', ['case', ['==', ['get', 'area_id'], sel], 4, 1.5]);
+      m.setPaintProperty('fill', 'fill-opacity', ['case', ['==', ['get', 'area_id'], sel], 0.6, 0.4]);
+      m.setPaintProperty('line', 'line-width', ['case', ['==', ['get', 'area_id'], sel], 4, 2]);
     };
 
+    // 배경 스타일을 바꾸면 위에 올린 레이어가 지워지므로, 스타일이 준비될 때마다 해역 레이어를 다시 올린다.
+    const addAreaLayers = () => {
+      if (m.getSource('areas')) return;
+      m.addSource('areas', { type: 'geojson', data: dataRef.current });
+      // 지명 글자보다 아래에 깔아서 섬 이름이 가려지지 않게 한다.
+      const firstLabel = m.getStyle().layers.find((l) => l.type === 'symbol')?.id;
+      m.addLayer({ id: 'fill', type: 'fill', source: 'areas', paint: { 'fill-color': colors, 'fill-opacity': 0.4 } }, firstLabel);
+      m.addLayer({ id: 'line', type: 'line', source: 'areas', paint: { 'line-color': colors, 'line-width': 2 } }, firstLabel);
+      refreshPaint();
+    };
+    m.on('style.load', addAreaLayers);
+    loadBasemap().then((style) => {
+      if (!disposed && style !== BLANK_STYLE) m.setStyle(style, { diff: false });
+    });
+
     m.on('load', () => {
-      m.addSource('areas', { type: 'geojson', data });
-      m.addLayer({ id: 'fill', type: 'fill', source: 'areas', paint: { 'fill-color': colors, 'fill-opacity': 0.68 } });
-      m.addLayer({ id: 'line', type: 'line', source: 'areas', paint: { 'line-color': '#13243b', 'line-width': 1.5 } });
+      addAreaLayers();
 
       shapes.features.forEach((f) => {
         const id = f.properties.area_id;
@@ -158,6 +209,7 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     map.current = m;
     api.current = { refreshLabels, refreshPaint, refreshPopup };
     return () => {
+      disposed = true;
       Object.values(markers).forEach(({ marker }) => marker.remove());
       popup.remove();
       m.remove();

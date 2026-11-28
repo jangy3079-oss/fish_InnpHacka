@@ -124,7 +124,7 @@ export default function FarmerPage() {
           )}
           {!moveRight && keyCard}
           <CauseList causes={status.cause ?? []} status={status} />
-          <EvidenceSummary evidence={status.evidence} />
+          <EvidenceSummary evidence={status.evidence} ruleId={status.cause?.[0]?.rule_id} />
           {!user?.real && <SuspectVideo causes={status.cause} />}
         </div>
         <div className="farmer">
