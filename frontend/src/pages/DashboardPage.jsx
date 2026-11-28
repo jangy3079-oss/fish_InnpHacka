@@ -16,23 +16,47 @@ export default function DashboardPage() {
   const [attempt, setAttempt] = useState(0);
   usePageTitle('지자체 대시보드');
 
-  const { demo } = useDemo();
+  const { demo, setBusy } = useDemo();
 
+  // 해역 경계는 시연 시각과 상관없다. 데이터 출처(파일/서버)가 바뀔 때만 다시 받는다.
+  // 아직 API에 없을 수 있어, 실패해도 표와 차트는 보여준다.
+  const fromFile = demo?.file === true;
   useEffect(() => {
     let alive = true;
-    // 해역 경계는 아직 API에 없을 수 있어, 실패해도 표와 차트는 보여준다.
-    setMap(null); setShapes(null); setError(null);
-    Promise.all([api.getStressMap(demo), api.getAreaShapes(demo).catch(() => null)])
-      .then(([m, s]) => {
-        if (!alive) return;
-        setMap(m);
-        setShapes(s);
-      })
-      .catch((e) => alive && setError(e.message));
+    api.getAreaShapes(demo).catch(() => null).then((s) => alive && setShapes(s));
     return () => {
       alive = false;
     };
-  }, [demo, attempt]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromFile, attempt]);
+
+  // 시나리오·시각이 바뀌면 다시 불러온다. 이전 화면은 새 값이 올 때까지 유지한다.
+  // 비우고 다시 그리면 지도가 통째로 새로 만들어져 재생 중 화면이 깜빡인다.
+  useEffect(() => {
+    let alive = true;
+    setBusy(true); // 응답이 올 때까지 재생을 멈춘다
+    const timer = setTimeout(() => {
+      api.getStressMap(demo)
+        .then((m) => {
+          if (!alive) return;
+          setBusy(false);
+          setMap(m);
+          setError(null);
+        })
+        .catch((e) => {
+          if (!alive) return;
+          setBusy(false);
+          setError(e.message);
+        });
+    }, api.debounceFor(demo));
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [demo, attempt, setBusy]);
+
+  // 화면을 떠나면 재생이 멈춘 채로 남지 않게 푼다.
+  useEffect(() => () => setBusy(false), [setBusy]);
 
   if (error && !map) return <ErrorNotice onRetry={() => { setError(null); setAttempt((a) => a + 1); }} />;
   if (!map) {
