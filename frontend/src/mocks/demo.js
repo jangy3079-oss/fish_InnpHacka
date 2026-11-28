@@ -163,12 +163,29 @@ function buildRecommendation(cageId, f) {
   return { ...base, kind: 'profit', recommended_option: recommended, options };
 }
 
+// 서버(area_cause_distribution)처럼 표시되는 원인 중 확률이 가장 높은 것을 1순위로 본다.
+const topCause = (f) =>
+  (f.cause ?? []).filter((c) => c.display !== false).reduce((a, c) => (!a || (c.probability ?? 0) > (a.probability ?? 0) ? c : a), null);
+// 해역 전체에 영향을 주는 환경 원인. 나머지(질병·기생충·작업·섭식)는 가두리마다 다르다.
+const AREA_WIDE = ['R1', 'R2', 'R3', 'R4'];
+const ALERT = ['주의', '경고', '위험'];
+
 export function stressMapAt(demo) {
   const f = frameAt(demo);
   const map = structuredClone(baseStressMap);
   map.ts = f.ts;
   // 단계나 지수가 아직 없는(null) 구간은 '정상', 0으로 보여준다.
   Object.assign(map.areas[0], { level: f.level ?? '정상', stress_score: f.stress_score ?? 0 });
+  // 원인 분포: stress-map.json은 다른 해역(B) 몫만 담고, 해역 A 몫은 시연 프레임을 따른다.
+  // 환경 원인이면 해역 A 가두리 전체, 개별 원인이면 시연 가두리 1곳으로 센다. 경보 단계가 아니면 세지 않는다.
+  const top = topCause(f);
+  if (top && ALERT.includes(f.level)) {
+    const n = AREA_WIDE.includes(top.rule_id) ? map.areas[0].cage_count : 1;
+    const hit = map.cause_distribution.find((c) => c.rule_id === top.rule_id);
+    if (hit) hit.count += n;
+    else map.cause_distribution.push({ rule_id: top.rule_id, name: top.name, count: n });
+    map.cause_distribution.sort((a, b) => a.rule_id.localeCompare(b.rule_id));
+  }
   return map;
 }
 
@@ -192,5 +209,8 @@ const PER_CAGE = { 정상: 0, 주의: 500, 경고: 2000, 위험: 10000 };
 export function releaseDemandAt(areaId, demo) {
   const map = stressMapAt(demo);
   const a = map.areas.find((x) => x.area_id === Number(areaId)) ?? map.areas[0];
-  return { area_id: a.area_id, ts: map.ts, estimated_fish_count: (PER_CAGE[a.level] ?? 0) * a.cage_count, cage_count: a.cage_count };
+  // 질병·기생충 의심은 손익 비교가 아니라 1차 조치·진단 흐름이라 방류를 추천하지 않는다(서버도 방류 추천 가두리만 센다).
+  const sick = a === map.areas[0] && ['R5', 'R8'].includes(topCause(frameAt(demo))?.rule_id);
+  const perCage = sick ? 0 : PER_CAGE[a.level] ?? 0;
+  return { area_id: a.area_id, ts: map.ts, estimated_fish_count: perCage * a.cage_count, cage_count: a.cage_count };
 }

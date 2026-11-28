@@ -129,7 +129,7 @@ function CauseChart({ items }) {
       <p className="hint">유효한 최신 분석에서 원인이 표시된 경보 가두리 {total}곳 기준입니다. 원인 미확인·관측 부족은 제외하며 복수 후보는 첫 순위로 집계합니다.</p>
       <ul className="bars">
         {items.map((i) => (
-          <li key={i.name}>
+          <li key={i.rule_id ?? i.name}>
             <span className="bar-label">{i.name}</span>
             <span className="bar-track"><span className="bar-fill" style={{ width: `${(i.count / max) * 100}%` }} /></span>
             <span className="bar-n">{i.count}곳</span>
