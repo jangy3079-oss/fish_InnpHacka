@@ -145,7 +145,6 @@ export default function DashboardPage() {
 
 function CauseChart({ items }) {
   if (!items?.length) return null;
-  const max = Math.max(...items.map((i) => i.count));
   const total = items.reduce((s, i) => s + i.count, 0);
   return (
     <section className="card">
@@ -155,7 +154,7 @@ function CauseChart({ items }) {
         {items.map((i) => (
           <li key={i.rule_id ?? i.name}>
             <span className="bar-label">{i.name}</span>
-            <span className="bar-track"><span className="bar-fill" style={{ width: `${(i.count / max) * 100}%` }} /></span>
+            <span className="bar-track"><span className="bar-fill" style={{ width: `${(i.count / total) * 100}%` }} /></span>
             <span className="bar-n">{i.count}곳</span>
           </li>
         ))}
