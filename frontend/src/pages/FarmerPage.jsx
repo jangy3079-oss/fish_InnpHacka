@@ -8,6 +8,7 @@ import { FarmerTabs } from '../components/SiteChrome.jsx';
 import CausePending from '../components/CausePending.jsx';
 import EvidenceCharts from '../components/EvidenceCharts.jsx';
 import EvidenceSummary from '../components/EvidenceSummary.jsx';
+import SuspectVideo from '../components/SuspectVideo.jsx';
 import { FirstAidCard, ProfitCompare, formatKrw } from '../components/ProfitCards.jsx';
 import { BASELINE_WINDOWS, LEVELS, LEVEL_RANK, SOURCE_LABELS, formatTime } from '../constants.js';
 
@@ -124,6 +125,7 @@ export default function FarmerPage() {
           {!moveRight && keyCard}
           <CauseList causes={status.cause ?? []} status={status} />
           <EvidenceSummary evidence={status.evidence} ruleId={status.cause?.[0]?.rule_id} />
+          {!user?.real && <SuspectVideo causes={status.cause} />}
         </div>
         <div className="farmer">
           {/* 그래프를 맨 위에 둬서, 재생 중 단계가 바뀌어 카드가 생겨도 그래프 위치가 밀리지 않게 한다. */}
