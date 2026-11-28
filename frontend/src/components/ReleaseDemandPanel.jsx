@@ -12,9 +12,7 @@ export default function ReleaseDemandPanel({ areas }) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    let alive = true;
-    setRows(null);
-    setError(false);
+    let alive = true; // 새 값이 올 때까지 이전 막대를 유지한다(비우면 재생 중 패널이 깜빡인다)
     Promise.all(areas.map((a) => api.getReleaseDemand(a.area_id, demo).then((d) => ({ ...d, name: a.name }))))
       .then((r) => alive && (setRows(r), setError(false)))
       .catch(() => alive && setError(true));
