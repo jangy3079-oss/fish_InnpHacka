@@ -125,7 +125,7 @@ export default function FarmerPage() {
           {!moveRight && keyCard}
           <CauseList causes={status.cause ?? []} status={status} />
           <EvidenceSummary evidence={status.evidence} />
-          {!user?.real && <SuspectVideo scenario={demo.scenario} />}
+          {!user?.real && <SuspectVideo causes={status.cause} />}
         </div>
         <div className="farmer">
           {/* 그래프를 맨 위에 둬서, 재생 중 단계가 바뀌어 카드가 생겨도 그래프 위치가 밀리지 않게 한다. */}
