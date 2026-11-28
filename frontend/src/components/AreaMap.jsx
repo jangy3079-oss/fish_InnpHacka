@@ -7,6 +7,25 @@ import { LEVELS } from '../constants.js';
 // Vite에서는 워커 파일 경로를 직접 알려줘야 한다.
 maplibregl.setWorkerUrl(workerUrl);
 
+// 배경 지도: OpenFreeMap(API 키 없이 무료, OpenStreetMap 데이터). 닿지 않으면 빈 바다색 배경으로 그린다.
+const BASEMAP_URL = 'https://tiles.openfreemap.org/styles/positron';
+const BLANK_STYLE = { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#dbe8f3' } }] };
+
+async function loadBasemap() {
+  try {
+    const res = await fetch(BASEMAP_URL, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(String(res.status));
+    const style = await res.json();
+    // 지명은 한글 이름을 먼저 쓰고, 없으면 현지 이름을 쓴다(기본 스타일은 영문+현지 두 줄).
+    style.layers.forEach((l) => {
+      if (l.layout?.['text-field']) l.layout['text-field'] = ['coalesce', ['get', 'name:ko'], ['get', 'name']];
+    });
+    return style;
+  } catch {
+    return BLANK_STYLE;
+  }
+}
+
 const centroid = (feature) => {
   const ring = feature.geometry.coordinates[0].slice(0, -1); // 마지막 점은 첫 점과 같다
   const sum = ring.reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
@@ -39,8 +58,7 @@ function popupNode(a) {
   return box;
 }
 
-// 해역 폴리곤을 경보 단계 색으로 칠한다. 타일 서버와 지도 글꼴 없이 동작하도록 빈 배경 스타일을 쓰고,
-// 해역 이름은 HTML 라벨로 올린다.
+// 실제 지도 위에 해역 폴리곤을 경보 단계 색으로 반투명하게 칠한다. 해역 이름은 HTML 라벨로 올린다.
 export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
   const el = useRef(null);
   const map = useRef(null);
@@ -52,6 +70,7 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
   selRef.current = selectedId;
   onSelectRef.current = onSelect;
 
+  const dataRef = useRef(null);
   const data = {
     ...shapes,
     features: shapes.features.map((f) => {
@@ -59,6 +78,7 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
       return { ...f, properties: { ...f.properties, level: a?.level ?? '미집계', name: a?.name ?? '' } };
     }),
   };
+  dataRef.current = data;
 
   useEffect(() => {
     const colors = ['match', ['get', 'level']];
@@ -68,13 +88,14 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     const featuresById = Object.fromEntries(shapes.features.map((f) => [f.properties.area_id, f]));
     const m = new maplibregl.Map({
       container: el.current,
-      style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#dbe8f3' } }] },
+      style: BLANK_STYLE,
       bounds: boundsOf(shapes),
       fitBoundsOptions: { padding: 56, maxZoom: 11 },
-      attributionControl: false,
+      attributionControl: { compact: true },
       cooperativeGestures: false,
     });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    let disposed = false;
 
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: 'area-popup' });
     const markers = {};
@@ -111,14 +132,25 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     const refreshPaint = () => {
       if (!m.getLayer('fill')) return;
       const sel = selRef.current ?? -1;
-      m.setPaintProperty('fill', 'fill-opacity', ['case', ['==', ['get', 'area_id'], sel], 0.92, 0.68]);
+      m.setPaintProperty('fill', 'fill-opacity', ['case', ['==', ['get', 'area_id'], sel], 0.75, 0.5]);
       m.setPaintProperty('line', 'line-width', ['case', ['==', ['get', 'area_id'], sel], 4, 1.5]);
     };
 
-    m.on('load', () => {
-      m.addSource('areas', { type: 'geojson', data });
-      m.addLayer({ id: 'fill', type: 'fill', source: 'areas', paint: { 'fill-color': colors, 'fill-opacity': 0.68 } });
+    // 배경 스타일을 바꾸면 위에 올린 레이어가 지워지므로, 스타일이 준비될 때마다 해역 레이어를 다시 올린다.
+    const addAreaLayers = () => {
+      if (m.getSource('areas')) return;
+      m.addSource('areas', { type: 'geojson', data: dataRef.current });
+      m.addLayer({ id: 'fill', type: 'fill', source: 'areas', paint: { 'fill-color': colors, 'fill-opacity': 0.5 } });
       m.addLayer({ id: 'line', type: 'line', source: 'areas', paint: { 'line-color': '#13243b', 'line-width': 1.5 } });
+      refreshPaint();
+    };
+    m.on('style.load', addAreaLayers);
+    loadBasemap().then((style) => {
+      if (!disposed && style !== BLANK_STYLE) m.setStyle(style, { diff: false });
+    });
+
+    m.on('load', () => {
+      addAreaLayers();
 
       shapes.features.forEach((f) => {
         const id = f.properties.area_id;
@@ -158,6 +190,7 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     map.current = m;
     api.current = { refreshLabels, refreshPaint, refreshPopup };
     return () => {
+      disposed = true;
       Object.values(markers).forEach(({ marker }) => marker.remove());
       popup.remove();
       m.remove();
