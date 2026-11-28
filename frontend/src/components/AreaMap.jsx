@@ -149,8 +149,8 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     const refreshPaint = () => {
       if (!m.getLayer('fill')) return;
       const sel = selRef.current ?? -1;
-      m.setPaintProperty('fill', 'fill-opacity', ['case', ['==', ['get', 'area_id'], sel], 0.75, 0.5]);
-      m.setPaintProperty('line', 'line-width', ['case', ['==', ['get', 'area_id'], sel], 4, 1.5]);
+      m.setPaintProperty('fill', 'fill-opacity', ['case', ['==', ['get', 'area_id'], sel], 0.6, 0.4]);
+      m.setPaintProperty('line', 'line-width', ['case', ['==', ['get', 'area_id'], sel], 4, 2]);
     };
 
     // 배경 스타일을 바꾸면 위에 올린 레이어가 지워지므로, 스타일이 준비될 때마다 해역 레이어를 다시 올린다.
@@ -159,8 +159,8 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
       m.addSource('areas', { type: 'geojson', data: dataRef.current });
       // 지명 글자보다 아래에 깔아서 섬 이름이 가려지지 않게 한다.
       const firstLabel = m.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-      m.addLayer({ id: 'fill', type: 'fill', source: 'areas', paint: { 'fill-color': colors, 'fill-opacity': 0.5 } }, firstLabel);
-      m.addLayer({ id: 'line', type: 'line', source: 'areas', paint: { 'line-color': '#13243b', 'line-width': 1.5 } }, firstLabel);
+      m.addLayer({ id: 'fill', type: 'fill', source: 'areas', paint: { 'fill-color': colors, 'fill-opacity': 0.4 } }, firstLabel);
+      m.addLayer({ id: 'line', type: 'line', source: 'areas', paint: { 'line-color': colors, 'line-width': 2 } }, firstLabel);
       refreshPaint();
     };
     m.on('style.load', addAreaLayers);
