@@ -25,20 +25,14 @@
   ],
   "cause_distribution": [
     {
-      "name": "고수온",
-      "count": 12
-    },
-    {
-      "name": "저산소",
+      "rule_id": "R1",
+      "name": "고수온 (피신 중)",
       "count": 5
     },
     {
-      "name": "탁도",
-      "count": 2
-    },
-    {
-      "name": "질병 의심",
-      "count": 1
+      "rule_id": "R3",
+      "name": "저산소",
+      "count": 3
     }
   ]
 }
