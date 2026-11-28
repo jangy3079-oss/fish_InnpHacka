@@ -17,8 +17,12 @@ async function loadBasemap() {
     if (!res.ok) throw new Error(String(res.status));
     const style = await res.json();
     // 지명은 한글 이름을 먼저 쓰고, 없으면 현지 이름을 쓴다(기본 스타일은 영문+현지 두 줄).
+    // 기본 회색조는 바다와 육지가 잘 구분되지 않아, 바다는 푸른색·육지는 밝은 베이지로 바꾼다.
     style.layers.forEach((l) => {
       if (l.layout?.['text-field']) l.layout['text-field'] = ['coalesce', ['get', 'name:ko'], ['get', 'name']];
+      if (l.id === 'background') l.paint = { ...l.paint, 'background-color': '#f4f1ea' };
+      if (l.id === 'water') l.paint = { ...l.paint, 'fill-color': '#b9d7ea' };
+      if (l.id === 'park' || l.id.startsWith('landcover') || l.id.startsWith('landuse')) l.paint = { ...l.paint, 'fill-opacity': 0.4 };
     });
     return style;
   } catch {
@@ -26,15 +30,28 @@ async function loadBasemap() {
   }
 }
 
+// Polygon과 MultiPolygon 모두 바깥 고리 목록으로 바꾼다.
+const outerRings = (geometry) =>
+  geometry.type === 'MultiPolygon' ? geometry.coordinates.map((p) => p[0]) : [geometry.coordinates[0]];
+
+// 라벨 자리: 가장 큰 조각의 면적 중심. 해안선을 따라 꼭짓점이 몰려도 한쪽으로 쏠리지 않는다.
 const centroid = (feature) => {
-  const ring = feature.geometry.coordinates[0].slice(0, -1); // 마지막 점은 첫 점과 같다
-  const sum = ring.reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
-  return [sum[0] / ring.length, sum[1] / ring.length];
+  let best = null;
+  outerRings(feature.geometry).forEach((ring) => {
+    let a = 0, cx = 0, cy = 0;
+    for (let i = 0; i < ring.length - 1; i++) {
+      const [x0, y0] = ring[i], [x1, y1] = ring[i + 1];
+      const k = x0 * y1 - x1 * y0;
+      a += k; cx += (x0 + x1) * k; cy += (y0 + y1) * k;
+    }
+    if (a && (!best || Math.abs(a) > Math.abs(best.a))) best = { a, c: [cx / (3 * a), cy / (3 * a)] };
+  });
+  return best?.c ?? outerRings(feature.geometry)[0][0];
 };
 
 const boundsOf = (shapes) => {
   const b = new maplibregl.LngLatBounds();
-  shapes.features.forEach((f) => f.geometry.coordinates[0].forEach((c) => b.extend(c)));
+  shapes.features.forEach((f) => outerRings(f.geometry).forEach((ring) => ring.forEach((c) => b.extend(c))));
   return b;
 };
 
@@ -140,8 +157,10 @@ export default function AreaMap({ shapes, areas, selectedId, onSelect }) {
     const addAreaLayers = () => {
       if (m.getSource('areas')) return;
       m.addSource('areas', { type: 'geojson', data: dataRef.current });
-      m.addLayer({ id: 'fill', type: 'fill', source: 'areas', paint: { 'fill-color': colors, 'fill-opacity': 0.5 } });
-      m.addLayer({ id: 'line', type: 'line', source: 'areas', paint: { 'line-color': '#13243b', 'line-width': 1.5 } });
+      // 지명 글자보다 아래에 깔아서 섬 이름이 가려지지 않게 한다.
+      const firstLabel = m.getStyle().layers.find((l) => l.type === 'symbol')?.id;
+      m.addLayer({ id: 'fill', type: 'fill', source: 'areas', paint: { 'fill-color': colors, 'fill-opacity': 0.5 } }, firstLabel);
+      m.addLayer({ id: 'line', type: 'line', source: 'areas', paint: { 'line-color': '#13243b', 'line-width': 1.5 } }, firstLabel);
       refreshPaint();
     };
     m.on('style.load', addAreaLayers);
